@@ -75,10 +75,10 @@ const headingFont = createInterFont({
     10: -2,
   },
   face: {
-    400: { normal: "Inter" },
-    500: { normal: "InterMedium" },
-    600: { normal: "InterSemiBold" },
-    700: { normal: "InterBold" },
+    400: { normal: "System" },
+    500: { normal: "System" },
+    600: { normal: "System" },
+    700: { normal: "System" },
   },
 });
 
@@ -104,10 +104,10 @@ const bodyFont = createInterFont(
       7: "700",
     },
     face: {
-      400: { normal: "Inter" },
-      500: { normal: "InterMedium" },
-      600: { normal: "InterSemiBold" },
-      700: { normal: "InterBold" },
+      400: { normal: "System" },
+      500: { normal: "System" },
+      600: { normal: "System" },
+      700: { normal: "System" },
     },
   },
   {
