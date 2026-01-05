@@ -17,6 +17,7 @@ import { Dialog } from "../components/ui/Dialog";
 import { deleteConnection, getConnections } from "../lib/storage/connections";
 import { CONNECTION_COLORS, type ConnectionConfig } from "../lib/types";
 import { useConnectionStore } from "../stores/connection";
+import AlienLogo from "../assets/logos/alien.svg";
 
 type ConnectionItemProps = {
   connection: ConnectionConfig;
@@ -237,7 +238,7 @@ export default function HomeScreen() {
               backgroundColor: theme.surfaceAlt.val,
             }}
           >
-            <Ionicons name="server-outline" size={56} color={theme.textSubtle.val} />
+            <AlienLogo width={70} height={70} />
           </Animated.View>
           <Animated.Text
             entering={FadeInUp.delay(200).springify()}

@@ -7,6 +7,7 @@ import {
   getBiometricDisplayName,
   type BiometricCapability,
 } from "../lib/app-lock";
+import AlienLogo from "../assets/logos/alien.svg";
 
 type LockScreenProps = {
   onUnlock: () => void;
@@ -88,7 +89,7 @@ export const LockScreen = ({ onUnlock }: LockScreenProps) => {
           borderWidth={2}
           borderColor="$borderColor"
         >
-          <Text fontSize={48}>🔐</Text>
+          <AlienLogo width={60} height={60} />
         </YStack>
 
         <Text fontSize={32} fontWeight="bold" color="$color" marginBottom="$sm">
