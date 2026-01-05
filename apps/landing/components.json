@@ -19,6 +19,7 @@
     "hooks": "@/hooks"
   },
   "registries": {
-    "@eldoraui": "https://eldoraui.site/r/{name}.json"
+    "@eldoraui": "https://eldoraui.site/r/{name}.json",
+    "@kokonutui": "https://kokonutui.com/r/{name}.json"
   }
 }

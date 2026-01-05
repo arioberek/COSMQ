@@ -1,31 +1,9 @@
 ---
 import Layout from '../layouts/Layout.astro';
 import AnimatedFrameworks from '../components/ui/animated-frameworks';
+import { FeaturesSection } from '../components/features-section';
 import AlienLogo from '../assets/logos/alien.svg';
 import TextLogo from '../assets/logos/text.svg';
-
-const features = [
-  {
-    title: "Direct TCP Connections",
-    description: "Connect directly to your database servers using native TCP sockets. No intermediate APIs or proxy servers required.",
-    icon: "🔌"
-  },
-  {
-    title: "Secure Storage",
-    description: "Your credentials never leave your device. Passwords are encrypted using the device's native secure enclave (Keychain/Keystore).",
-    icon: "🔒"
-  },
-  {
-    title: "Universal Support",
-    description: "Built for iOS, Android, and Web. Experience a consistent, high-performance interface across all your devices.",
-    icon: "📱"
-  },
-  {
-    title: "SQL Editor",
-    description: "Full-featured SQL editor with syntax highlighting, history, and results visualization optimized for mobile screens.",
-    icon: "📊"
-  }
-];
 ---
 
 <Layout>
@@ -61,20 +39,9 @@ const features = [
 			<div class="absolute w-[600px] h-[600px] bg-[radial-gradient(circle,rgba(124,92,255,0.15)_0%,rgba(0,0,0,0)_70%)] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 -z-10 pointer-events-none"></div>
 		</section>
 
-		<section id="features" class="py-16 px-6 max-w-[1200px] mx-auto">
-			<h2 class="text-center text-4xl mb-12">Everything you need</h2>
-			<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-				{features.map(feature => (
-					<div class="bg-[#13131a] p-8 rounded-2xl border border-white/[0.08] transition-transform duration-200 hover:-translate-y-1 hover:border-[#7c5cff]">
-						<div class="text-[2.5rem] mb-4">{feature.icon}</div>
-						<h3 class="text-xl mb-3 text-[#f0f0f5]">{feature.title}</h3>
-						<p class="text-[#b8b8c8] leading-relaxed">{feature.description}</p>
-					</div>
-				))}
-			</div>
-		</section>
+		<FeaturesSection client:load />
 
-		<section class="py-16 pb-8 px-6 text-center bg-[#1a1a24] border-y border-white/[0.08]">
+		<section class="py-16 pb-8 px-6 text-center bg-[#171717] border-y border-white/[0.08]">
 			<h2 class="text-4xl mb-8">Supported Databases</h2>
 			<div class="max-w-md mx-auto">
 				<AnimatedFrameworks 
