@@ -101,9 +101,10 @@ export const SwipeableRow = ({
         ]}
       >
         <XStack height="100%">
-          {rightActions.map((action) => (
+          {rightActions.map((action, index) => (
             <Pressable
-              key={action.icon}
+              key={`${action.icon}-${index}`}
+              style={[styles.actionButton, { backgroundColor: action.color }]}
               style={[styles.actionButton, { backgroundColor: action.color }]}
               onPress={() => handleActionPress(action)}
             >
