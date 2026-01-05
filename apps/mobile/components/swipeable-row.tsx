@@ -2,165 +2,238 @@ import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import type { ReactNode } from "react";
 import { useRef } from "react";
-import { Animated, PanResponder, Pressable, StyleSheet, View } from "react-native";
-import { XStack, Text, useTheme } from "tamagui";
+import {
+	Animated,
+	type GestureResponderEvent,
+	PanResponder,
+	type PanResponderGestureState,
+	Pressable,
+	StyleSheet,
+	View,
+} from "react-native";
+import { XStack } from "tamagui";
 
-const ACTION_WIDTH = 80;
+const ACTION_BUTTON_SIZE = 44;
+const ACTION_GAP = 8;
+const ACTION_PADDING_RIGHT = 12;
+const OPEN_THRESHOLD = 0.15;
+const CLOSE_THRESHOLD = 0.5;
 
 type SwipeAction = {
-  icon: keyof typeof Ionicons.glyphMap;
-  color: string;
-  onPress: () => void;
-  label?: string;
+	icon: keyof typeof Ionicons.glyphMap;
+	color: string;
+	onPress: () => void;
 };
 
 type SwipeableRowProps = {
-  children: ReactNode;
-  rightActions?: SwipeAction[];
-  enabled?: boolean;
+	children: ReactNode;
+	rightActions?: SwipeAction[];
+	enabled?: boolean;
+};
+
+const calculateActionsWidth = (actionsCount: number) => {
+	if (actionsCount === 0) return 0;
+	return (
+		actionsCount * ACTION_BUTTON_SIZE +
+		(actionsCount - 1) * ACTION_GAP +
+		ACTION_PADDING_RIGHT
+	);
 };
 
 export const SwipeableRow = ({
-  children,
-  rightActions = [],
-  enabled = true,
+	children,
+	rightActions = [],
+	enabled = true,
 }: SwipeableRowProps) => {
-  const theme = useTheme();
-  const translateX = useRef(new Animated.Value(0)).current;
-  const rightWidth = rightActions.length * ACTION_WIDTH;
+	const translateX = useRef(new Animated.Value(0)).current;
+	const offsetX = useRef(0);
+	const isOpen = useRef(false);
+	const rightWidth = calculateActionsWidth(rightActions.length);
 
-  const enabledRef = useRef(enabled);
-  const rightActionsRef = useRef(rightActions);
-  const rightWidthRef = useRef(rightWidth);
+	const enabledRef = useRef(enabled);
+	const rightActionsRef = useRef(rightActions);
+	const rightWidthRef = useRef(rightWidth);
 
-  enabledRef.current = enabled;
-  rightActionsRef.current = rightActions;
-  rightWidthRef.current = rightWidth;
+	enabledRef.current = enabled;
+	rightActionsRef.current = rightActions;
+	rightWidthRef.current = rightWidth;
 
-  const panResponder = useRef(
-    PanResponder.create({
-      onMoveShouldSetPanResponder: (_, gestureState) => {
-        if (!enabledRef.current) return false;
-        return Math.abs(gestureState.dx) > 10 && Math.abs(gestureState.dx) > Math.abs(gestureState.dy);
-      },
-      onPanResponderMove: (_, gestureState) => {
-        if (gestureState.dx < 0 && rightActionsRef.current.length > 0) {
-          const newX = Math.max(-rightWidthRef.current - 20, gestureState.dx);
-          translateX.setValue(newX);
-        } else if (gestureState.dx > 0) {
-          translateX.setValue(gestureState.dx * 0.2);
-        }
-      },
-      onPanResponderRelease: (_, gestureState) => {
-        const shouldOpenRight = gestureState.dx < -rightWidthRef.current / 3;
+	const animateTo = (toValue: number, open: boolean) => {
+		if (open && !isOpen.current) {
+			Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+		}
+		isOpen.current = open;
+		offsetX.current = toValue;
 
-        if (shouldOpenRight && rightActionsRef.current.length > 0) {
-          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-          Animated.spring(translateX, {
-            toValue: -rightWidthRef.current,
-            useNativeDriver: true,
-            damping: 20,
-            stiffness: 200,
-          }).start();
-        } else {
-          Animated.spring(translateX, {
-            toValue: 0,
-            useNativeDriver: true,
-            damping: 20,
-            stiffness: 200,
-          }).start();
-        }
-      },
-    })
-  ).current;
+		Animated.spring(translateX, {
+			toValue,
+			useNativeDriver: true,
+			damping: 20,
+			stiffness: 200,
+		}).start();
+	};
 
-  const close = () => {
-    Animated.timing(translateX, {
-      toValue: 0,
-      duration: 200,
-      useNativeDriver: true,
-    }).start();
-  };
+	const snapToOpen = () => animateTo(-rightWidthRef.current, true);
+	const snapToClosed = () => animateTo(0, false);
 
-  const handleActionPress = (action: SwipeAction) => {
-    close();
-    setTimeout(() => {
-      action.onPress();
-    }, 200);
-  };
+	const handleMove = (_: GestureResponderEvent, gestureState: PanResponderGestureState) => {
+		const newValue = offsetX.current + gestureState.dx;
+		const clampedX = Math.max(
+			-rightWidthRef.current - 20,
+			Math.min(20, newValue),
+		);
+		translateX.setValue(clampedX);
+	};
 
-  const actionsOpacity = translateX.interpolate({
-    inputRange: [-rightWidth, -rightWidth / 2, 0],
-    outputRange: [1, 0.5, 0],
-    extrapolate: "clamp",
-  });
+	const handleRelease = (_: GestureResponderEvent, gestureState: PanResponderGestureState) => {
+		const finalPosition = offsetX.current + gestureState.dx;
+		const hasVelocity = Math.abs(gestureState.vx) > 0.05;
 
-  if (rightActions.length === 0 || !enabled) {
-    return <View>{children}</View>;
-  }
+		if (hasVelocity) {
+			if (gestureState.vx < 0 && rightActionsRef.current.length > 0) {
+				snapToOpen();
+			} else {
+				snapToClosed();
+			}
+		} else {
+			const openThreshold = -rightWidthRef.current * OPEN_THRESHOLD;
+			const closeThreshold = -rightWidthRef.current * CLOSE_THRESHOLD;
 
-  return (
-    <View style={styles.container}>
-      <Animated.View
-        style={[
-          styles.actionsContainer,
-          {
-            opacity: actionsOpacity,
-          },
-        ]}
-      >
-        <XStack height="100%">
-          {rightActions.map((action, index) => (
-            <Pressable
-              key={`${action.icon}-${index}`}
-              style={[styles.actionButton, { backgroundColor: action.color }]}
-              onPress={() => handleActionPress(action)}
-            >
-              <Ionicons name={action.icon} size={22} color={theme.color.val} />
-              {action.label && (
-                <Text color="$color" fontSize={11} marginTop={2} fontWeight="500">
-                  {action.label}
-                </Text>
-              )}
-            </Pressable>
-          ))}
-        </XStack>
-      </Animated.View>
+			if (isOpen.current) {
+				if (finalPosition > closeThreshold) {
+					snapToClosed();
+				} else {
+					snapToOpen();
+				}
+			} else {
+				if (finalPosition < openThreshold && rightActionsRef.current.length > 0) {
+					snapToOpen();
+				} else {
+					snapToClosed();
+				}
+			}
+		}
+	};
 
-      <Animated.View
-        style={[
-          styles.contentContainer,
-          {
-            transform: [{ translateX }],
-          },
-        ]}
-        {...panResponder.panHandlers}
-      >
-        {children}
-      </Animated.View>
-    </View>
-  );
+	const panResponder = useRef(
+		PanResponder.create({
+			onStartShouldSetPanResponder: () => false,
+			onMoveShouldSetPanResponder: (_, gestureState) => {
+				if (!enabledRef.current) return false;
+				const isHorizontal = Math.abs(gestureState.dx) > Math.abs(gestureState.dy);
+				return isHorizontal && Math.abs(gestureState.dx) > 3;
+			},
+			onMoveShouldSetPanResponderCapture: (_, gestureState) => {
+				if (!enabledRef.current) return false;
+				const isHorizontal = Math.abs(gestureState.dx) > Math.abs(gestureState.dy);
+				return isHorizontal && Math.abs(gestureState.dx) > 10;
+			},
+			onPanResponderTerminationRequest: () => false,
+			onPanResponderGrant: () => {
+				translateX.stopAnimation();
+			},
+			onPanResponderMove: handleMove,
+			onPanResponderRelease: handleRelease,
+			onPanResponderTerminate: () => {
+				if (isOpen.current) {
+					animateTo(-rightWidthRef.current, true);
+				} else {
+					snapToClosed();
+				}
+			},
+		}),
+	).current;
+
+	const close = () => {
+		isOpen.current = false;
+		offsetX.current = 0;
+		Animated.timing(translateX, {
+			toValue: 0,
+			duration: 200,
+			useNativeDriver: true,
+		}).start();
+	};
+
+	const handleActionPress = (action: SwipeAction) => {
+		close();
+		setTimeout(() => {
+			action.onPress();
+		}, 200);
+	};
+
+	const actionsOpacity = translateX.interpolate({
+		inputRange: [-rightWidth, -rightWidth / 2, 0],
+		outputRange: [1, 0.5, 0],
+		extrapolate: "clamp",
+	});
+
+	if (rightActions.length === 0 || !enabled) {
+		return <View>{children}</View>;
+	}
+
+	return (
+		<View style={styles.container}>
+			<Animated.View
+				style={[
+					styles.actionsContainer,
+					{
+						opacity: actionsOpacity,
+					},
+				]}
+			>
+				<XStack
+					height="100%"
+					alignItems="center"
+					gap={ACTION_GAP}
+					paddingRight={ACTION_PADDING_RIGHT}
+				>
+					{rightActions.map((action, index) => (
+						<Pressable
+							key={`${action.icon}-${index}`}
+							style={[styles.actionButton, { backgroundColor: action.color }]}
+							onPress={() => handleActionPress(action)}
+						>
+							<Ionicons name={action.icon} size={20} color="#fff" />
+						</Pressable>
+					))}
+				</XStack>
+			</Animated.View>
+
+			<Animated.View
+				style={[
+					styles.contentContainer,
+					{
+						transform: [{ translateX }],
+					},
+				]}
+				{...panResponder.panHandlers}
+			>
+				{children}
+			</Animated.View>
+		</View>
+	);
 };
 
 const styles = StyleSheet.create({
-  container: {
-    position: "relative",
-    overflow: "hidden",
-  },
-  actionsContainer: {
-    position: "absolute",
-    right: 0,
-    top: 0,
-    bottom: 0,
-    justifyContent: "center",
-  },
-  contentContainer: {
-    backgroundColor: "transparent",
-  },
-  actionButton: {
-    width: ACTION_WIDTH,
-    height: "100%",
-    justifyContent: "center",
-    alignItems: "center",
-  },
+	container: {
+		position: "relative",
+		overflow: "hidden",
+	},
+	actionsContainer: {
+		position: "absolute",
+		right: 0,
+		top: 0,
+		bottom: 0,
+		justifyContent: "center",
+	},
+	contentContainer: {
+		backgroundColor: "transparent",
+	},
+	actionButton: {
+		width: ACTION_BUTTON_SIZE,
+		height: ACTION_BUTTON_SIZE,
+		borderRadius: ACTION_BUTTON_SIZE / 2,
+		alignItems: "center",
+		justifyContent: "center",
+	},
 });

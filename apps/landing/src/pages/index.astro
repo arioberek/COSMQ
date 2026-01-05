@@ -1,11 +1,6 @@
 ---
 import Layout from '../layouts/Layout.astro';
-import PostgresIcon from '../assets/icons/postgresql.svg';
-import MysqlIcon from '../assets/icons/mysql.svg';
-import MariadbIcon from '../assets/icons/mariadb.svg';
-import SqliteIcon from '../assets/icons/sqlite.svg';
-import CockroachIcon from '../assets/icons/cockroachdb.svg';
-import MongoIcon from '../assets/icons/mongodb.svg';
+import AnimatedFrameworks from '../components/ui/animated-frameworks';
 import AlienLogo from '../assets/logos/alien.svg';
 import TextLogo from '../assets/logos/text.svg';
 
@@ -31,412 +26,79 @@ const features = [
     icon: "📊"
   }
 ];
-
-const databases = [
-  { name: "PostgreSQL", icon: PostgresIcon },
-  { name: "MySQL", icon: MysqlIcon },
-  { name: "MariaDB", icon: MariadbIcon },
-  { name: "SQLite", icon: SqliteIcon },
-  { name: "CockroachDB", icon: CockroachIcon },
-  { name: "MongoDB", icon: MongoIcon },
-];
 ---
 
 <Layout>
-	<header class="site-header">
-		<nav class="nav-container">
-			<a href="/" class="logo-link ">
-				<img src={TextLogo.src} alt="COSMQ" class="logo-text" height="56" />
+	<header class="fixed top-0 left-0 right-0 z-[100] bg-[rgba(10,10,15,0.8)] backdrop-blur-[12px] border-b border-white/[0.08]">
+		<nav class="max-w-[1200px] mx-auto px-6 py-4 flex justify-between items-center">
+			<a href="/" class="items-center no-underline">
+				<img src={TextLogo.src} alt="COSMQ" class="h-8 w-auto opacity-95 md:block hidden" />
 			</a>
-			<div class="nav-links">
-				<a href="#features">Features</a>
-				<a href="https://github.com/arioberek/COSMQ" class="nav-github">GitHub</a>
+			<div class="flex gap-4 md:gap-8 items-center">
+				<a href="#features" class="text-[#b8b8c8] no-underline text-sm font-medium transition-colors duration-200 hover:text-[#f0f0f5]">Features</a>
+				<a href="https://github.com/arioberek/COSMQ" class="text-[#b8b8c8] no-underline text-sm font-medium transition-colors duration-200 hover:text-[#f0f0f5] bg-[#1a1a24] px-4 py-2 rounded-lg border border-white/[0.08] hover:bg-[#13131a] hover:border-[#7c5cff]">GitHub</a>
 			</div>
 		</nav>
 	</header>
-	<main>
-		<section class="hero">
-			<div class="content">
-				<div class="badge">Open Source Mobile Database Client</div>
-				<h1>Manage your databases <br/> <span class="text-gradient">from anywhere</span></h1>
-				<p class="subtitle">
+	<main class="w-full overflow-x-hidden">
+		<section class="pt-24 md:pt-32 pb-24 px-6 text-center relative flex flex-col items-center overflow-hidden">
+			<div>
+				<div class="inline-block bg-[rgba(124,92,255,0.1)] text-[#9d85ff] px-4 py-2 rounded-full text-sm font-medium mb-6 border border-[rgba(124,92,255,0.2)]">Open Source Mobile Database Client</div>
+				<h1 class="text-4xl md:text-[3.5rem] leading-[1.1] mb-6 font-bold tracking-tight">Manage your databases <br/> <span class="bg-gradient-to-br from-[#7c5cff] to-[#e040fb] bg-clip-text text-transparent">from anywhere</span></h1>
+				<p class="text-xl text-[#b8b8c8] max-w-[600px] mx-auto mb-10 leading-relaxed">
 					COSMQ brings professional database management to your phone. 
 					Connect directly via TCP, execute queries, and visualize results with native performance.
 				</p>
-				<div class="cta-group">
-					<a href="https://github.com/yourusername/cosmq" class="button primary">
+				<div class="flex gap-4 justify-center">
+					<a href="https://github.com/yourusername/cosmq" class="px-6 py-3 rounded-xl font-semibold no-underline transition-all duration-200 bg-[#7c5cff] text-white shadow-[0_4px_14px_rgba(124,92,255,0.3)] hover:bg-[#9d85ff] hover:-translate-y-0.5">
 						View on GitHub
 					</a>
-					<a href="#features" class="button secondary">
+					<a href="#features" class="px-6 py-3 rounded-xl font-semibold no-underline transition-all duration-200 bg-[#1a1a24] text-[#f0f0f5] border border-white/[0.08] hover:bg-[#13131a] hover:border-[#b8b8c8]">
 						Learn More
 					</a>
 				</div>
 			</div>
-            <div class="hero-bg-glow"></div>
+			<div class="absolute w-[600px] h-[600px] bg-[radial-gradient(circle,rgba(124,92,255,0.15)_0%,rgba(0,0,0,0)_70%)] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 -z-10 pointer-events-none"></div>
 		</section>
 
-		<section id="features" class="features">
-			<h2>Everything you need</h2>
-			<div class="grid">
+		<section id="features" class="py-16 px-6 max-w-[1200px] mx-auto">
+			<h2 class="text-center text-4xl mb-12">Everything you need</h2>
+			<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
 				{features.map(feature => (
-					<div class="card">
-						<div class="icon">{feature.icon}</div>
-						<h3>{feature.title}</h3>
-						<p>{feature.description}</p>
+					<div class="bg-[#13131a] p-8 rounded-2xl border border-white/[0.08] transition-transform duration-200 hover:-translate-y-1 hover:border-[#7c5cff]">
+						<div class="text-[2.5rem] mb-4">{feature.icon}</div>
+						<h3 class="text-xl mb-3 text-[#f0f0f5]">{feature.title}</h3>
+						<p class="text-[#b8b8c8] leading-relaxed">{feature.description}</p>
 					</div>
 				))}
 			</div>
 		</section>
 
-		<section class="databases">
-			<h2>Supported Databases</h2>
-			<div class="db-grid">
-				{databases.map(db => (
-					<div class="db-item">
-						<img src={db.icon.src} alt={db.name} width="48" height="48" />
-						<span>{db.name}</span>
-					</div>
-				))}
+		<section class="py-16 pb-8 px-6 text-center bg-[#1a1a24] border-y border-white/[0.08]">
+			<h2 class="text-4xl mb-8">Supported Databases</h2>
+			<div class="max-w-md mx-auto">
+				<AnimatedFrameworks 
+					cardTitle="Database Support"
+					cardDescription="Connect to PostgreSQL, MySQL, MariaDB, SQLite, CockroachDB, MongoDB and more."
+					client:load
+				/>
 			</div>
 		</section>
 
-		<footer>
-			<div class="footer-content">
-				<div class="footer-brand">
-					<img src={AlienLogo.src} alt="COSMQ" width="28" height="28" />
-					<p>© 2026 COSMQ. Open Source Software.</p>
+		<footer class="py-12 px-6 text-center border-t border-white/[0.08]">
+			<div class="max-w-[1200px] mx-auto flex flex-col items-center gap-4">
+				<div class="flex items-center gap-3">
+					<img src={AlienLogo.src} alt="COSMQ" width="28" height="28" class="opacity-70" />
+					<p class="m-0 text-[#b8b8c8]">© 2026 COSMQ. Open Source Software.</p>
 				</div>
-				<div class="links">
-				<div class="links">
-					<a href="https://github.com/arioberek/COSMQ">GitHub</a>
-					<a href="https://github.com/arioberek/COSMQ/blob/main/LICENSE">License</a>
-					<a href="https://github.com/arioberek/COSMQ/issues">Issues</a>
-				</div>
+				<div class="flex gap-6">
+					<div class="flex gap-6">
+						<a href="https://github.com/arioberek/COSMQ" class="text-[#b8b8c8] no-underline text-sm hover:text-[#9d85ff]">GitHub</a>
+						<a href="https://github.com/arioberek/COSMQ/blob/main/LICENSE" class="text-[#b8b8c8] no-underline text-sm hover:text-[#9d85ff]">License</a>
+						<a href="https://github.com/arioberek/COSMQ/issues" class="text-[#b8b8c8] no-underline text-sm hover:text-[#9d85ff]">Issues</a>
+					</div>
 				</div>
 			</div>
 		</footer>
 	</main>
 </Layout>
-
-<style>
-	main {
-		width: 100%;
-		overflow-x: hidden;
-	}
-
-	/* Site Header */
-	.site-header {
-		position: fixed;
-		top: 0;
-		left: 0;
-		right: 0;
-		z-index: 100;
-		background: rgba(10, 10, 15, 0.8);
-		backdrop-filter: blur(12px);
-		border-bottom: 1px solid var(--border-color);
-	}
-
-	.nav-container {
-		max-width: 1200px;
-		margin: 0 auto;
-		padding: 1rem 1.5rem;
-		display: flex;
-		justify-content: space-between;
-		align-items: center;
-	}
-
-	.logo-link {
-		align-items: center;
-		
-		text-decoration: none;
-	}
-
-	.logo-icon {
-		transition: transform 0.2s ease;
-	}
-
-	.logo-link:hover .logo-icon {
-		transform: scale(1.05);
-	}
-
-	.logo-text {
-		opacity: 0.95;
-		
-	}
-
-	.nav-links {
-		display: flex;
-		gap: 2rem;
-		align-items: center;
-	}
-
-	.nav-links a {
-		color: var(--text-muted);
-		text-decoration: none;
-		font-size: 0.9rem;
-		font-weight: 500;
-		transition: color 0.2s;
-	}
-
-	.nav-links a:hover {
-		color: var(--text-color);
-	}
-
-	.nav-github {
-		background: var(--surface-alt);
-		padding: 0.5rem 1rem;
-		border-radius: 0.5rem;
-		border: 1px solid var(--border-color);
-	}
-
-	.nav-github:hover {
-		background: var(--surface-color);
-		border-color: var(--primary-color);
-	}
-
-	/* Hero Section */
-	.hero {
-		padding: 8rem 1.5rem 6rem;
-		text-align: center;
-		position: relative;
-		display: flex;
-		flex-direction: column;
-		align-items: center;
-        overflow: hidden;
-	}
-
-    .hero-bg-glow {
-        position: absolute;
-        width: 600px;
-        height: 600px;
-        background: radial-gradient(circle, rgba(124, 92, 255, 0.15) 0%, rgba(0,0,0,0) 70%);
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        z-index: -1;
-        pointer-events: none;
-    }
-
-	.badge {
-		background: rgba(124, 92, 255, 0.1);
-		color: var(--primary-light);
-		padding: 0.5rem 1rem;
-		border-radius: 999px;
-		font-size: 0.875rem;
-		font-weight: 500;
-		margin-bottom: 1.5rem;
-		border: 1px solid rgba(124, 92, 255, 0.2);
-        display: inline-block;
-	}
-
-	h1 {
-		font-size: 3.5rem;
-		line-height: 1.1;
-		margin-bottom: 1.5rem;
-		font-weight: 700;
-		letter-spacing: -0.02em;
-	}
-
-	.text-gradient {
-		background: linear-gradient(135deg, #7c5cff 0%, #e040fb 100%);
-		-webkit-background-clip: text;
-		-webkit-text-fill-color: transparent;
-		background-clip: text;
-	}
-
-	.subtitle {
-		font-size: 1.25rem;
-		color: var(--text-muted);
-		max-width: 600px;
-		margin: 0 auto 2.5rem;
-		line-height: 1.6;
-	}
-
-	.cta-group {
-		display: flex;
-		gap: 1rem;
-		justify-content: center;
-	}
-
-	.button {
-		padding: 0.75rem 1.5rem;
-		border-radius: 0.75rem;
-		font-weight: 600;
-		text-decoration: none;
-		transition: all 0.2s ease;
-	}
-
-	.button.primary {
-		background: var(--primary-color);
-		color: white;
-		box-shadow: 0 4px 14px rgba(124, 92, 255, 0.3);
-	}
-
-	.button.primary:hover {
-		background: var(--primary-light);
-		transform: translateY(-1px);
-	}
-
-	.button.secondary {
-		background: var(--surface-alt);
-		color: var(--text-color);
-		border: 1px solid var(--border-color);
-	}
-
-	.button.secondary:hover {
-		background: var(--surface-color);
-		border-color: var(--text-muted);
-	}
-
-	/* Features Section */
-	.features {
-		padding: 4rem 1.5rem;
-		max-width: 1200px;
-		margin: 0 auto;
-	}
-
-	h2 {
-		text-align: center;
-		font-size: 2.5rem;
-		margin-bottom: 3rem;
-	}
-
-	.grid {
-		display: grid;
-		grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-		gap: 2rem;
-	}
-
-	.card {
-		background: var(--surface-color);
-		padding: 2rem;
-		border-radius: 1rem;
-		border: 1px solid var(--border-color);
-		transition: transform 0.2s;
-	}
-
-	.card:hover {
-		transform: translateY(-4px);
-		border-color: var(--primary-color);
-	}
-
-	.icon {
-		font-size: 2.5rem;
-		margin-bottom: 1rem;
-	}
-
-	.card h3 {
-		font-size: 1.25rem;
-		margin-bottom: 0.75rem;
-		color: var(--text-color);
-	}
-
-	.card p {
-		color: var(--text-muted);
-		line-height: 1.5;
-	}
-
-	/* Databases Section */
-	.databases {
-		padding: 4rem 1.5rem;
-		text-align: center;
-		background: var(--surface-alt);
-		border-top: 1px solid var(--border-color);
-		border-bottom: 1px solid var(--border-color);
-	}
-
-	.db-grid {
-		display: flex;
-		flex-wrap: wrap;
-		justify-content: center;
-		gap: 3rem;
-		max-width: 1000px;
-		margin: 0 auto;
-	}
-
-	.db-item {
-		display: flex;
-		flex-direction: column;
-		align-items: center;
-		gap: 0.75rem;
-        opacity: 0.8;
-        transition: opacity 0.2s;
-	}
-
-    .db-item:hover {
-        opacity: 1;
-    }
-
-	.db-item img {
-		filter: brightness(0) invert(1);
-	}
-
-	.db-item span {
-		font-weight: 500;
-		color: var(--text-muted);
-	}
-
-	/* Footer */
-	footer {
-		padding: 3rem 1.5rem;
-		text-align: center;
-		border-top: 1px solid var(--border-color);
-	}
-
-	.footer-content {
-		max-width: 1200px;
-		margin: 0 auto;
-		display: flex;
-		flex-direction: column;
-		align-items: center;
-		gap: 1rem;
-	}
-
-	.footer-brand {
-		display: flex;
-		align-items: center;
-		gap: 0.75rem;
-	}
-
-	.footer-brand img {
-		opacity: 0.7;
-	}
-
-	.footer-brand p {
-		margin: 0;
-		color: var(--text-muted);
-	}
-
-	.links {
-		display: flex;
-		gap: 1.5rem;
-	}
-
-	.links a {
-		color: var(--text-muted);
-		text-decoration: none;
-		font-size: 0.875rem;
-	}
-
-	.links a:hover {
-		color: var(--primary-light);
-	}
-
-	@media (max-width: 768px) {
-		h1 {
-			font-size: 2.5rem;
-		}
-        
-        .hero {
-            padding-top: 6rem;
-        }
-
-		.nav-links {
-			gap: 1rem;
-		}
-
-		.logo-text {
-			display: none;
-		}
-	}
-</style>

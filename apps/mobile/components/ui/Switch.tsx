@@ -4,16 +4,16 @@ const StyledSwitch = styled(TamaguiSwitch, {
   backgroundColor: "$surfaceMuted",
 
   variants: {
-    size: {
-      sm: {
+    switchSize: {
+      small: {
         width: 40,
         height: 24,
       },
-      md: {
+      medium: {
         width: 50,
         height: 30,
       },
-      lg: {
+      large: {
         width: 60,
         height: 36,
       },
@@ -21,7 +21,7 @@ const StyledSwitch = styled(TamaguiSwitch, {
   } as const,
 
   defaultVariants: {
-    size: "md",
+    switchSize: "medium",
   },
 });
 
@@ -30,16 +30,16 @@ const StyledThumb = styled(TamaguiSwitch.Thumb, {
   borderRadius: "$full",
 
   variants: {
-    size: {
-      sm: {
+    thumbSize: {
+      small: {
         width: 20,
         height: 20,
       },
-      md: {
+      medium: {
         width: 26,
         height: 26,
       },
-      lg: {
+      large: {
         width: 32,
         height: 32,
       },
@@ -47,23 +47,26 @@ const StyledThumb = styled(TamaguiSwitch.Thumb, {
   } as const,
 
   defaultVariants: {
-    size: "md",
+    thumbSize: "medium",
   },
 });
 
-type SwitchProps = GetProps<typeof StyledSwitch> & {
-  thumbSize?: "sm" | "md" | "lg";
+type SwitchSize = "small" | "medium" | "large";
+
+type SwitchProps = Omit<GetProps<typeof StyledSwitch>, "switchSize"> & {
+  size?: SwitchSize;
+  thumbSize?: SwitchSize;
 };
 
-export const Switch = ({ size = "md", thumbSize, checked, ...props }: SwitchProps) => {
+export const Switch = ({ size = "medium", thumbSize, checked, ...props }: SwitchProps) => {
   return (
     <StyledSwitch
-      size={size}
+      switchSize={size}
       checked={checked}
       backgroundColor={checked ? "$primary" : "$surfaceMuted"}
       {...props}
     >
-      <StyledThumb size={thumbSize ?? size} animation="quick" />
+      <StyledThumb thumbSize={thumbSize ?? size} animation="quick" />
     </StyledSwitch>
   );
 };

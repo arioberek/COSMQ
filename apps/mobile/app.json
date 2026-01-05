@@ -16,6 +16,7 @@
       "resizeMode": "contain",
       "backgroundColor": "#1a1a2e"
     },
+    "newArchEnabled": true,
     "assetBundlePatterns": [
       "**/*"
     ],
@@ -43,6 +44,18 @@
         "expo-local-authentication",
         {
           "faceIDPermission": "Allow $(PRODUCT_NAME) to use Face ID to unlock the app and protect your database connections."
+        }
+      ],
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#1a1a2e",
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 280,
+          "dark": {
+            "image": "./assets/splash-icon.png",
+            "backgroundColor": "#1a1a2e"
+          }
         }
       ]
     ],

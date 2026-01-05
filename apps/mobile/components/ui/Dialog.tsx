@@ -128,14 +128,16 @@ export const Dialog = ({
             <XStack gap="$md" justifyContent="flex-end" marginTop="$md">
               {showCancelButton && (
                 <Button
+                  unstyled
                   backgroundColor="transparent"
                   borderWidth={1}
                   borderColor="$dialogButtonBorder"
                   onPress={handleCancel}
                   paddingHorizontal="$lg"
-                  paddingVertical="$sm"
+                  height={44}
                   borderRadius="$md"
-                  animation="quick"
+                  alignItems="center"
+                  justifyContent="center"
                   pressStyle={{ scale: 0.95, opacity: 0.8, backgroundColor: "$dialogButtonHover" }}
                 >
                   <Text color="$dialogTextMuted" fontWeight="500" fontSize={15}>
@@ -145,12 +147,14 @@ export const Dialog = ({
               )}
 
               <Button
+                unstyled
                 backgroundColor={variant === "danger" ? "$danger" : "$primary"}
                 onPress={handleConfirm}
                 paddingHorizontal="$lg"
-                paddingVertical="$sm"
+                height={44}
                 borderRadius="$md"
-                animation="quick"
+                alignItems="center"
+                justifyContent="center"
                 pressStyle={{ scale: 0.95, opacity: 0.9 }}
                 hoverStyle={{ opacity: 0.9 }}
               >
@@ -210,32 +214,36 @@ export const Dialog = ({
               <XStack gap="$md" marginTop="$md">
                 {showCancelButton && (
                   <Button
+                    unstyled
                     flex={1}
                     backgroundColor="transparent"
                     borderWidth={1}
                     borderColor="$dialogButtonBorder"
                     onPress={handleCancel}
-                    paddingVertical="$md"
+                    height={56}
                     borderRadius="$md"
-                    animation="quick"
+                    alignItems="center"
+                    justifyContent="center"
                     pressStyle={{ scale: 0.97, opacity: 0.8, backgroundColor: "$dialogButtonHover" }}
                   >
-                    <Text color="$dialogTextMuted" fontWeight="500" fontSize={15}>
+                    <Text color="$dialogTextMuted" fontWeight="500" fontSize={16}>
                       {cancelLabel}
                     </Text>
                   </Button>
                 )}
 
                 <Button
+                  unstyled
                   flex={1}
                   backgroundColor={variant === "danger" ? "$danger" : "$primary"}
                   onPress={handleConfirm}
-                  paddingVertical="$md"
+                  height={56}
                   borderRadius="$md"
-                  animation="quick"
+                  alignItems="center"
+                  justifyContent="center"
                   pressStyle={{ scale: 0.97, opacity: 0.9 }}
                 >
-                  <Text color="#ffffff" fontWeight="600" fontSize={15}>
+                  <Text color="#ffffff" fontWeight="600" fontSize={16}>
                     {confirmLabel}
                   </Text>
                 </Button>

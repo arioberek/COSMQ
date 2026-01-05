@@ -1,5 +1,6 @@
 import "../polyfills";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import Constants from "expo-constants";
 import { useFonts } from "expo-font";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
@@ -13,7 +14,16 @@ import { LockScreen } from "../components/lock-screen";
 import { APP_LOCK_TIMEOUT_MS } from "../lib/settings";
 import { Provider } from "../components/Provider";
 
-SplashScreen.preventAutoHideAsync();
+const isExpoGo = Constants.appOwnership === "expo";
+
+SplashScreen.preventAutoHideAsync().catch(() => {});
+
+if (!isExpoGo) {
+  SplashScreen.setOptions({
+    duration: 800,
+    fade: true,
+  });
+}
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -143,7 +153,7 @@ export default function RootLayout() {
 
   useEffect(() => {
     if (fontsLoaded && settingsLoaded) {
-      SplashScreen.hideAsync();
+      SplashScreen.hideAsync().catch(() => {});
     }
   }, [fontsLoaded, settingsLoaded]);
 

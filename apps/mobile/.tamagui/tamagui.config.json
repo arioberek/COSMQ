@@ -28776,22 +28776,22 @@
             "normal": "Inter"
           },
           "400": {
-            "normal": "Inter"
+            "normal": "System"
           },
           "500": {
-            "normal": "InterMedium"
+            "normal": "System"
           },
           "600": {
-            "normal": "InterSemiBold"
+            "normal": "System"
           },
           "700": {
-            "normal": "InterBold"
+            "normal": "System"
           },
           "800": {
-            "normal": "InterBold"
+            "normal": "System"
           },
           "900": {
-            "normal": "InterBold"
+            "normal": "System"
           }
         }
       },
@@ -28884,22 +28884,22 @@
             "normal": "Inter"
           },
           "400": {
-            "normal": "Inter"
+            "normal": "System"
           },
           "500": {
-            "normal": "InterMedium"
+            "normal": "System"
           },
           "600": {
-            "normal": "InterSemiBold"
+            "normal": "System"
           },
           "700": {
-            "normal": "InterBold"
+            "normal": "System"
           },
           "800": {
-            "normal": "InterBold"
+            "normal": "System"
           },
           "900": {
-            "normal": "InterBold"
+            "normal": "System"
           }
         }
       },
@@ -29460,6 +29460,7 @@
         "dialogHandle": "rgba(255,255,255,0.3)",
         "shadowColor": "#000000",
         "shadowColorStrong": "rgba(0, 0, 0, 0.4)",
+        "switchThumb": "#ffffff",
         "id": "dark"
       },
       "dark_Button": {
@@ -29815,6 +29816,7 @@
         "dialogHandle": "rgba(255,255,255,0.3)",
         "shadowColor": "#000000",
         "shadowColorStrong": "rgba(0, 0, 0, 0.4)",
+        "switchThumb": "#ffffff",
         "id": "dark_Button"
       },
       "dark_danger": {
@@ -30170,6 +30172,7 @@
         "dialogHandle": "rgba(255,255,255,0.3)",
         "shadowColor": "#000000",
         "shadowColorStrong": "rgba(0, 0, 0, 0.4)",
+        "switchThumb": "#ffffff",
         "id": "dark_danger"
       },
       "dark_success": {
@@ -30525,6 +30528,7 @@
         "dialogHandle": "rgba(255,255,255,0.3)",
         "shadowColor": "#000000",
         "shadowColorStrong": "rgba(0, 0, 0, 0.4)",
+        "switchThumb": "#ffffff",
         "id": "dark_success"
       },
       "light": {
@@ -30880,6 +30884,7 @@
         "dialogHandle": "rgba(0,0,0,0.2)",
         "shadowColor": "#6b4eff",
         "shadowColorStrong": "rgba(107, 78, 255, 0.2)",
+        "switchThumb": "#ffffff",
         "id": "light"
       },
       "light_Button": {
@@ -31235,6 +31240,7 @@
         "dialogHandle": "rgba(0,0,0,0.2)",
         "shadowColor": "#6b4eff",
         "shadowColorStrong": "rgba(107, 78, 255, 0.2)",
+        "switchThumb": "#ffffff",
         "id": "light_Button"
       },
       "light_danger": {
@@ -31590,6 +31596,7 @@
         "dialogHandle": "rgba(0,0,0,0.2)",
         "shadowColor": "#6b4eff",
         "shadowColorStrong": "rgba(107, 78, 255, 0.2)",
+        "switchThumb": "#ffffff",
         "id": "light_danger"
       },
       "light_success": {
@@ -31945,6 +31952,7 @@
         "dialogHandle": "rgba(0,0,0,0.2)",
         "shadowColor": "#6b4eff",
         "shadowColorStrong": "rgba(107, 78, 255, 0.2)",
+        "switchThumb": "#ffffff",
         "id": "light_success"
       }
     },

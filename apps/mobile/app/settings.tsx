@@ -1,6 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import Constants from "expo-constants";
 import { LinearGradient } from "expo-linear-gradient";
+import * as Linking from "expo-linking";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Pressable, StyleSheet, TextInput } from "react-native";
 import Animated, { FadeInDown, FadeInUp } from "react-native-reanimated";
@@ -280,6 +281,20 @@ export default function SettingsScreen() {
 
         <Section title="About" index={5} cardGradient={cardGradient}>
           <InfoRow label="Version" value={appVersion} onPress={handleVersionTap} />
+          <YStack height={1} backgroundColor="$borderColor" marginVertical="$sm" />
+          <InfoRow label="Author" value="Arielton Oberek" />
+          <YStack height={1} backgroundColor="$borderColor" marginVertical="$sm" />
+          <LinkRow
+            label="Website"
+            value="cosmq.arielton.com"
+            url="https://cosmq.arielton.com"
+          />
+          <YStack height={1} backgroundColor="$borderColor" marginVertical="$sm" />
+          <LinkRow
+            label="GitHub"
+            value="arioberek/cosmq"
+            url="https://github.com/arioberek/cosmq"
+          />
         </Section>
 
         <Animated.View
@@ -498,6 +513,43 @@ const InfoRow = ({
       </Text>
     </XStack>
   );
+
+const LinkRow = ({
+  label,
+  value,
+  url,
+}: {
+  label: string;
+  value: string;
+  url: string;
+}) => {
+  const theme = useTheme();
+
+  return (
+    <Pressable
+      style={({ pressed }) => [
+        {
+          flexDirection: "row",
+          justifyContent: "space-between",
+          alignItems: "center",
+          paddingVertical: 4,
+        },
+        pressed && { opacity: 0.7 },
+      ]}
+      onPress={() => Linking.openURL(url)}
+    >
+      <Text color="$textSubtle" fontSize={15}>
+        {label}
+      </Text>
+      <XStack alignItems="center" gap="$xs">
+        <Text color="$primary" fontSize={15} fontWeight="600">
+          {value}
+        </Text>
+        <Ionicons name="open-outline" size={14} color={theme.primary.val} />
+      </XStack>
+    </Pressable>
+  );
+};
 
 const TimeoutSelector = ({
   value,
