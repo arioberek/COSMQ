@@ -3,7 +3,7 @@ import * as Haptics from "expo-haptics";
 import type { ReactNode } from "react";
 import { useRef } from "react";
 import { Animated, PanResponder, Pressable, StyleSheet, View } from "react-native";
-import { XStack, Text } from "tamagui";
+import { XStack, Text, useTheme } from "tamagui";
 
 const ACTION_WIDTH = 80;
 
@@ -25,30 +25,39 @@ export const SwipeableRow = ({
   rightActions = [],
   enabled = true,
 }: SwipeableRowProps) => {
+  const theme = useTheme();
   const translateX = useRef(new Animated.Value(0)).current;
   const rightWidth = rightActions.length * ACTION_WIDTH;
+
+  const enabledRef = useRef(enabled);
+  const rightActionsRef = useRef(rightActions);
+  const rightWidthRef = useRef(rightWidth);
+
+  enabledRef.current = enabled;
+  rightActionsRef.current = rightActions;
+  rightWidthRef.current = rightWidth;
 
   const panResponder = useRef(
     PanResponder.create({
       onMoveShouldSetPanResponder: (_, gestureState) => {
-        if (!enabled) return false;
+        if (!enabledRef.current) return false;
         return Math.abs(gestureState.dx) > 10 && Math.abs(gestureState.dx) > Math.abs(gestureState.dy);
       },
       onPanResponderMove: (_, gestureState) => {
-        if (gestureState.dx < 0 && rightActions.length > 0) {
-          const newX = Math.max(-rightWidth - 20, gestureState.dx);
+        if (gestureState.dx < 0 && rightActionsRef.current.length > 0) {
+          const newX = Math.max(-rightWidthRef.current - 20, gestureState.dx);
           translateX.setValue(newX);
         } else if (gestureState.dx > 0) {
           translateX.setValue(gestureState.dx * 0.2);
         }
       },
       onPanResponderRelease: (_, gestureState) => {
-        const shouldOpenRight = gestureState.dx < -rightWidth / 3;
-        
-        if (shouldOpenRight && rightActions.length > 0) {
+        const shouldOpenRight = gestureState.dx < -rightWidthRef.current / 3;
+
+        if (shouldOpenRight && rightActionsRef.current.length > 0) {
           Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
           Animated.spring(translateX, {
-            toValue: -rightWidth,
+            toValue: -rightWidthRef.current,
             useNativeDriver: true,
             damping: 20,
             stiffness: 200,
@@ -104,16 +113,12 @@ export const SwipeableRow = ({
           {rightActions.map((action, index) => (
             <Pressable
               key={`${action.icon}-${index}`}
-              <Pressable
-                key={`${action.icon}-${index}`}
-                style={[styles.actionButton, { backgroundColor: action.color }]}
-                onPress={() => handleActionPress(action)}
-              >
+              style={[styles.actionButton, { backgroundColor: action.color }]}
               onPress={() => handleActionPress(action)}
             >
-              <Ionicons name={action.icon} size={22} color="#fff" />
+              <Ionicons name={action.icon} size={22} color={theme.color.val} />
               {action.label && (
-                <Text color="#fff" fontSize={11} marginTop={2} fontWeight="500">
+                <Text color="$color" fontSize={11} marginTop={2} fontWeight="500">
                   {action.label}
                 </Text>
               )}

@@ -26,7 +26,7 @@ const StyledSwitch = styled(TamaguiSwitch, {
 });
 
 const StyledThumb = styled(TamaguiSwitch.Thumb, {
-  backgroundColor: "#ffffff",
+  backgroundColor: "$switchThumb",
   borderRadius: "$full",
 
   variants: {

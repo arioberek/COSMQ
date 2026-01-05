@@ -112,7 +112,7 @@ const bodyFont = createInterFont(
   },
   {
     sizeSize: (size: number) => Math.round(size * 1.1),
-    sizeLineHeight: (size: number) => Math.round(size * 1.1 + (size > 20 ? 10 : 10)),
+    sizeLineHeight: (size: number) => Math.round(size * 1.1 + 10),
   }
 );
 
@@ -308,6 +308,8 @@ const darkTheme = {
 
   shadowColor: "#000000",
   shadowColorStrong: "rgba(0, 0, 0, 0.4)",
+
+  switchThumb: "#ffffff",
 };
 
 const lightTheme = {
@@ -383,6 +385,8 @@ const lightTheme = {
 
   shadowColor: "#6b4eff",
   shadowColorStrong: "rgba(107, 78, 255, 0.2)",
+
+  switchThumb: "#ffffff",
 };
 
 export const config = createTamagui({

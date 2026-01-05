@@ -147,7 +147,7 @@ export const LockScreen = ({ onUnlock }: LockScreenProps) => {
             animation="quick"
           >
             {isAuthenticating ? (
-              <ActivityIndicator color={theme.color.val} />
+              <ActivityIndicator color="#ffffff" />
             ) : (
               <>
                 <Text fontSize={24}>

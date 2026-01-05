@@ -71,10 +71,15 @@ export default function ConnectionDetailScreen() {
 
   const handleDeleteConfirm = async () => {
     if (!id) return;
-    await disconnect(id);
-    await deleteConnection(id);
-    await queryClient.invalidateQueries({ queryKey: ["connections"] });
-    router.back();
+    try {
+      await disconnect(id);
+      await deleteConnection(id);
+      await queryClient.invalidateQueries({ queryKey: ["connections"] });
+      router.back();
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : "Failed to delete connection");
+      setShowErrorDialog(true);
+    }
   };
 
   if (isLoading) {
