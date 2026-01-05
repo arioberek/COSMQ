@@ -393,28 +393,13 @@ export default function HomeScreen() {
 									pressed && { transform: [{ scale: 0.9 }], opacity: 0.9 },
 								]}
 							>
-								<LinearGradient
-									colors={primaryGradient}
-									style={StyleSheet.absoluteFill}
-									start={{ x: 0, y: 0 }}
-									end={{ x: 1, y: 1 }}
-								/>
-								<YStack
-									position="absolute"
-									width={80}
-									height={80}
-									borderRadius="$full"
-									backgroundColor="$primary"
-									opacity={0.3}
-								/>
-								<Text
-									color="#fff"
-									fontSize={32}
-									fontWeight="300"
-									marginTop={-2}
-								>
-									+
-								</Text>
+							<LinearGradient
+								colors={primaryGradient}
+								style={StyleSheet.absoluteFill}
+								start={{ x: 0, y: 0 }}
+								end={{ x: 1, y: 1 }}
+							/>
+							<Ionicons name="add" size={32} color="#fff" />
 							</Pressable>
 						</Link>
 					</Animated.View>

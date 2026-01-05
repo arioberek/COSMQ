@@ -2,6 +2,7 @@
 import Layout from '../layouts/Layout.astro';
 import AnimatedFrameworks from '../components/ui/animated-frameworks';
 import { FeaturesSection } from '../components/features-section';
+import { ScreenshotsSection } from '../components/screenshots-section';
 import AlienLogo from '../assets/logos/alien.svg';
 import TextLogo from '../assets/logos/text.svg';
 ---
@@ -40,6 +41,8 @@ import TextLogo from '../assets/logos/text.svg';
 		</section>
 
 		<FeaturesSection client:load />
+
+		<ScreenshotsSection client:load />
 
 		<section class="py-16 pb-8 px-6 text-center bg-[#171717] border-y border-white/[0.08]">
 			<h2 class="text-4xl mb-8">Supported Databases</h2>

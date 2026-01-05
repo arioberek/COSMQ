@@ -6,7 +6,7 @@
 <p align="center"><strong>Open-source Mobile Database Client</strong></p>
 
 <p align="center">
-  <strong>COSMQ</strong> (<strong>C</strong>lient <strong>O</strong>pen-<strong>S</strong>ource <strong>M</strong>obile <strong>Q</strong>uery) is a universal mobile database client for iOS, Android, and Web.
+  <strong>COSMQ</strong> (<strong>C</strong>lient <strong>O</strong>pen-<strong>S</strong>ource <strong>M</strong>obile <strong>Q</strong>uery) is a mobile database client for iOS and Android.
 </p>
 
 <p align="center"><em>Pronounced "cosmic"</em></p>
@@ -15,13 +15,13 @@ Connect directly to PostgreSQL and MySQL/MariaDB databases using native TCP sock
 
 ## Overview
 
-COSMQ is a full-featured database client that brings professional database management to your mobile device. Instead of relying on REST APIs or web dashboards, this app connects directly to your database servers using the native database wire protocols.
+COSMQ is a full-featured database client that brings professional database management to your mobile device. Instead of relying on REST APIs, this app connects directly to your database servers using the native database wire protocols.
 
 **Key Highlights:**
 - 🔌 Direct TCP connection to databases (no intermediate API)
 - 🔒 Encrypted credential storage using device-native security
 - 📊 SQL query editor with results visualization
-- 🚀 Native iOS, Android, and Web support via Expo
+- 🚀 Native iOS and Android support via Expo
 - ⚡ Built with modern React Native and TypeScript
 - 🌙 Dark theme optimized for SQL editors
 
@@ -39,7 +39,7 @@ COSMQ is a full-featured database client that brings professional database manag
 ```
 ┌─────────────────────────────────────────────────────────┐
 │                     React Native App                      │
-│              (iOS / Android / Web via Expo)               │
+│                  (iOS / Android via Expo)                 │
 └─────────────────────────────────────────────────────────┘
                             ↓
                  ┌──────────────────────┐
@@ -101,7 +101,7 @@ bun start
 Then:
 - Press `i` for iOS simulator
 - Press `a` for Android emulator
-- Press `w` for web browser
+
 
 **Native Build (iOS):**
 ```bash
