@@ -11,7 +11,7 @@
 
 <p align="center"><em>Pronounced "cosmic"</em></p>
 
-Connect directly to PostgreSQL and MySQL/MariaDB databases using native TCP sockets, just like DBeaver or TablePlus, but for your phone.
+Connect directly to PostgreSQL, MySQL/MariaDB, MongoDB, and SQLite databases using native TCP sockets, just like DBeaver or TablePlus, but for your phone.
 
 ## Overview
 
@@ -51,10 +51,15 @@ COSMQ is a full-featured database client that brings professional database manag
         ↓                                       ↓
 ┌──────────────────┐              ┌──────────────────┐
 │ PostgreSQL v3    │              │  MySQL Protocol  │
-│   Implementation │              │  (Planned)       │
+│   Implementation │              │  Implementation  │
 └──────────────────┘              └──────────────────┘
         ↓                                       ↓
         └───────────────────┬───────────────────┘
+                            ↓
+                  ┌──────────────────┐
+                  │   Protocol API   │
+                  │ (Unified Interf) │
+                  └──────────────────┘
                             ↓
                   ┌──────────────────┐
                   │  TCP Socket      │
@@ -65,6 +70,7 @@ COSMQ is a full-featured database client that brings professional database manag
         ┌───────────────────┴───────────────────┐
         ↓                                       ↓
    PostgreSQL Server                    MySQL/MariaDB Server
+                            (MongoDB & SQLite also supported)
 ```
 
 ## Quick Start
@@ -132,6 +138,9 @@ bunx expo start --android
 - Connection status indicators
 - Support for:
   - PostgreSQL (all versions)
+  - MySQL / MariaDB
+  - MongoDB
+  - SQLite (Local)
   - SSL/TLS connections
   - Custom connection ports
   - Multiple databases per server
@@ -156,7 +165,8 @@ bunx expo start --android
 
 ### Future Features
 
-- MySQL/MariaDB protocol support
+- Cloud synchronization for connections
+- SSH Tunneling
 - Query history and favorites
 - Export results (CSV, JSON, SQL INSERT)
 - Database diff tool
@@ -181,10 +191,10 @@ mobile/
 │   ├── tcp/
 │   │   └── socket.ts            # TCP socket wrapper (TcpClient class)
 │   ├── protocols/
-│   │   └── postgres/            # PostgreSQL v3 wire protocol
-│   │       ├── connection.ts     # PostgresConnection class
-│   │       ├── messages.ts       # Message builders and parsers
-│   │       └── index.ts          # Public exports
+│   │   ├── postgres/            # PostgreSQL v3 wire protocol
+│   │   ├── mysql/               # MySQL wire protocol
+│   │   ├── mongodb/             # MongoDB driver (TCP + BSON)
+│   │   └── sqlite/              # SQLite adapter
 │   └── storage/
 │       └── connections.ts        # Secure credential storage
 ├── stores/
@@ -383,16 +393,17 @@ bun install
 | SSL/TLS | ✅ Supported |
 | Type OID mapping | ✅ Common types supported |
 
-### MySQL/MariaDB ⏳ Planned
+### MySQL/MariaDB ✅ Implemented
 
-The MySQL protocol implementation will follow the same pattern as PostgreSQL:
+| Feature | Status |
+|---------|--------|
+| Connection | ✅ Full support |
+| Authentication | ✅ Native & Caching SHA2 |
+| SSL/TLS | ✅ Supported |
 
-```
-lib/protocols/mysql/
-├── connection.ts      # MySQLConnection class
-├── packets.ts         # MySQL packet builders/parsers
-└── index.ts           # Public exports
-```
+### MongoDB / SQLite ✅ Implemented
+
+Both MongoDB (TCP/SCRAM-SHA-1) and SQLite (Local) are fully supported.
 
 ## Configuration
 
@@ -504,11 +515,6 @@ bunx eas build --platform android
 See [Expo documentation](https://docs.expo.dev/build/setup/) for details.
 
 ## Future Roadmap
-
-### Phase 2: MySQL Support
-- Implement MySQL wire protocol (similar to PostgreSQL)
-- Support for MySQL 5.7+, 8.0+, MariaDB
-- Same connection interface as PostgreSQL
 
 ### Phase 3: Enhanced Features
 - Database explorer with tree view
