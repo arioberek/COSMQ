@@ -1,13 +1,6 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import {
-  ActivityIndicator,
-  Pressable,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
-import { useTheme } from "../hooks/useTheme";
-import type { Theme } from "../lib/theme";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { ActivityIndicator } from "react-native";
+import { Button, Text, useTheme, YStack } from "tamagui";
 import {
   authenticate,
   checkBiometricCapability,
@@ -21,7 +14,6 @@ type LockScreenProps = {
 
 export const LockScreen = ({ onUnlock }: LockScreenProps) => {
   const theme = useTheme();
-  const styles = useMemo(() => createStyles(theme), [theme]);
 
   const [capability, setCapability] = useState<BiometricCapability | null>(null);
   const [isAuthenticating, setIsAuthenticating] = useState(false);
@@ -29,7 +21,7 @@ export const LockScreen = ({ onUnlock }: LockScreenProps) => {
   const [warning, setWarning] = useState<string | null>(null);
   const hasTriedAutoAuth = useRef(false);
   const onUnlockRef = useRef(onUnlock);
-  
+
   onUnlockRef.current = onUnlock;
 
   useEffect(() => {
@@ -38,7 +30,7 @@ export const LockScreen = ({ onUnlock }: LockScreenProps) => {
 
   const handleUnlock = useCallback(async () => {
     if (isAuthenticating) return;
-    
+
     setError(null);
     setWarning(null);
     setIsAuthenticating(true);
@@ -75,184 +67,118 @@ export const LockScreen = ({ onUnlock }: LockScreenProps) => {
   const canAuthenticate = capability?.isSupported && capability?.isEnrolled;
 
   return (
-    <View style={styles.overlay}>
-      <View style={styles.container}>
-        <View style={styles.iconContainer}>
-          <Text style={styles.lockIcon}>🔐</Text>
-        </View>
+    <YStack
+      position="absolute"
+      top={0}
+      left={0}
+      right={0}
+      bottom={0}
+      backgroundColor="$background"
+      zIndex={9999}
+    >
+      <YStack flex={1} justifyContent="center" alignItems="center" padding="$xl">
+        <YStack
+          width={100}
+          height={100}
+          borderRadius="$full"
+          backgroundColor="$surface"
+          justifyContent="center"
+          alignItems="center"
+          marginBottom="$lg"
+          borderWidth={2}
+          borderColor="$borderColor"
+        >
+          <Text fontSize={48}>🔐</Text>
+        </YStack>
 
-        <Text style={styles.title}>COSMQ</Text>
-        <Text style={styles.subtitle}>App Locked</Text>
+        <Text fontSize={32} fontWeight="bold" color="$color" marginBottom="$sm">
+          COSMQ
+        </Text>
+        <Text fontSize={18} color="$textSubtle" marginBottom="$xl">
+          App Locked
+        </Text>
 
         {error ? (
-          <View style={styles.errorContainer}>
-            <Text style={styles.errorText}>{error}</Text>
-          </View>
+          <YStack
+            backgroundColor="$dangerMuted"
+            padding="$md"
+            borderRadius="$md"
+            marginBottom="$lg"
+            maxWidth={300}
+          >
+            <Text color="$danger" fontSize={14} textAlign="center" lineHeight={20}>
+              {error}
+            </Text>
+          </YStack>
         ) : null}
 
         {warning ? (
-          <View style={styles.warningContainer}>
-            <Text style={styles.warningText}>{warning}</Text>
-          </View>
+          <YStack
+            backgroundColor="$warningMuted"
+            padding="$md"
+            borderRadius="$md"
+            marginBottom="$lg"
+            maxWidth={300}
+          >
+            <Text color="$warning" fontSize={14} textAlign="center">
+              {warning}
+            </Text>
+          </YStack>
         ) : null}
 
         {!capability ? (
           <ActivityIndicator
             size="large"
-            color={theme.colors.primary}
-            style={styles.loader}
+            color={theme.primary.val}
+            style={{ marginBottom: 24 }}
           />
         ) : canAuthenticate ? (
-          <Pressable
-            style={({ pressed }) => [
-              styles.unlockButton,
-              pressed && styles.unlockButtonPressed,
-              isAuthenticating && styles.unlockButtonDisabled,
-            ]}
+          <Button
+            backgroundColor="$primary"
+            paddingHorizontal="$xl"
+            paddingVertical="$md"
+            borderRadius="$md"
+            marginBottom="$lg"
+            gap="$md"
             onPress={handleUnlock}
             disabled={isAuthenticating}
+            opacity={isAuthenticating ? 0.6 : 1}
+            pressStyle={{ opacity: 0.8 }}
+            animation="quick"
           >
             {isAuthenticating ? (
-              <ActivityIndicator color={theme.colors.text} />
+              <ActivityIndicator color="#ffffff" />
             ) : (
               <>
-                <Text style={styles.unlockButtonIcon}>
+                <Text fontSize={24}>
                   {capability.availableTypes.includes("facial") ? "👤" : "👆"}
                 </Text>
-                <Text style={styles.unlockButtonText}>
+                <Text color="$color" fontSize={16} fontWeight="600">
                   Unlock with {biometricName}
                 </Text>
               </>
             )}
-          </Pressable>
+          </Button>
         ) : (
-          <View style={styles.unavailableContainer}>
-            <Text style={styles.unavailableText}>
+          <YStack
+            backgroundColor="$surfaceMuted"
+            padding="$md"
+            borderRadius="$md"
+            marginBottom="$lg"
+            maxWidth={300}
+          >
+            <Text color="$textSubtle" fontSize={14} textAlign="center" lineHeight={20}>
               {!capability.isSupported
                 ? "Biometric authentication not supported on this device"
                 : "No biometric credentials enrolled. Please set up Face ID or fingerprint in device settings."}
             </Text>
-          </View>
+          </YStack>
         )}
 
-        <Text style={styles.hint}>
+        <Text color="$textSubtle" fontSize={12} textAlign="center">
           Your database connections are protected
         </Text>
-      </View>
-    </View>
+      </YStack>
+    </YStack>
   );
 };
-
-const createStyles = (theme: Theme) =>
-  StyleSheet.create({
-    overlay: {
-      position: "absolute",
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0,
-      backgroundColor: theme.colors.background,
-      zIndex: 9999,
-    },
-    container: {
-      flex: 1,
-      justifyContent: "center",
-      alignItems: "center",
-      padding: 32,
-    },
-    iconContainer: {
-      width: 100,
-      height: 100,
-      borderRadius: 50,
-      backgroundColor: theme.colors.surface,
-      justifyContent: "center",
-      alignItems: "center",
-      marginBottom: 24,
-      borderWidth: 2,
-      borderColor: theme.colors.border,
-    },
-    lockIcon: {
-      fontSize: 48,
-    },
-    title: {
-      fontSize: 32,
-      fontWeight: "bold",
-      color: theme.colors.text,
-      marginBottom: 8,
-    },
-    subtitle: {
-      fontSize: 18,
-      color: theme.colors.textSubtle,
-      marginBottom: 32,
-    },
-    errorContainer: {
-      backgroundColor: theme.colors.dangerMuted,
-      padding: 16,
-      borderRadius: 12,
-      marginBottom: 24,
-      maxWidth: 300,
-    },
-    errorText: {
-      color: theme.colors.danger,
-      fontSize: 14,
-      textAlign: "center",
-      lineHeight: 20,
-    },
-    warningContainer: {
-      backgroundColor: theme.colors.warningMuted,
-      padding: 16,
-      borderRadius: 12,
-      marginBottom: 24,
-      maxWidth: 300,
-    },
-    warningText: {
-      color: theme.colors.warning,
-      fontSize: 14,
-      textAlign: "center",
-    },
-    loader: {
-      marginBottom: 24,
-    },
-    unlockButton: {
-      flexDirection: "row",
-      alignItems: "center",
-      backgroundColor: theme.colors.primary,
-      paddingHorizontal: 32,
-      paddingVertical: 16,
-      borderRadius: 12,
-      marginBottom: 24,
-      gap: 12,
-    },
-    unlockButtonPressed: {
-      opacity: 0.8,
-    },
-    unlockButtonDisabled: {
-      opacity: 0.6,
-    },
-    unlockButtonIcon: {
-      fontSize: 24,
-    },
-    unlockButtonText: {
-      color: theme.colors.text,
-      fontSize: 16,
-      fontWeight: "600",
-    },
-    unavailableContainer: {
-      backgroundColor: theme.colors.surfaceMuted,
-      padding: 16,
-      borderRadius: 12,
-      marginBottom: 24,
-      maxWidth: 300,
-    },
-    unavailableText: {
-      color: theme.colors.textSubtle,
-      fontSize: 14,
-      textAlign: "center",
-      lineHeight: 20,
-    },
-    hint: {
-      color: theme.colors.textSubtle,
-      fontSize: 12,
-      textAlign: "center",
-    },
-  });

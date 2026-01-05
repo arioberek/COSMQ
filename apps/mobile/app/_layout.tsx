@@ -7,10 +7,11 @@ import { StatusBar } from "expo-status-bar";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AppState, type AppStateStatus } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
-import { useTheme } from "../hooks/useTheme";
+import { useTheme } from "tamagui";
 import { useSettingsStore } from "../stores/settings";
 import { LockScreen } from "../components/lock-screen";
 import { APP_LOCK_TIMEOUT_MS } from "../lib/settings";
+import { Provider } from "../components/Provider";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -23,10 +24,7 @@ const queryClient = new QueryClient({
   },
 });
 
-export default function RootLayout() {
-  const [fontsLoaded] = useFonts({
-    JetBrainsMono: require("../assets/fonts/JetBrainsMono-Regular.ttf"),
-  });
+function RootLayoutContent() {
   const theme = useTheme();
   const { loadSettings, settings, isLoaded: settingsLoaded } = useSettingsStore();
 
@@ -34,12 +32,6 @@ export default function RootLayout() {
   const hasAuthenticatedRef = useRef(false);
   const lastUnlockTime = useRef<number>(0);
   const backgroundTimestamp = useRef<number | null>(null);
-
-  useEffect(() => {
-    if (fontsLoaded && settingsLoaded) {
-      SplashScreen.hideAsync();
-    }
-  }, [fontsLoaded, settingsLoaded]);
 
   useEffect(() => {
     loadSettings();
@@ -94,52 +86,77 @@ export default function RootLayout() {
     setIsLocked(false);
   }, []);
 
+  const showLockScreen = settings.appLockEnabled && isLocked;
+
+  return (
+    <>
+      <StatusBar style={settings.darkMode ? "light" : "dark"} />
+      <Stack
+        screenOptions={{
+          headerStyle: {
+            backgroundColor: theme.surface?.val,
+          },
+          headerTintColor: theme.color?.val,
+          headerTitleStyle: {
+            fontWeight: "bold",
+          },
+          contentStyle: {
+            backgroundColor: theme.background?.val,
+          },
+        }}
+      >
+        <Stack.Screen
+          name="index"
+          options={{ title: "COSMQ" }}
+        />
+        <Stack.Screen
+          name="connection/new"
+          options={{ title: "New Connection", presentation: "modal" }}
+        />
+        <Stack.Screen
+          name="connection/[id]"
+          options={{ title: "Connection" }}
+        />
+        <Stack.Screen
+          name="query/[connectionId]"
+          options={{ title: "Query" }}
+        />
+        <Stack.Screen
+          name="settings"
+          options={{ title: "Settings" }}
+        />
+      </Stack>
+      {showLockScreen ? <LockScreen onUnlock={handleUnlock} /> : null}
+    </>
+  );
+}
+
+export default function RootLayout() {
+  const [fontsLoaded] = useFonts({
+    JetBrainsMono: require("../assets/fonts/JetBrainsMono-Regular.ttf"),
+  });
+  const { isLoaded: settingsLoaded, loadSettings } = useSettingsStore();
+
+  useEffect(() => {
+    loadSettings();
+  }, [loadSettings]);
+
+  useEffect(() => {
+    if (fontsLoaded && settingsLoaded) {
+      SplashScreen.hideAsync();
+    }
+  }, [fontsLoaded, settingsLoaded]);
+
   if (!fontsLoaded || !settingsLoaded) {
     return null;
   }
 
-  const showLockScreen = settings.appLockEnabled && isLocked;
-
   return (
     <QueryClientProvider client={queryClient}>
       <SafeAreaProvider>
-        <StatusBar style={theme.mode === "dark" ? "light" : "dark"} />
-        <Stack
-          screenOptions={{
-            headerStyle: {
-              backgroundColor: theme.colors.surface,
-            },
-            headerTintColor: theme.colors.text,
-            headerTitleStyle: {
-              fontWeight: "bold",
-            },
-            contentStyle: {
-              backgroundColor: theme.colors.background,
-            },
-          }}
-        >
-          <Stack.Screen
-            name="index"
-            options={{ title: "COSMQ" }}
-          />
-          <Stack.Screen
-            name="connection/new"
-            options={{ title: "New Connection", presentation: "modal" }}
-          />
-          <Stack.Screen
-            name="connection/[id]"
-            options={{ title: "Connection" }}
-          />
-          <Stack.Screen
-            name="query/[connectionId]"
-            options={{ title: "Query" }}
-          />
-          <Stack.Screen
-            name="settings"
-            options={{ title: "Settings" }}
-          />
-        </Stack>
-        {showLockScreen ? <LockScreen onUnlock={handleUnlock} /> : null}
+        <Provider>
+          <RootLayoutContent />
+        </Provider>
       </SafeAreaProvider>
     </QueryClientProvider>
   );
