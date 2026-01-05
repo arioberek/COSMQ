@@ -1,8 +1,15 @@
-# COSMQ - Open-source Mobile Database Client
+<p align="center">
+  <img src="apps/mobile/assets/logos/full-logo.svg" alt="COSMQ" width="400" />
+</p>
 
-**COSMQ** (**C**lient **O**pen-**S**ource **M**obile **Q**uery) is a universal mobile database client for iOS, Android, and Web.
+<h1 align="center">COSMQ</h1>
+<p align="center"><strong>Open-source Mobile Database Client</strong></p>
 
-*Pronounced "cosmic"*
+<p align="center">
+  <strong>COSMQ</strong> (<strong>C</strong>lient <strong>O</strong>pen-<strong>S</strong>ource <strong>M</strong>obile <strong>Q</strong>uery) is a universal mobile database client for iOS, Android, and Web.
+</p>
+
+<p align="center"><em>Pronounced "cosmic"</em></p>
 
 Connect directly to PostgreSQL and MySQL/MariaDB databases using native TCP sockets, just like DBeaver or TablePlus, but for your phone.
 
@@ -63,13 +70,13 @@ COSMQ is a full-featured database client that brings professional database manag
 ### Installation
 
 ```bash
-cd mobile
+cd apps/mobile
 
 # Install dependencies
 bun install
 
 # Generate TypeScript types for expo-router
-bun --filter @hr/frontend generate
+bun --filter @cosmq/mobile generate
 
 # Type check
 bun typecheck
