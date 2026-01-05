@@ -104,8 +104,11 @@ export const SwipeableRow = ({
           {rightActions.map((action, index) => (
             <Pressable
               key={`${action.icon}-${index}`}
-              style={[styles.actionButton, { backgroundColor: action.color }]}
-              style={[styles.actionButton, { backgroundColor: action.color }]}
+              <Pressable
+                key={`${action.icon}-${index}`}
+                style={[styles.actionButton, { backgroundColor: action.color }]}
+                onPress={() => handleActionPress(action)}
+              >
               onPress={() => handleActionPress(action)}
             >
               <Ionicons name={action.icon} size={22} color="#fff" />
