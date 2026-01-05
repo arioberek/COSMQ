@@ -6,13 +6,14 @@ import { ScreenshotsSection } from '../components/screenshots-section';
 import AlienLogo from '../assets/logos/alien.svg';
 import TextLogo from '../assets/logos/text.svg';
 import { HeroSection } from '../components/hero-section';
+import { Image } from 'astro:assets';
 ---
 
 <Layout>
 	<header class="fixed top-0 left-0 right-0 z-[100] bg-[rgba(10,10,15,0.8)] backdrop-blur-[12px] border-b border-white/[0.08]">
 		<nav class="max-w-[1200px] mx-auto px-6 py-4 flex justify-between items-center">
 			<a href="/" class="items-center no-underline">
-				<img src={TextLogo.src} alt="COSMQ" class="h-8 w-auto opacity-95 md:block hidden" />
+				<Image src={TextLogo} alt="COSMQ" class="h-8 w-auto opacity-95 md:block hidden" />
 			</a>
 			<div class="flex gap-4 md:gap-8 items-center">
 				<a href="#features" class="text-[#b8b8c8] no-underline text-sm font-medium transition-colors duration-200 hover:text-[#f0f0f5]">Features</a>
@@ -41,7 +42,7 @@ import { HeroSection } from '../components/hero-section';
 		<footer class="py-12 px-6 text-center border-t border-white/[0.08]">
 			<div class="max-w-[1200px] mx-auto flex flex-col items-center gap-4">
 				<div class="flex items-center gap-3">
-					<img src={AlienLogo.src} alt="COSMQ" width="28" height="28" class="opacity-70" />
+					<Image src={AlienLogo} alt="COSMQ" width={28} height={28} class="opacity-70" />
 					<p class="m-0 text-[#b8b8c8]">© 2026 COSMQ. Open Source Software.</p>
 				</div>
 				<div class="flex gap-6">
