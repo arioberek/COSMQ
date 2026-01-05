@@ -1,5 +1,11 @@
 # @cosmq/mobile
 
+## 0.1.3
+
+### Patch Changes
+
+- 8e31e55: feat: update mobile app branding with new COSMQ logo and add landing page
+
 ## 0.1.2
 
 ### Patch Changes
