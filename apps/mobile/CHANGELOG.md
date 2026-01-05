@@ -1,5 +1,11 @@
 # @cosmq/mobile
 
+## 0.1.2
+
+### Patch Changes
+
+- c0a0e2d: feat(mobile): integrate Tamagui UI system
+
 ## 0.1.1
 
 ### Patch Changes
