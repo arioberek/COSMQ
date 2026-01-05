@@ -179,10 +179,16 @@ export default function HomeScreen() {
 
   const handleDeleteConfirm = async () => {
     if (!connectionToDelete) return;
-    
-    await deleteConnection(connectionToDelete.id);
-    await queryClient.invalidateQueries({ queryKey: ["connections"] });
-    setConnectionToDelete(null);
+
+    try {
+      await deleteConnection(connectionToDelete.id);
+      await queryClient.invalidateQueries({ queryKey: ["connections"] });
+    } catch (error) {
+      console.error("Failed to delete connection:", error);
+      // Optionally show error dialog to user
+    } finally {
+      setConnectionToDelete(null);
+    }
   };
 
   const primaryGradient = [theme.gradientPrimaryStart.val, theme.gradientPrimaryEnd.val] as const;
