@@ -1,0 +1,439 @@
+---
+import Layout from '../layouts/Layout.astro';
+import PostgresIcon from '../assets/icons/postgresql.svg';
+import MysqlIcon from '../assets/icons/mysql.svg';
+import MariadbIcon from '../assets/icons/mariadb.svg';
+import SqliteIcon from '../assets/icons/sqlite.svg';
+import CockroachIcon from '../assets/icons/cockroachdb.svg';
+import MongoIcon from '../assets/icons/mongodb.svg';
+import AlienLogo from '../assets/logos/alien.svg';
+import TextLogo from '../assets/logos/text.svg';
+
+const features = [
+  {
+    title: "Direct TCP Connections",
+    description: "Connect directly to your database servers using native TCP sockets. No intermediate APIs or proxy servers required.",
+    icon: "🔌"
+  },
+  {
+    title: "Secure Storage",
+    description: "Your credentials never leave your device. Passwords are encrypted using the device's native secure enclave (Keychain/Keystore).",
+    icon: "🔒"
+  },
+  {
+    title: "Universal Support",
+    description: "Built for iOS, Android, and Web. Experience a consistent, high-performance interface across all your devices.",
+    icon: "📱"
+  },
+  {
+    title: "SQL Editor",
+    description: "Full-featured SQL editor with syntax highlighting, history, and results visualization optimized for mobile screens.",
+    icon: "📊"
+  }
+];
+
+const databases = [
+  { name: "PostgreSQL", icon: PostgresIcon },
+  { name: "MySQL", icon: MysqlIcon },
+  { name: "MariaDB", icon: MariadbIcon },
+  { name: "SQLite", icon: SqliteIcon },
+  { name: "CockroachDB", icon: CockroachIcon },
+  { name: "MongoDB", icon: MongoIcon },
+];
+---
+
+<Layout>
+	<header class="site-header">
+		<nav class="nav-container">
+			<a href="/" class="logo-link">
+				<img src={AlienLogo.src} alt="COSMQ" class="logo-icon" width="36" height="36" />
+				<img src={TextLogo.src} alt="COSMQ" class="logo-text" height="24" />
+			</a>
+			<div class="nav-links">
+				<a href="#features">Features</a>
+				<a href="https://github.com/arioberek/COSMQ" class="nav-github">GitHub</a>
+			</div>
+		</nav>
+	</header>
+	<main>
+		<section class="hero">
+			<div class="content">
+				<div class="badge">Open Source Mobile Database Client</div>
+				<h1>Manage your databases <br/> <span class="text-gradient">from anywhere</span></h1>
+				<p class="subtitle">
+					COSMQ brings professional database management to your phone. 
+					Connect directly via TCP, execute queries, and visualize results with native performance.
+				</p>
+				<div class="cta-group">
+					<a href="https://github.com/yourusername/cosmq" class="button primary">
+						View on GitHub
+					</a>
+					<a href="#features" class="button secondary">
+						Learn More
+					</a>
+				</div>
+			</div>
+            <div class="hero-bg-glow"></div>
+		</section>
+
+		<section id="features" class="features">
+			<h2>Everything you need</h2>
+			<div class="grid">
+				{features.map(feature => (
+					<div class="card">
+						<div class="icon">{feature.icon}</div>
+						<h3>{feature.title}</h3>
+						<p>{feature.description}</p>
+					</div>
+				))}
+			</div>
+		</section>
+
+		<section class="databases">
+			<h2>Supported Databases</h2>
+			<div class="db-grid">
+				{databases.map(db => (
+					<div class="db-item">
+						<img src={db.icon.src} alt={db.name} width="48" height="48" />
+						<span>{db.name}</span>
+					</div>
+				))}
+			</div>
+		</section>
+
+		<footer>
+			<div class="footer-content">
+				<div class="footer-brand">
+					<img src={AlienLogo.src} alt="COSMQ" width="28" height="28" />
+					<p>© 2026 COSMQ. Open Source Software.</p>
+				</div>
+				<div class="links">
+				<div class="links">
+					<a href="https://github.com/arioberek/COSMQ">GitHub</a>
+					<a href="https://github.com/arioberek/COSMQ/blob/main/LICENSE">License</a>
+					<a href="https://github.com/arioberek/COSMQ/issues">Issues</a>
+				</div>
+				</div>
+			</div>
+		</footer>
+	</main>
+</Layout>
+
+<style>
+	main {
+		width: 100%;
+		overflow-x: hidden;
+	}
+
+	/* Site Header */
+	.site-header {
+		position: fixed;
+		top: 0;
+		left: 0;
+		right: 0;
+		z-index: 100;
+		background: rgba(10, 10, 15, 0.8);
+		backdrop-filter: blur(12px);
+		border-bottom: 1px solid var(--border-color);
+	}
+
+	.nav-container {
+		max-width: 1200px;
+		margin: 0 auto;
+		padding: 1rem 1.5rem;
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+	}
+
+	.logo-link {
+		display: flex;
+		align-items: center;
+		gap: 0.75rem;
+		text-decoration: none;
+	}
+
+	.logo-icon {
+		transition: transform 0.2s ease;
+	}
+
+	.logo-link:hover .logo-icon {
+		transform: scale(1.05);
+	}
+
+	.logo-text {
+		opacity: 0.95;
+	}
+
+	.nav-links {
+		display: flex;
+		gap: 2rem;
+		align-items: center;
+	}
+
+	.nav-links a {
+		color: var(--text-muted);
+		text-decoration: none;
+		font-size: 0.9rem;
+		font-weight: 500;
+		transition: color 0.2s;
+	}
+
+	.nav-links a:hover {
+		color: var(--text-color);
+	}
+
+	.nav-github {
+		background: var(--surface-alt);
+		padding: 0.5rem 1rem;
+		border-radius: 0.5rem;
+		border: 1px solid var(--border-color);
+	}
+
+	.nav-github:hover {
+		background: var(--surface-color);
+		border-color: var(--primary-color);
+	}
+
+	/* Hero Section */
+	.hero {
+		padding: 8rem 1.5rem 6rem;
+		text-align: center;
+		position: relative;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+        overflow: hidden;
+	}
+
+    .hero-bg-glow {
+        position: absolute;
+        width: 600px;
+        height: 600px;
+        background: radial-gradient(circle, rgba(124, 92, 255, 0.15) 0%, rgba(0,0,0,0) 70%);
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        z-index: -1;
+        pointer-events: none;
+    }
+
+	.badge {
+		background: rgba(124, 92, 255, 0.1);
+		color: var(--primary-light);
+		padding: 0.5rem 1rem;
+		border-radius: 999px;
+		font-size: 0.875rem;
+		font-weight: 500;
+		margin-bottom: 1.5rem;
+		border: 1px solid rgba(124, 92, 255, 0.2);
+        display: inline-block;
+	}
+
+	h1 {
+		font-size: 3.5rem;
+		line-height: 1.1;
+		margin-bottom: 1.5rem;
+		font-weight: 700;
+		letter-spacing: -0.02em;
+	}
+
+	.text-gradient {
+		background: linear-gradient(135deg, #7c5cff 0%, #e040fb 100%);
+		-webkit-background-clip: text;
+		-webkit-text-fill-color: transparent;
+		background-clip: text;
+	}
+
+	.subtitle {
+		font-size: 1.25rem;
+		color: var(--text-muted);
+		max-width: 600px;
+		margin: 0 auto 2.5rem;
+		line-height: 1.6;
+	}
+
+	.cta-group {
+		display: flex;
+		gap: 1rem;
+		justify-content: center;
+	}
+
+	.button {
+		padding: 0.75rem 1.5rem;
+		border-radius: 0.75rem;
+		font-weight: 600;
+		text-decoration: none;
+		transition: all 0.2s ease;
+	}
+
+	.button.primary {
+		background: var(--primary-color);
+		color: white;
+		box-shadow: 0 4px 14px rgba(124, 92, 255, 0.3);
+	}
+
+	.button.primary:hover {
+		background: var(--primary-light);
+		transform: translateY(-1px);
+	}
+
+	.button.secondary {
+		background: var(--surface-alt);
+		color: var(--text-color);
+		border: 1px solid var(--border-color);
+	}
+
+	.button.secondary:hover {
+		background: var(--surface-color);
+		border-color: var(--text-muted);
+	}
+
+	/* Features Section */
+	.features {
+		padding: 4rem 1.5rem;
+		max-width: 1200px;
+		margin: 0 auto;
+	}
+
+	h2 {
+		text-align: center;
+		font-size: 2.5rem;
+		margin-bottom: 3rem;
+	}
+
+	.grid {
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+		gap: 2rem;
+	}
+
+	.card {
+		background: var(--surface-color);
+		padding: 2rem;
+		border-radius: 1rem;
+		border: 1px solid var(--border-color);
+		transition: transform 0.2s;
+	}
+
+	.card:hover {
+		transform: translateY(-4px);
+		border-color: var(--primary-color);
+	}
+
+	.icon {
+		font-size: 2.5rem;
+		margin-bottom: 1rem;
+	}
+
+	.card h3 {
+		font-size: 1.25rem;
+		margin-bottom: 0.75rem;
+		color: var(--text-color);
+	}
+
+	.card p {
+		color: var(--text-muted);
+		line-height: 1.5;
+	}
+
+	/* Databases Section */
+	.databases {
+		padding: 4rem 1.5rem;
+		text-align: center;
+		background: var(--surface-alt);
+		border-top: 1px solid var(--border-color);
+		border-bottom: 1px solid var(--border-color);
+	}
+
+	.db-grid {
+		display: flex;
+		flex-wrap: wrap;
+		justify-content: center;
+		gap: 3rem;
+		max-width: 1000px;
+		margin: 0 auto;
+	}
+
+	.db-item {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 0.75rem;
+        opacity: 0.8;
+        transition: opacity 0.2s;
+	}
+
+    .db-item:hover {
+        opacity: 1;
+    }
+
+	.db-item span {
+		font-weight: 500;
+		color: var(--text-muted);
+	}
+
+	/* Footer */
+	footer {
+		padding: 3rem 1.5rem;
+		text-align: center;
+		border-top: 1px solid var(--border-color);
+	}
+
+	.footer-content {
+		max-width: 1200px;
+		margin: 0 auto;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 1rem;
+	}
+
+	.footer-brand {
+		display: flex;
+		align-items: center;
+		gap: 0.75rem;
+	}
+
+	.footer-brand img {
+		opacity: 0.7;
+	}
+
+	.footer-brand p {
+		margin: 0;
+		color: var(--text-muted);
+	}
+
+	.links {
+		display: flex;
+		gap: 1.5rem;
+	}
+
+	.links a {
+		color: var(--text-muted);
+		text-decoration: none;
+		font-size: 0.875rem;
+	}
+
+	.links a:hover {
+		color: var(--primary-light);
+	}
+
+	@media (max-width: 768px) {
+		h1 {
+			font-size: 2.5rem;
+		}
+        
+        .hero {
+            padding-top: 6rem;
+        }
+
+		.nav-links {
+			gap: 1rem;
+		}
+
+		.logo-text {
+			display: none;
+		}
+	}
+</style>
