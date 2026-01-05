@@ -25,6 +25,15 @@ COSMQ is a full-featured database client that brings professional database manag
 - ⚡ Built with modern React Native and TypeScript
 - 🌙 Dark theme optimized for SQL editors
 
+## Screenshots
+
+<p align="center">
+  <img src="apps/landing/src/assets/screenshots/app/1.jpeg" width="200" alt="Connection List" />
+  <img src="apps/landing/src/assets/screenshots/app/2.jpeg" width="200" alt="Add Database" />
+  <img src="apps/landing/src/assets/screenshots/app/3.jpeg" width="200" alt="Query Editor" />
+  <img src="apps/landing/src/assets/screenshots/app/4.jpeg" width="200" alt="Results View" />
+</p>
+
 ## Architecture
 
 ```
