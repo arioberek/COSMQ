@@ -1,5 +1,6 @@
-import type { FC } from "react";
+import { memo, type FC } from "react";
 import type { SvgProps } from "react-native-svg";
+import { useTheme } from "tamagui";
 import type { DatabaseType } from "../lib/types";
 import PostgresqlIcon from "../assets/icons/postgresql.svg";
 import MysqlIcon from "../assets/icons/mysql.svg";
@@ -23,11 +24,13 @@ type DatabaseIconProps = {
   color?: string;
 };
 
-export const DatabaseIcon: FC<DatabaseIconProps> = ({
+export const DatabaseIcon: FC<DatabaseIconProps> = memo(function DatabaseIcon({
   type,
   size = 32,
-  color = "#ffffff",
-}) => {
+  color,
+}) {
+  const theme = useTheme();
   const Icon = DATABASE_ICONS[type];
-  return <Icon width={size} height={size} fill={color} />;
-};
+  const fillColor = color ?? theme.color.val;
+  return <Icon width={size} height={size} fill={fillColor} />;
+});

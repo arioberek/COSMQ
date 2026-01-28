@@ -1,3 +1,4 @@
+import { memo } from "react";
 import { YStack, styled, type GetProps } from "tamagui";
 
 const StyledCard = styled(YStack, {
@@ -52,6 +53,6 @@ const StyledCard = styled(YStack, {
 
 type CardProps = GetProps<typeof StyledCard>;
 
-export const Card = (props: CardProps) => {
+export const Card = memo(function Card(props: CardProps) {
   return <StyledCard {...props} />;
-};
+});

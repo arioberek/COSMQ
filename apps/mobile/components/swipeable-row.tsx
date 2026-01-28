@@ -1,7 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
-import type { ReactNode } from "react";
-import { useRef } from "react";
+import { memo, type ReactNode, useRef } from "react";
 import {
 	Animated,
 	type GestureResponderEvent,
@@ -11,7 +10,7 @@ import {
 	StyleSheet,
 	View,
 } from "react-native";
-import { XStack } from "tamagui";
+import { useTheme, XStack } from "tamagui";
 
 const ACTION_BUTTON_SIZE = 44;
 const ACTION_GAP = 8;
@@ -40,11 +39,12 @@ const calculateActionsWidth = (actionsCount: number) => {
 	);
 };
 
-export const SwipeableRow = ({
+export const SwipeableRow = memo(function SwipeableRow({
 	children,
 	rightActions = [],
 	enabled = true,
-}: SwipeableRowProps) => {
+}: SwipeableRowProps) {
+	const theme = useTheme();
 	const translateX = useRef(new Animated.Value(0)).current;
 	const offsetX = useRef(0);
 	const isOpen = useRef(false);
@@ -154,10 +154,16 @@ export const SwipeableRow = ({
 		}).start();
 	};
 
+	const actionTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+	
 	const handleActionPress = (action: SwipeAction) => {
 		close();
-		setTimeout(() => {
+		if (actionTimeoutRef.current) {
+			clearTimeout(actionTimeoutRef.current);
+		}
+		actionTimeoutRef.current = setTimeout(() => {
 			action.onPress();
+			actionTimeoutRef.current = null;
 		}, 200);
 	};
 
@@ -193,7 +199,7 @@ export const SwipeableRow = ({
 							style={[styles.actionButton, { backgroundColor: action.color }]}
 							onPress={() => handleActionPress(action)}
 						>
-							<Ionicons name={action.icon} size={20} color="#fff" />
+							<Ionicons name={action.icon} size={20} color={theme.textOnAccent.val} />
 						</Pressable>
 					))}
 				</XStack>
@@ -212,7 +218,7 @@ export const SwipeableRow = ({
 			</Animated.View>
 		</View>
 	);
-};
+});
 
 const styles = StyleSheet.create({
 	container: {

@@ -1,3 +1,4 @@
+import { memo } from "react";
 import {
   Input as TamaguiInput,
   styled,
@@ -14,7 +15,7 @@ const StyledInput = styled(TamaguiInput, {
   paddingHorizontal: "$md",
   paddingVertical: "$sm",
   color: "$color",
-  height: 48,
+  height: "$inputMd",
   placeholderTextColor: "$placeholderColor",
 
   focusStyle: {
@@ -34,15 +35,15 @@ const StyledInput = styled(TamaguiInput, {
     },
     size: {
       sm: {
-        height: 40,
+        height: "$inputSm",
         paddingHorizontal: "$sm",
       },
       md: {
-        height: 48,
+        height: "$inputMd",
         paddingHorizontal: "$md",
       },
       lg: {
-        height: 56,
+        height: "$inputLg",
         paddingHorizontal: "$lg",
       },
     },
@@ -60,7 +61,7 @@ type InputProps = StyledInputProps & {
   error?: string;
 };
 
-export const Input = ({ label, error, hasError, ...props }: InputProps) => {
+export const Input = memo(function Input({ label, error, hasError, ...props }: InputProps) {
   const showError = Boolean(error) || hasError;
 
   return (
@@ -78,4 +79,4 @@ export const Input = ({ label, error, hasError, ...props }: InputProps) => {
       ) : null}
     </YStack>
   );
-};
+});

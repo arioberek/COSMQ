@@ -1,3 +1,4 @@
+import { memo } from "react";
 import { Switch as TamaguiSwitch, styled, type GetProps } from "tamagui";
 
 const StyledSwitch = styled(TamaguiSwitch, {
@@ -58,7 +59,7 @@ type SwitchProps = Omit<GetProps<typeof StyledSwitch>, "switchSize"> & {
   thumbSize?: SwitchSize;
 };
 
-export const Switch = ({ size = "medium", thumbSize, checked, ...props }: SwitchProps) => {
+export const Switch = memo(function Switch({ size = "medium", thumbSize, checked, ...props }: SwitchProps) {
   return (
     <StyledSwitch
       switchSize={size}
@@ -69,4 +70,4 @@ export const Switch = ({ size = "medium", thumbSize, checked, ...props }: Switch
       <StyledThumb thumbSize={thumbSize ?? size} animation="quick" />
     </StyledSwitch>
   );
-};
+});

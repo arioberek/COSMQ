@@ -35,7 +35,7 @@ type TcpSocketInstance = {
     encoding?: string,
     cb?: (err?: Error) => void
   ) => void;
-  on: (event: string, cb: (...args: any[]) => void) => void;
+  on: (event: string, cb: (...args: unknown[]) => void) => void;
   destroy: () => void;
 };
 
@@ -62,7 +62,7 @@ function getTcpSocket(): TcpSocketModule {
     const mod = require("react-native-tcp-socket");
     cachedTcpSocket = (mod?.default ?? mod) as TcpSocketModule;
     return cachedTcpSocket;
-  } catch (error) {
+  } catch {
     const message =
       "TCP sockets are not available in Expo Go. Create a development build to use database connections.";
     tcpSocketLoadError = new Error(message);
@@ -70,9 +70,69 @@ function getTcpSocket(): TcpSocketModule {
   }
 }
 
+/**
+ * O(1) append buffer list - avoids O(N²) Buffer.concat on every data event.
+ * Concatenates only when data is consumed via read().
+ */
+class BufferList {
+  private chunks: Buffer[] = [];
+  private totalLength = 0;
+
+  push(chunk: Buffer): void {
+    this.chunks.push(chunk);
+    this.totalLength += chunk.length;
+  }
+
+  get length(): number {
+    return this.totalLength;
+  }
+
+  read(n?: number): Buffer {
+    if (this.totalLength === 0) {
+      return Buffer.alloc(0);
+    }
+
+    if (n === undefined || n >= this.totalLength) {
+      const result = this.chunks.length === 1 
+        ? this.chunks[0] 
+        : Buffer.concat(this.chunks, this.totalLength);
+      this.chunks = [];
+      this.totalLength = 0;
+      return result;
+    }
+
+    const result = Buffer.allocUnsafe(n);
+    let offset = 0;
+    let remaining = n;
+
+    while (remaining > 0 && this.chunks.length > 0) {
+      const chunk = this.chunks[0];
+      
+      if (chunk.length <= remaining) {
+        chunk.copy(result, offset);
+        offset += chunk.length;
+        remaining -= chunk.length;
+        this.chunks.shift();
+      } else {
+        chunk.copy(result, offset, 0, remaining);
+        this.chunks[0] = chunk.slice(remaining);
+        remaining = 0;
+      }
+    }
+
+    this.totalLength -= n;
+    return result;
+  }
+
+  clear(): void {
+    this.chunks = [];
+    this.totalLength = 0;
+  }
+}
+
 export class TcpClient {
   private socket: TcpSocketInstance | null = null;
-  private buffer: Buffer = Buffer.alloc(0);
+  private buffer = new BufferList();
   private messageQueue: Array<{
     resolve: (data: Buffer) => void;
     reject: (error: Error) => void;
@@ -131,17 +191,27 @@ export class TcpClient {
 
       this.socket = socket;
 
-      socket.on("data", (data) => {
-        const buf = Buffer.isBuffer(data) ? data : Buffer.from(data);
-        this.buffer = Buffer.concat([this.buffer, buf]);
+      socket.on("data", (data: unknown) => {
+        let buf: Buffer;
+        if (Buffer.isBuffer(data)) {
+          buf = data;
+        } else if (data instanceof Uint8Array) {
+          buf = Buffer.from(data);
+        } else if (typeof data === "string") {
+          buf = Buffer.from(data);
+        } else {
+          buf = Buffer.from(data as number[]);
+        }
+        this.buffer.push(buf);
         this.processBuffer();
       });
 
-      socket.on("error", (error: Error) => {
+      socket.on("error", (error: unknown) => {
+        const err = error instanceof Error ? error : new Error(String(error));
         if (!this.connected) {
-          reject(error);
+          reject(err);
         }
-        this.handleError(error);
+        this.handleError(err);
       });
 
       socket.on("close", () => {
@@ -176,9 +246,7 @@ export class TcpClient {
   async receive(expectedLength?: number): Promise<Buffer> {
     return new Promise((resolve, reject) => {
       if (expectedLength && this.buffer.length >= expectedLength) {
-        const data = this.buffer.slice(0, expectedLength);
-        this.buffer = this.buffer.slice(expectedLength);
-        resolve(data);
+        resolve(this.buffer.read(expectedLength));
         return;
       }
 
@@ -190,9 +258,7 @@ export class TcpClient {
     while (this.messageQueue.length > 0 && this.buffer.length > 0) {
       const pending = this.messageQueue.shift();
       if (pending) {
-        const data = this.buffer;
-        this.buffer = Buffer.alloc(0);
-        pending.resolve(data);
+        pending.resolve(this.buffer.read());
       }
     }
   }
@@ -213,7 +279,7 @@ export class TcpClient {
       this.socket.destroy();
       this.socket = null;
       this.connected = false;
-      this.buffer = Buffer.alloc(0);
+      this.buffer.clear();
     }
   }
 

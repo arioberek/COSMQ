@@ -2,7 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import Constants from "expo-constants";
 import { LinearGradient } from "expo-linear-gradient";
 import * as Linking from "expo-linking";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Pressable, StyleSheet, TextInput } from "react-native";
 import Animated, { FadeInDown, FadeInUp } from "react-native-reanimated";
 import { ScrollView, Text, useTheme, XStack, YStack } from "tamagui";
@@ -39,7 +39,13 @@ export default function SettingsScreen() {
   const [alertContent, setAlertContent] = useState({ title: "", message: "" });
 
   useEffect(() => {
-    checkBiometricCapability().then(setBiometricCapability);
+    let mounted = true;
+    checkBiometricCapability().then((capability) => {
+      if (mounted) setBiometricCapability(capability);
+    });
+    return () => {
+      mounted = false;
+    };
   }, []);
 
   useEffect(() => {
@@ -138,13 +144,23 @@ export default function SettingsScreen() {
     }, 1200);
   }, []);
 
-  const auroraGradient = [
-    theme.gradientCosmicStart.val,
-    theme.gradientCosmicMid.val,
-    theme.gradientCosmicEnd.val,
-  ] as const;
-  const cardGradient = [theme.card.val, theme.surfaceAlt.val] as const;
-  const primaryGradient = [theme.gradientPrimaryStart.val, theme.gradientPrimaryEnd.val] as const;
+  const auroraGradient = useMemo(
+    () =>
+      [
+        theme.gradientCosmicStart.val,
+        theme.gradientCosmicMid.val,
+        theme.gradientCosmicEnd.val,
+      ] as const,
+    [theme.gradientCosmicStart.val, theme.gradientCosmicMid.val, theme.gradientCosmicEnd.val]
+  );
+  const cardGradient = useMemo(
+    () => [theme.card.val, theme.surfaceAlt.val] as const,
+    [theme.card.val, theme.surfaceAlt.val]
+  );
+  const primaryGradient = useMemo(
+    () => [theme.gradientPrimaryStart.val, theme.gradientPrimaryEnd.val] as const,
+    [theme.gradientPrimaryStart.val, theme.gradientPrimaryEnd.val]
+  );
 
   return (
     <YStack flex={1} backgroundColor="$background">
@@ -587,7 +603,7 @@ const TimeoutSelector = ({
             />
           )}
           <Text
-            color={value === option ? "#fff" : "$textSubtle"}
+            color={value === option ? "$textOnPrimary" : "$textSubtle"}
             fontSize={13}
             fontWeight="600"
           >

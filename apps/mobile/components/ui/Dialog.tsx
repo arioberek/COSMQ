@@ -1,3 +1,4 @@
+import { memo } from "react";
 import { LinearGradient } from "expo-linear-gradient";
 import { StyleSheet } from "react-native";
 import { Dialog as TamaguiDialog, Adapt, Sheet, XStack, YStack, Text, Button, useTheme } from "tamagui";
@@ -24,7 +25,7 @@ type DialogProps = {
   secondaryAction?: DialogAction;
 };
 
-export const Dialog = ({
+export const Dialog = memo(function Dialog({
   open,
   onOpenChange,
   title,
@@ -37,7 +38,7 @@ export const Dialog = ({
   children,
   primaryAction,
   secondaryAction,
-}: DialogProps) => {
+}: DialogProps) {
   const theme = useTheme();
   
   const dialogGradient = [
@@ -158,7 +159,7 @@ export const Dialog = ({
                 pressStyle={{ scale: 0.95, opacity: 0.9 }}
                 hoverStyle={{ opacity: 0.9 }}
               >
-                <Text color="#ffffff" fontWeight="600" fontSize={15}>
+                <Text color={variant === "danger" ? "$textOnDanger" : "$textOnPrimary"} fontWeight="600" fontSize={15}>
                   {confirmLabel}
                 </Text>
               </Button>
@@ -243,7 +244,7 @@ export const Dialog = ({
                   justifyContent="center"
                   pressStyle={{ scale: 0.97, opacity: 0.9 }}
                 >
-                  <Text color="#ffffff" fontWeight="600" fontSize={16}>
+                  <Text color={variant === "danger" ? "$textOnDanger" : "$textOnPrimary"} fontWeight="600" fontSize={16}>
                     {confirmLabel}
                   </Text>
                 </Button>
@@ -254,4 +255,4 @@ export const Dialog = ({
       </Adapt>
     </TamaguiDialog>
   );
-};
+});

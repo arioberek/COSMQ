@@ -1,3 +1,4 @@
+import { memo } from "react";
 import { ActivityIndicator } from "react-native";
 import {
   Button as TamaguiButton,
@@ -19,7 +20,7 @@ const StyledButton = styled(TamaguiButton, {
     variant: {
       primary: {
         backgroundColor: "$primary",
-        color: "#ffffff",
+        color: "$textOnPrimary",
         pressStyle: {
           backgroundColor: "$primaryLight",
           opacity: 0.9,
@@ -36,7 +37,7 @@ const StyledButton = styled(TamaguiButton, {
       },
       danger: {
         backgroundColor: "$danger",
-        color: "#ffffff",
+        color: "$textOnDanger",
         pressStyle: {
           backgroundColor: "$dangerMuted",
           opacity: 0.9,
@@ -63,17 +64,17 @@ const StyledButton = styled(TamaguiButton, {
       sm: {
         paddingHorizontal: "$md",
         paddingVertical: "$xs",
-        height: 36,
+        height: "$buttonSm",
       },
       md: {
         paddingHorizontal: "$lg",
         paddingVertical: "$sm",
-        height: 44,
+        height: "$buttonMd",
       },
       lg: {
         paddingHorizontal: "$xl",
         paddingVertical: "$md",
-        height: 52,
+        height: "$buttonLg",
       },
     },
   } as const,
@@ -91,12 +92,16 @@ type ButtonProps = Omit<StyledButtonProps, "children"> & {
   children: React.ReactNode;
 };
 
-export const Button = ({ loading, disabled, children, variant = "primary", ...props }: ButtonProps) => {
+export const Button = memo(function Button({ loading, disabled, children, variant = "primary", ...props }: ButtonProps) {
   const theme = useTheme();
   const isDisabled = disabled || loading;
 
   const textColor =
-    variant === "primary" || variant === "danger" ? "#ffffff" : theme.color.val;
+    variant === "primary"
+      ? theme.textOnPrimary.val
+      : variant === "danger"
+        ? theme.textOnDanger.val
+        : theme.color.val;
 
   return (
     <StyledButton
@@ -116,4 +121,4 @@ export const Button = ({ loading, disabled, children, variant = "primary", ...pr
       )}
     </StyledButton>
   );
-};
+});

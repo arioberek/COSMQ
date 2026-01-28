@@ -144,6 +144,13 @@ const cosmicTokens = createTokens({
     lg: 24,
     xl: 32,
     xxl: 48,
+    // Component-specific sizes
+    buttonSm: 36,
+    buttonMd: 44,
+    buttonLg: 52,
+    inputSm: 40,
+    inputMd: 48,
+    inputLg: 56,
   },
   color: {
     ...defaultTokens.color,
@@ -310,6 +317,9 @@ const darkTheme = {
   shadowColorStrong: "rgba(0, 0, 0, 0.4)",
 
   switchThumb: "#ffffff",
+  textOnPrimary: "#ffffff",
+  textOnDanger: "#ffffff",
+  textOnAccent: "#ffffff",
 };
 
 const lightTheme = {
@@ -387,6 +397,9 @@ const lightTheme = {
   shadowColorStrong: "rgba(107, 78, 255, 0.2)",
 
   switchThumb: "#ffffff",
+  textOnPrimary: "#ffffff",
+  textOnDanger: "#ffffff",
+  textOnAccent: "#ffffff",
 };
 
 export const config = createTamagui({

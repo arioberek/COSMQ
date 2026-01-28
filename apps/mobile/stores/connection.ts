@@ -87,7 +87,7 @@ export const useConnectionStore = create<ConnectionStore>((set, get) => ({
         const connections = new Map(state.activeConnections);
         const conn = connections.get(config.id);
         if (conn) {
-          conn.state = { status: "connected" };
+          connections.set(config.id, { ...conn, state: { status: "connected" } });
         }
         return {
           activeConnections: connections,
@@ -100,10 +100,10 @@ export const useConnectionStore = create<ConnectionStore>((set, get) => ({
         const connections = new Map(state.activeConnections);
         const conn = connections.get(config.id);
         if (conn) {
-          conn.state = {
-            status: "error",
-            error: errorMessage,
-          };
+          connections.set(config.id, {
+            ...conn,
+            state: { status: "error", error: errorMessage },
+          });
         }
         return { activeConnections: connections };
       });

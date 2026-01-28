@@ -2,7 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { LinearGradient } from "expo-linear-gradient";
 import { Link, Stack, router } from "expo-router";
-import { useState } from "react";
+import { memo, useCallback, useMemo, useState } from "react";
 import { FlatList, Pressable, StyleSheet } from "react-native";
 import Animated, {
 	FadeIn,
@@ -26,28 +26,31 @@ type ConnectionItemProps = {
 	onDelete: (connection: ConnectionConfig) => void;
 };
 
-const ConnectionItem = ({
+const ConnectionItem = memo(function ConnectionItem({
 	connection,
 	index,
 	onEdit,
 	onDelete,
-}: ConnectionItemProps) => {
+}: ConnectionItemProps) {
 	const theme = useTheme();
 	const { activeConnections } = useConnectionStore();
 	const activeConnection = activeConnections.get(connection.id);
 	const isConnected = activeConnection?.state.status === "connected";
 
-	const handlePress = async () => {
+	const handlePress = useCallback(() => {
 		if (isConnected) {
 			router.push(`/query/${connection.id}`);
 		} else {
 			router.push(`/connection/${connection.id}`);
 		}
-	};
+	}, [connection.id, isConnected]);
 
-	const cardGradient = [theme.card.val, theme.surfaceAlt.val] as const;
-	const successGradient = [theme.success.val, theme.successLight.val] as const;
-	const surfaceGradient = [theme.surface.val, theme.surfaceAlt.val] as const;
+	const handleEdit = useCallback(() => onEdit(connection), [onEdit, connection]);
+	const handleDelete = useCallback(() => onDelete(connection), [onDelete, connection]);
+
+	const cardGradient = useMemo(() => [theme.card.val, theme.surfaceAlt.val] as const, [theme.card.val, theme.surfaceAlt.val]);
+	const successGradient = useMemo(() => [theme.success.val, theme.successLight.val] as const, [theme.success.val, theme.successLight.val]);
+	const surfaceGradient = useMemo(() => [theme.surface.val, theme.surfaceAlt.val] as const, [theme.surface.val, theme.surfaceAlt.val]);
 
 	return (
 		<Animated.View entering={FadeInDown.delay(index * 80).springify()}>
@@ -56,14 +59,12 @@ const ConnectionItem = ({
 					{
 						icon: "pencil",
 						color: theme.primary.val,
-						//label: "Edit",
-						onPress: () => onEdit(connection),
+						onPress: handleEdit,
 					},
 					{
 						icon: "trash",
 						color: theme.danger.val,
-					//	label: "Delete",
-						onPress: () => onDelete(connection),
+						onPress: handleDelete,
 					},
 				]}
 			>
@@ -74,7 +75,7 @@ const ConnectionItem = ({
 							overflow: "hidden",
 							borderWidth: 1,
 							borderColor: theme.cardBorder.val,
-							shadowColor: "#000",
+							shadowColor: theme.shadowColor.val,
 							shadowOffset: { width: 0, height: 4 },
 							shadowOpacity: 0.15,
 							shadowRadius: 12,
@@ -172,7 +173,7 @@ const ConnectionItem = ({
 			</SwipeableRow>
 		</Animated.View>
 	);
-};
+});
 
 export default function HomeScreen() {
 	const theme = useTheme();
@@ -185,15 +186,15 @@ export default function HomeScreen() {
 		queryFn: getConnections,
 	});
 
-	const handleEdit = (connection: ConnectionConfig) => {
+	const handleEdit = useCallback((connection: ConnectionConfig) => {
 		router.push(`/connection/new?edit=${connection.id}`);
-	};
+	}, []);
 
-	const handleDeleteRequest = (connection: ConnectionConfig) => {
+	const handleDeleteRequest = useCallback((connection: ConnectionConfig) => {
 		setConnectionToDelete(connection);
-	};
+	}, []);
 
-	const handleDeleteConfirm = async () => {
+	const handleDeleteConfirm = useCallback(async () => {
 		if (!connectionToDelete) return;
 
 		try {
@@ -201,16 +202,15 @@ export default function HomeScreen() {
 			await queryClient.invalidateQueries({ queryKey: ["connections"] });
 		} catch (error) {
 			console.error("Failed to delete connection:", error);
-			// Optionally show error dialog to user
 		} finally {
 			setConnectionToDelete(null);
 		}
-	};
+	}, [connectionToDelete, queryClient]);
 
-	const primaryGradient = [
+	const primaryGradient = useMemo(() => [
 		theme.gradientPrimaryStart.val,
 		theme.gradientPrimaryEnd.val,
-	] as const;
+	] as const, [theme.gradientPrimaryStart.val, theme.gradientPrimaryEnd.val]);
 
 	return (
 		<YStack flex={1} backgroundColor="$background">
@@ -307,7 +307,7 @@ export default function HomeScreen() {
 									end={{ x: 1, y: 1 }}
 								/>
 								<Text
-									color="#fff"
+									color="$textOnPrimary"
 									fontSize={17}
 									fontWeight="600"
 									paddingHorizontal="$xl"
@@ -399,7 +399,7 @@ export default function HomeScreen() {
 								start={{ x: 0, y: 0 }}
 								end={{ x: 1, y: 1 }}
 							/>
-							<Ionicons name="add" size={32} color="#fff" />
+							<Ionicons name="add" size={32} color={theme.textOnPrimary.val} />
 							</Pressable>
 						</Link>
 					</Animated.View>

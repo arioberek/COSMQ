@@ -13,6 +13,7 @@ import { useSettingsStore } from "../stores/settings";
 import { LockScreen } from "../components/lock-screen";
 import { APP_LOCK_TIMEOUT_MS } from "../lib/settings";
 import { Provider } from "../components/Provider";
+import { migrateFromSecureStore } from "../lib/storage/connections";
 
 const isExpoGo = Constants.appOwnership === "expo";
 
@@ -148,6 +149,7 @@ export default function RootLayout() {
   const { isLoaded: settingsLoaded, loadSettings } = useSettingsStore();
 
   useEffect(() => {
+    migrateFromSecureStore();
     loadSettings();
   }, [loadSettings]);
 

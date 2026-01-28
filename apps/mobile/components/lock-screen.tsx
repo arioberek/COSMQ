@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useRef, useState } from "react";
 import { ActivityIndicator } from "react-native";
 import { Button, Text, useTheme, YStack } from "tamagui";
 import {
@@ -13,7 +13,7 @@ type LockScreenProps = {
   onUnlock: () => void;
 };
 
-export const LockScreen = ({ onUnlock }: LockScreenProps) => {
+export const LockScreen = memo(function LockScreen({ onUnlock }: LockScreenProps) {
   const theme = useTheme();
 
   const [capability, setCapability] = useState<BiometricCapability | null>(null);
@@ -26,7 +26,11 @@ export const LockScreen = ({ onUnlock }: LockScreenProps) => {
   onUnlockRef.current = onUnlock;
 
   useEffect(() => {
-    checkBiometricCapability().then(setCapability);
+    let mounted = true;
+    checkBiometricCapability().then((cap) => {
+      if (mounted) setCapability(cap);
+    });
+    return () => { mounted = false; };
   }, []);
 
   const handleUnlock = useCallback(async () => {
@@ -182,4 +186,4 @@ export const LockScreen = ({ onUnlock }: LockScreenProps) => {
       </YStack>
     </YStack>
   );
-};
+});
