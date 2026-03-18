@@ -1,6 +1,6 @@
 ---
 import Layout from '../layouts/Layout.astro';
-import AnimatedFrameworks from '../components/ui/animated-frameworks';
+import { DatabaseMarquee } from '../components/database-marquee';
 import { FeaturesSection } from '../components/features-section';
 import { ScreenshotsSection } from '../components/screenshots-section';
 import AlienLogo from '../assets/logos/alien.svg';
@@ -10,48 +10,40 @@ import { Image } from 'astro:assets';
 ---
 
 <Layout>
-	<header class="fixed top-0 left-0 right-0 z-[100] bg-[rgba(10,10,15,0.8)] backdrop-blur-[12px] border-b border-white/[0.08]">
-		<nav class="max-w-[1200px] mx-auto px-6 py-4 flex justify-between items-center">
-			<a href="/" class="items-center no-underline">
-				<Image src={TextLogo} alt="COSMQ" class="h-8 w-auto opacity-95 md:block hidden" />
+	<header class="fixed top-0 left-0 right-0 z-[100] backdrop-blur-[20px] border-b border-white/[0.04]" style="background: rgba(6,6,10,0.6);">
+		<nav class="max-w-[1400px] mx-auto px-6 lg:px-10 py-4 flex justify-between items-center">
+			<a href="/" class="items-center no-underline group">
+				<Image src={AlienLogo} alt="COSMQ" width={28} height={28} class="md:hidden block opacity-90 group-hover:opacity-100 transition-opacity" />
+				<Image src={TextLogo} alt="COSMQ" class="h-7 w-auto opacity-90 hidden md:block group-hover:opacity-100 transition-opacity" />
 			</a>
-			<div class="flex gap-4 md:gap-8 items-center">
-				<a href="#features" class="text-[#b8b8c8] no-underline text-sm font-medium transition-colors duration-200 hover:text-[#f0f0f5]">Features</a>
-				<a href="https://github.com/arioberek/COSMQ" class="text-[#b8b8c8] no-underline text-sm font-medium transition-colors duration-200 hover:text-[#f0f0f5] bg-[#1a1a24] px-4 py-2 rounded-lg border border-white/[0.08] hover:bg-[#13131a] hover:border-[#7c5cff]">GitHub</a>
+			<div class="flex gap-3 md:gap-6 items-center">
+				<a href="#features" class="text-[#777] no-underline text-[13px] font-medium tracking-wide uppercase transition-colors duration-300 hover:text-white">Features</a>
+				<a href="https://github.com/arioberek/COSMQ" class="text-[#f0f0f5] no-underline text-[13px] font-semibold tracking-wide px-5 py-2.5 rounded-full bg-white/[0.06] border border-white/[0.08] hover:bg-[#7c5cff] hover:border-[#7c5cff] transition-all duration-300">GitHub</a>
 			</div>
 		</nav>
 	</header>
-	<main class="w-full overflow-x-hidden">
+	<main id="main" class="w-full overflow-x-hidden">
 		<HeroSection client:load />
 
-		<FeaturesSection client:load />
+		<FeaturesSection client:visible />
 
-		<ScreenshotsSection client:load />
+		<ScreenshotsSection client:visible />
 
-		<section class="py-16 pb-8 px-6 text-center bg-[#171717] border-y border-white/[0.08]">
-			<h2 class="text-4xl mb-8">Supported Databases</h2>
-			<div class="max-w-md mx-auto">
-				<AnimatedFrameworks 
-					cardTitle="Database Support"
-					cardDescription="Connect to PostgreSQL, MySQL, MariaDB, SQLite, CockroachDB, MongoDB and more."
-					client:load
-				/>
-			</div>
-		</section>
+		<DatabaseMarquee client:visible />
 
-		<footer class="py-12 px-6 text-center border-t border-white/[0.08]">
-			<div class="max-w-[1200px] mx-auto flex flex-col items-center gap-4">
+		<footer class="relative py-20 px-6 border-t border-white/[0.04]">
+			<div class="max-w-[1400px] mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
 				<div class="flex items-center gap-3">
-					<Image src={AlienLogo} alt="COSMQ" width={28} height={28} class="opacity-70" />
-					<p class="m-0 text-[#b8b8c8]">© 2026 COSMQ. Open Source Software.</p>
+					<Image src={AlienLogo} alt="" width={22} height={22} class="opacity-40" aria-hidden="true" />
+					<p class="m-0 text-[#555] text-sm tracking-wide">&copy; {new Date().getFullYear()} COSMQ</p>
 				</div>
-				<div class="flex gap-6">
-					<div class="flex gap-6">
-						<a href="https://github.com/arioberek/COSMQ" class="text-[#b8b8c8] no-underline text-sm hover:text-[#9d85ff]">GitHub</a>
-						<a href="https://github.com/arioberek/COSMQ/blob/main/LICENSE" class="text-[#b8b8c8] no-underline text-sm hover:text-[#9d85ff]">License</a>
-						<a href="https://github.com/arioberek/COSMQ/issues" class="text-[#b8b8c8] no-underline text-sm hover:text-[#9d85ff]">Issues</a>
-					</div>
-				</div>
+				<nav aria-label="Footer">
+					<ul class="flex gap-8 list-none m-0 p-0">
+						<li><a href="https://github.com/arioberek/COSMQ" class="text-[#555] no-underline text-[13px] tracking-wide hover:text-white transition-colors duration-300">GitHub</a></li>
+						<li><a href="https://github.com/arioberek/COSMQ/blob/main/LICENSE" class="text-[#555] no-underline text-[13px] tracking-wide hover:text-white transition-colors duration-300">License</a></li>
+						<li><a href="https://github.com/arioberek/COSMQ/issues" class="text-[#555] no-underline text-[13px] tracking-wide hover:text-white transition-colors duration-300">Issues</a></li>
+					</ul>
+				</nav>
 			</div>
 		</footer>
 	</main>

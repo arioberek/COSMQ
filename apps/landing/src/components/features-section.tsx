@@ -1,121 +1,153 @@
-"use client";
-
 import {
-  Cable,
-  type LucideIcon,
-  ShieldCheck,
-  Smartphone,
-  SquareTerminal,
+	Cable,
+	type LucideIcon,
+	ShieldCheck,
+	Smartphone,
+	SquareTerminal,
 } from "lucide-react";
-import { motion, type Variants } from "motion/react";
+import { motion, useScroll, useTransform } from "motion/react";
+import { useRef } from "react";
 
 interface Feature {
-  title: string;
-  description: string;
-  Icon: LucideIcon;
-  className?: string;
+	title: string;
+	description: string;
+	Icon: LucideIcon;
+	accent: string;
+	gradient: string;
 }
 
 const features: Feature[] = [
-  {
-    title: "Direct TCP Connections",
-    description:
-      "Connect directly to your database servers using native TCP sockets. No intermediate APIs or proxy servers required.",
-    Icon: Cable,
-    className: "md:col-span-2 md:row-span-1",
-  },
-  {
-    title: "Secure Storage",
-    description:
-      "Your credentials never leave your device. Passwords are encrypted using the device's native secure enclave (Keychain/Keystore).",
-    Icon: ShieldCheck,
-    className: "md:col-span-1 md:row-span-2",
-  },
-  {
-    title: "Universal Support",
-    description:
-      "Built for iOS, Android, and Web. Experience a consistent, high-performance interface across all your devices.",
-    Icon: Smartphone,
-    className: "md:col-span-1 md:row-span-1",
-  },
-  {
-    title: "SQL Editor",
-    description:
-      "Full-featured SQL editor with syntax highlighting, history, and results visualization optimized for mobile screens.",
-    Icon: SquareTerminal,
-    className: "md:col-span-1 md:row-span-1",
-  },
+	{
+		title: "Direct TCP",
+		description:
+			"Connect directly to your database servers using native TCP sockets. No intermediate APIs, no proxy servers, no compromises.",
+		Icon: Cable,
+		accent: "#7c5cff",
+		gradient: "from-[#7c5cff]/20 to-transparent",
+	},
+	{
+		title: "Secure Storage",
+		description:
+			"Credentials never leave your device. Passwords are encrypted using your device's native secure enclave — Keychain on iOS, Keystore on Android.",
+		Icon: ShieldCheck,
+		accent: "#34d399",
+		gradient: "from-[#34d399]/20 to-transparent",
+	},
+	{
+		title: "Universal",
+		description:
+			"Built for iOS, Android, and Web. One consistent, high-performance interface across every device you own.",
+		Icon: Smartphone,
+		accent: "#60a5fa",
+		gradient: "from-[#60a5fa]/20 to-transparent",
+	},
+	{
+		title: "SQL Editor",
+		description:
+			"Full-featured SQL editor with syntax highlighting, history, and results visualization — optimized for mobile screens.",
+		Icon: SquareTerminal,
+		accent: "#e040fb",
+		gradient: "from-[#e040fb]/20 to-transparent",
+	},
 ];
 
-const fadeInUp: Variants = {
-  hidden: { opacity: 0, y: 20 },
-  visible: {
-    opacity: 1,
-    y: 0,
-    transition: {
-      duration: 0.5,
-      ease: "easeOut",
-    },
-  },
-};
+function FeatureCard({
+	feature,
+	index,
+}: { feature: Feature; index: number }) {
+	const { Icon, title, description, accent } = feature;
+	const num = String(index + 1).padStart(2, "0");
+	const ref = useRef<HTMLDivElement>(null);
 
-const staggerContainer: Variants = {
-  hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: {
-      staggerChildren: 0.1,
-      delayChildren: 0.2,
-    },
-  },
-};
+	const { scrollYProgress } = useScroll({
+		target: ref,
+		offset: ["start end", "center center"],
+	});
 
-const FeatureCard = ({ feature }: { feature: Feature }) => {
-  const { Icon, title, description, className } = feature;
+	const y = useTransform(scrollYProgress, [0, 1], [60, 0]);
+	const opacity = useTransform(scrollYProgress, [0, 0.6], [0, 1]);
+	const scale = useTransform(scrollYProgress, [0, 1], [0.96, 1]);
 
-  return (
-    <motion.div
-      className={`group relative flex h-full flex-col gap-4 rounded-2xl border border-white/[0.08] bg-[#13131a] p-6 transition-all duration-300 hover:border-[#7c5cff] hover:shadow-[0_8px_30px_rgba(124,92,255,0.15)] ${className}`}
-      variants={fadeInUp}
-      whileHover={{ y: -4, scale: 1.01 }}
-      transition={{ type: "spring", stiffness: 300, damping: 20 }}
-    >
-      <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-[#7c5cff]/20 to-[#e040fb]/10 ring-1 ring-white/[0.08]">
-        <Icon className="h-6 w-6 text-[#9d85ff]" />
-      </div>
-      <div className="flex flex-1 flex-col gap-2">
-        <h3 className="text-lg font-semibold text-[#f0f0f5] tracking-tight">
-          {title}
-        </h3>
-        <p className="text-sm text-[#b8b8c8] leading-relaxed">{description}</p>
-      </div>
-    </motion.div>
-  );
-};
+	return (
+		<motion.div
+			ref={ref}
+			style={{ y, opacity, scale }}
+			className="group relative"
+		>
+			<div className="relative rounded-2xl border border-white/[0.05] bg-white/[0.02] p-8 md:p-10 overflow-hidden backdrop-blur-sm hover:border-white/[0.1] transition-colors duration-500">
+				{/* Gradient glow on hover */}
+				<div
+					className={`absolute inset-0 bg-gradient-to-br ${feature.gradient} opacity-0 group-hover:opacity-100 transition-opacity duration-700`}
+				/>
+
+				<div className="relative z-10">
+					{/* Number + icon row */}
+					<div className="flex items-start justify-between mb-8">
+						<span
+							className="text-[64px] md:text-[80px] font-black leading-none tracking-tighter"
+							style={{ color: `${accent}10` }}
+						>
+							{num}
+						</span>
+						<motion.div
+							whileHover={{ rotate: -8, scale: 1.1 }}
+							transition={{ type: "spring", stiffness: 400, damping: 15 }}
+							className="flex items-center justify-center w-14 h-14 rounded-2xl mt-2"
+							style={{
+								background: `${accent}12`,
+								border: `1px solid ${accent}20`,
+							}}
+						>
+							<Icon className="w-6 h-6" style={{ color: accent }} strokeWidth={1.5} />
+						</motion.div>
+					</div>
+
+					<h3 className="text-2xl md:text-3xl font-bold text-white tracking-tight mb-3">
+						{title}
+					</h3>
+					<p className="text-[15px] text-[#666] leading-[1.7] m-0 max-w-[400px]">
+						{description}
+					</p>
+				</div>
+			</div>
+		</motion.div>
+	);
+}
 
 export function FeaturesSection() {
-  return (
-    <section id="features" className="py-16 px-6 max-w-[1000px] mx-auto">
-      <motion.h2
-        className="text-center text-4xl font-bold mb-12 text-[#f0f0f5]"
-        initial={{ opacity: 0, y: -10 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: true }}
-        transition={{ duration: 0.5 }}
-      >
-        Everything you need
-      </motion.h2>
-      <motion.div
-        className="grid grid-cols-1 md:grid-cols-3 gap-4 auto-rows-[minmax(180px,auto)]"
-        initial="hidden"
-        whileInView="visible"
-        viewport={{ once: true }}
-        variants={staggerContainer}
-      >
-        {features.map((feature) => (
-          <FeatureCard key={feature.title} feature={feature} />
-        ))}
-      </motion.div>
-    </section>
-  );
+	return (
+		<section id="features" className="relative py-32 px-6 lg:px-10">
+			<div className="max-w-[1400px] mx-auto">
+				{/* Section header */}
+				<div className="mb-20 max-w-[640px]">
+					<motion.span
+						initial={{ opacity: 0, x: -10 }}
+						whileInView={{ opacity: 1, x: 0 }}
+						viewport={{ once: true }}
+						transition={{ duration: 0.5 }}
+						className="inline-block text-[11px] font-mono uppercase tracking-[0.3em] text-[#555] mb-5"
+					>
+						Features
+					</motion.span>
+					<motion.h2
+						initial={{ opacity: 0, y: 20 }}
+						whileInView={{ opacity: 1, y: 0 }}
+						viewport={{ once: true }}
+						transition={{ duration: 0.6, delay: 0.1 }}
+						className="text-[clamp(2rem,5vw,3.5rem)] font-bold tracking-[-0.03em] leading-[1.1] text-white"
+					>
+						Built for engineers
+						<span className="text-[#444]"> who ship from anywhere.</span>
+					</motion.h2>
+				</div>
+
+				{/* Feature grid */}
+				<div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-5">
+					{features.map((feature, i) => (
+						<FeatureCard key={feature.title} feature={feature} index={i} />
+					))}
+				</div>
+			</div>
+		</section>
+	);
 }

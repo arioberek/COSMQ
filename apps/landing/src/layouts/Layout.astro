@@ -13,9 +13,12 @@ import '../styles/global.css';
 		<title>COSMQ - Mobile Database Client</title>
 		<link rel="preconnect" href="https://fonts.googleapis.com">
 		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-		<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+		<link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 	</head>
-	<body class="m-0 w-full min-h-screen flex flex-col bg-[#0a0a0f] text-[#f0f0f5] font-['Inter',system-ui,sans-serif]">
+	<body class="m-0 w-full min-h-screen flex flex-col bg-[#06060a] text-[#f0f0f5] font-['Inter',system-ui,sans-serif] film-grain">
+		<a href="#main" class="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-[200] focus:px-4 focus:py-2 focus:rounded-lg focus:bg-[#7c5cff] focus:text-white focus:text-sm focus:font-medium focus:outline-none">
+			Skip to content
+		</a>
 		<slot />
 	</body>
 </html>
