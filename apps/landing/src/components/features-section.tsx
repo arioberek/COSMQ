@@ -22,8 +22,8 @@ const features: Feature[] = [
 		description:
 			"Connect directly to your database servers using native TCP sockets. No intermediate APIs, no proxy servers, no compromises.",
 		Icon: Cable,
-		accent: "#7c5cff",
-		gradient: "from-[#7c5cff]/20 to-transparent",
+		accent: "#38bdf8",
+		gradient: "from-[#38bdf8]/10 to-transparent",
 	},
 	{
 		title: "Secure Storage",
@@ -31,7 +31,7 @@ const features: Feature[] = [
 			"Credentials never leave your device. Passwords are encrypted using your device's native secure enclave — Keychain on iOS, Keystore on Android.",
 		Icon: ShieldCheck,
 		accent: "#34d399",
-		gradient: "from-[#34d399]/20 to-transparent",
+		gradient: "from-[#34d399]/10 to-transparent",
 	},
 	{
 		title: "Universal",
@@ -39,15 +39,15 @@ const features: Feature[] = [
 			"Built for iOS, Android, and Web. One consistent, high-performance interface across every device you own.",
 		Icon: Smartphone,
 		accent: "#60a5fa",
-		gradient: "from-[#60a5fa]/20 to-transparent",
+		gradient: "from-[#60a5fa]/10 to-transparent",
 	},
 	{
 		title: "SQL Editor",
 		description:
 			"Full-featured SQL editor with syntax highlighting, history, and results visualization — optimized for mobile screens.",
 		Icon: SquareTerminal,
-		accent: "#e040fb",
-		gradient: "from-[#e040fb]/20 to-transparent",
+		accent: "#c084fc",
+		gradient: "from-[#c084fc]/10 to-transparent",
 	},
 ];
 
