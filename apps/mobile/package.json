@@ -20,7 +20,6 @@
     "@shopify/flash-list": "^2.2.0",
     "@tamagui/animations-react-native": "^1.121.6",
     "@tamagui/config": "^1.121.6",
-    "@tamagui/font-inter": "^1.121.6",
     "@tamagui/lucide-icons": "^1.121.6",
     "@tamagui/portal": "^1.121.6",
     "@tamagui/shorthands": "^1.121.6",

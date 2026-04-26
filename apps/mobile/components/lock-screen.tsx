@@ -1,3 +1,4 @@
+import { Ionicons } from "@expo/vector-icons";
 import { memo, useCallback, useEffect, useRef, useState } from "react";
 import { ActivityIndicator } from "react-native";
 import { Button, Text, useTheme, YStack } from "tamagui";
@@ -144,21 +145,27 @@ export const LockScreen = memo(function LockScreen({ onUnlock }: LockScreenProps
             paddingVertical="$md"
             borderRadius="$md"
             marginBottom="$lg"
-            gap="$md"
+            gap="$sm"
             onPress={handleUnlock}
             disabled={isAuthenticating}
             opacity={isAuthenticating ? 0.6 : 1}
-            pressStyle={{ opacity: 0.8 }}
+            pressStyle={{ opacity: 0.85 }}
             animation="quick"
           >
             {isAuthenticating ? (
-              <ActivityIndicator color="#ffffff" />
+              <ActivityIndicator color={theme.textOnPrimary.val} />
             ) : (
               <>
-                <Text fontSize={24}>
-                  {capability.availableTypes.includes("facial") ? "👤" : "👆"}
-                </Text>
-                <Text color="$color" fontSize={16} fontWeight="600">
+                <Ionicons
+                  name={
+                    capability.availableTypes.includes("facial")
+                      ? "scan-outline"
+                      : "finger-print-outline"
+                  }
+                  size={20}
+                  color={theme.textOnPrimary.val}
+                />
+                <Text color="$textOnPrimary" fontSize={15} fontWeight="600">
                   Unlock with {biometricName}
                 </Text>
               </>

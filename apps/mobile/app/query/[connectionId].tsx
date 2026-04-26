@@ -4,8 +4,6 @@ import { useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
-  Modal,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -32,6 +30,7 @@ import {
   type QuerySnippet,
 } from "../../lib/storage/snippets";
 import { useHaptic } from "../../lib/haptics";
+import { Dialog } from "../../components/ui/Dialog";
 
 const SQL_KEYWORDS = [
   'SELECT', 'FROM', 'WHERE', 'JOIN', 'LEFT', 'RIGHT', 'INNER', 'OUTER',
@@ -114,16 +113,6 @@ const tokenizeSql = (sql: string): Token[] => {
   return tokens;
 };
 
-const TOKEN_COLORS: Record<TokenType, string> = {
-  keyword: '#c678dd',
-  string: '#98c379',
-  number: '#d19a66',
-  comment: '#5c6370',
-  operator: '#56b6c2',
-  punctuation: '#abb2bf',
-  identifier: '#e5c07b',
-  default: '#abb2bf',
-};
 
 const DANGEROUS_KEYWORDS = [
   "UPDATE",
@@ -441,7 +430,7 @@ const SqlEditor = ({
           <View style={styles.highlightedTextContainer} pointerEvents="none">
             <Text style={styles.highlightedText}>
               {tokens.map((token, index) => (
-                <Text key={`token-${index}-${token.value.slice(0, 5)}`} style={{ color: TOKEN_COLORS[token.type] }}>
+                <Text key={`token-${index}-${token.value.slice(0, 5)}`} style={{ color: theme.syntax[token.type] }}>
                   {token.value}
                 </Text>
               ))}
@@ -496,6 +485,17 @@ const SqlEditor = ({
  *
  * @returns The rendered Query screen as a React element
  */
+type AlertState = { open: boolean; title: string; message: string };
+type ConfirmState = {
+  open: boolean;
+  title: string;
+  message: string;
+  confirmLabel: string;
+  variant: "default" | "danger";
+  onConfirm: () => void;
+};
+type DangerousAction = "cancel" | "wrap" | "run";
+
 export default function QueryScreen() {
   const theme = useTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
@@ -531,6 +531,19 @@ export default function QueryScreen() {
 
   const [showSaveSnippetPrompt, setShowSaveSnippetPrompt] = useState(false);
   const [snippetName, setSnippetName] = useState("");
+  const [showMore, setShowMore] = useState(false);
+
+  const [alert, setAlert] = useState<AlertState>({ open: false, title: "", message: "" });
+  const [confirm, setConfirm] = useState<ConfirmState | null>(null);
+  const [dangerousState, setDangerousState] = useState<{
+    open: boolean;
+    keyword: string;
+    resolve?: (value: DangerousAction) => void;
+  }>({ open: false, keyword: "" });
+
+  const showAlert = useCallback((title: string, message: string) => {
+    setAlert({ open: true, title, message });
+  }, []);
 
   const { activeConnections, executeQuery } = useConnectionStore();
   const connection = connectionId ? activeConnections.get(connectionId) : null;
@@ -550,7 +563,7 @@ export default function QueryScreen() {
       }).join("\t")
     ).join("\n");
     await Clipboard.setStringAsync(`${header}\n${rows}`);
-    Alert.alert("Copied", "Results copied to clipboard");
+    showAlert("Copied", "Results copied to clipboard.");
   };
 
   const loadTables = async () => {
@@ -565,7 +578,7 @@ export default function QueryScreen() {
       setTables(tableList);
     } catch (err) {
       console.error("[loadTables] Error:", err);
-      Alert.alert("Error", "Failed to load tables");
+      showAlert("Couldn't load tables", err instanceof Error ? err.message : "Unknown error");
     } finally {
       setLoadingTables(false);
     }
@@ -591,7 +604,7 @@ export default function QueryScreen() {
       setTableColumns(prev => ({ ...prev, [tableName]: columns }));
       setExpandedTable(tableName);
     } catch {
-      Alert.alert("Error", `Failed to load columns for ${tableName}`);
+      showAlert("Couldn't load columns", `Failed to load columns for ${tableName}.`);
     }
   };
 
@@ -622,7 +635,7 @@ export default function QueryScreen() {
   const handleSaveSnippet = () => {
     const trimmed = query.trim();
     if (!trimmed) {
-      Alert.alert("Error", "Enter a query first");
+      showAlert("Empty query", "Type a query before saving.");
       return;
     }
     setSnippetName("");
@@ -636,37 +649,37 @@ export default function QueryScreen() {
       await saveSnippet({ name: trimmedName, query: query.trim() });
       haptic.success();
       setShowSaveSnippetPrompt(false);
-      Alert.alert("Saved", "Snippet saved successfully");
+      showAlert("Saved", "Snippet saved.");
     } catch (err) {
       haptic.error();
       console.error("[confirmSaveSnippet] Failed to save snippet:", err);
-      Alert.alert(
-        "Save Failed",
-        err instanceof Error ? err.message : "Could not save snippet"
+      showAlert(
+        "Couldn't save snippet",
+        err instanceof Error ? err.message : "Unknown error"
       );
     }
   };
 
-  const handleDeleteSnippet = async (id: string) => {
-    Alert.alert("Delete Snippet", "Are you sure?", [
-      { text: "Cancel", style: "cancel" },
-      {
-        text: "Delete",
-        style: "destructive",
-        onPress: async () => {
-          try {
-            await deleteSnippet(id);
-            loadSnippets();
-          } catch (err) {
-            console.error("[handleDeleteSnippet] Failed to delete snippet:", err);
-            Alert.alert(
-              "Delete Failed",
-              err instanceof Error ? err.message : "Could not delete snippet"
-            );
-          }
-        },
+  const handleDeleteSnippet = async (id: string, name: string) => {
+    setConfirm({
+      open: true,
+      title: "Delete snippet",
+      message: `Delete "${name}"? This cannot be undone.`,
+      confirmLabel: "Delete",
+      variant: "danger",
+      onConfirm: async () => {
+        try {
+          await deleteSnippet(id);
+          loadSnippets();
+        } catch (err) {
+          console.error("[handleDeleteSnippet] Failed to delete snippet:", err);
+          showAlert(
+            "Couldn't delete snippet",
+            err instanceof Error ? err.message : "Unknown error"
+          );
+        }
       },
-    ]);
+    });
   };
 
   const finalizeTransaction = useCallback(
@@ -714,16 +727,16 @@ export default function QueryScreen() {
     if (!connectionId || !connection) return;
     const transaction = getTransactionStatements(connection.config.type);
     if (!transaction) {
-      Alert.alert(
-        "Transactions Unavailable",
-        "Transactions are not supported for this connection type."
+      showAlert(
+        "Transactions unavailable",
+        "Transactions aren't supported for this connection type."
       );
       return;
     }
     if (transactionState.active) {
-      Alert.alert(
-        "Transaction Active",
-        "Commit or rollback the current transaction before starting a new one."
+      showAlert(
+        "Transaction in progress",
+        "Commit or roll back the current transaction first."
       );
       return;
     }
@@ -818,16 +831,8 @@ export default function QueryScreen() {
     if (settings.dangerousOpsHint) {
       const dangerousKeyword = findDangerousKeyword(trimmed);
       if (dangerousKeyword) {
-        const action = await new Promise<"cancel" | "wrap" | "run">((resolve) => {
-          Alert.alert(
-            "Confirm Dangerous Command",
-            `This looks like a ${dangerousKeyword} statement. Are you sure you want to run it? These commands can be irreversible.\n\nConsider wrapping it in a transaction (BEGIN ... COMMIT) so you can ROLLBACK if needed.`,
-            [
-              { text: "Cancel", style: "cancel", onPress: () => resolve("cancel") },
-              { text: "Wrap in Transaction", onPress: () => resolve("wrap") },
-              { text: "Run Anyway", style: "destructive", onPress: () => resolve("run") },
-            ]
-          );
+        const action = await new Promise<DangerousAction>((resolve) => {
+          setDangerousState({ open: true, keyword: dangerousKeyword, resolve });
         });
         if (action === "cancel") return;
         if (action === "wrap") {
@@ -891,32 +896,14 @@ export default function QueryScreen() {
               }}
             >
               <Text style={styles.tablesToggleText}>
-                {showTables ? "Hide Tables" : "Tables"}
+                {showTables ? "Hide tables" : "Tables"}
               </Text>
             </Pressable>
             <Pressable
-              style={styles.historyToggle}
-              onPress={() => {
-                loadHistory();
-                setShowHistory(true);
-              }}
+              style={styles.tablesToggle}
+              onPress={() => setShowMore(true)}
             >
-              <Text style={styles.historyToggleText}>History</Text>
-            </Pressable>
-            <Pressable
-              style={styles.snippetsToggle}
-              onPress={() => {
-                loadSnippets();
-                setShowSnippets(true);
-              }}
-            >
-              <Text style={styles.snippetsToggleText}>Snippets</Text>
-            </Pressable>
-            <Pressable
-              style={styles.saveSnippetToggle}
-              onPress={handleSaveSnippet}
-            >
-              <Text style={styles.saveSnippetToggleText}>+ Save</Text>
+              <Text style={styles.tablesToggleText}>More</Text>
             </Pressable>
           </View>
           <View style={styles.runRowRight}>
@@ -1094,134 +1081,220 @@ export default function QueryScreen() {
 
         {!result && !error && !executing && (
           <View style={styles.placeholder}>
+            <Text style={styles.placeholderTitle}>Ready when you are.</Text>
             <Text style={styles.placeholderText}>
-              Run a query to see results
+              {connection.config.type === "mongodb"
+                ? "Try {} to list documents, or db.runCommand({listCollections:1})."
+                : "Try a starter query, or tap Tables to browse the schema."}
             </Text>
+            {STARTER_QUERIES[connection.config.type]?.length ? (
+              <View style={styles.starterRow}>
+                {STARTER_QUERIES[connection.config.type]!.map((starter) => (
+                  <Pressable
+                    key={starter}
+                    style={styles.starterChip}
+                    onPress={() => setQuery(starter)}
+                  >
+                    <Text style={styles.starterChipText}>{starter}</Text>
+                  </Pressable>
+                ))}
+              </View>
+            ) : null}
           </View>
         )}
       </View>
 
-      <Modal
-        visible={showHistory}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setShowHistory(false)}
+      <Dialog
+        open={showHistory}
+        onOpenChange={setShowHistory}
+        title="Query history"
+        confirmText="Close"
+        primaryAction={{ label: "Close", onPress: () => setShowHistory(false) }}
       >
-        <Pressable 
-          style={styles.dialogOverlay} 
-          onPress={() => setShowHistory(false)}
-        >
-          <Pressable style={styles.dialogContainer} onPress={(e) => e.stopPropagation()}>
-            <View style={styles.dialogHeader}>
-              <Text style={styles.dialogTitle}>Query History</Text>
-              <Pressable onPress={() => setShowHistory(false)} hitSlop={8}>
-                <Text style={styles.dialogCloseText}>✕</Text>
-              </Pressable>
-            </View>
-            <ScrollView style={styles.dialogList} contentContainerStyle={styles.dialogListContent}>
-              {history.length === 0 ? (
-                <Text style={styles.dialogEmpty}>No query history yet</Text>
-              ) : (
-                history.map((item) => (
-                  <Pressable
-                    key={item.id}
-                    style={styles.historyItem}
-                    onPress={() => handleSelectHistory(item)}
-                  >
-                    <Text style={styles.historyQuery} numberOfLines={2}>
-                      {item.query}
-                    </Text>
-                    <View style={styles.historyMeta}>
-                      <Text style={styles.historyConnection}>
-                        {item.connectionName}
-                      </Text>
-                      <Text style={styles.historyTime}>
-                        {new Date(item.timestamp).toLocaleDateString()}
-                      </Text>
-                    </View>
-                  </Pressable>
-                ))
-              )}
-            </ScrollView>
-          </Pressable>
-        </Pressable>
-      </Modal>
-
-      <Modal
-        visible={showSnippets}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setShowSnippets(false)}
-      >
-        <Pressable 
-          style={styles.dialogOverlay} 
-          onPress={() => setShowSnippets(false)}
-        >
-          <Pressable style={styles.dialogContainer} onPress={(e) => e.stopPropagation()}>
-            <View style={styles.dialogHeader}>
-              <Text style={styles.dialogTitle}>Saved Snippets</Text>
-              <Pressable onPress={() => setShowSnippets(false)} hitSlop={8}>
-                <Text style={styles.dialogCloseText}>✕</Text>
-              </Pressable>
-            </View>
-            <ScrollView style={styles.dialogList} contentContainerStyle={styles.dialogListContent}>
-              {snippets.length === 0 ? (
-                <Text style={styles.dialogEmpty}>
-                  No snippets yet. Use "+ Save" button to save your query.
+        <ScrollView style={{ maxHeight: 360 }} contentContainerStyle={{ paddingVertical: 4 }}>
+          {history.length === 0 ? (
+            <Text style={styles.dialogEmpty}>No history yet.</Text>
+          ) : (
+            history.map((item) => (
+              <Pressable
+                key={item.id}
+                style={styles.historyItem}
+                onPress={() => handleSelectHistory(item)}
+              >
+                <Text style={styles.historyQuery} numberOfLines={2}>
+                  {item.query}
                 </Text>
-              ) : (
-                snippets.map((snippet) => (
-                  <Pressable
-                    key={snippet.id}
-                    style={styles.snippetItem}
-                    onPress={() => handleSelectSnippet(snippet)}
-                    onLongPress={() => handleDeleteSnippet(snippet.id)}
-                  >
-                    <Text style={styles.snippetName}>{snippet.name}</Text>
-                    <Text style={styles.snippetQuery} numberOfLines={2}>
-                      {snippet.query}
-                    </Text>
-                  </Pressable>
-                ))
-              )}
-            </ScrollView>
-          </Pressable>
-        </Pressable>
-      </Modal>
+                <View style={styles.historyMeta}>
+                  <Text style={styles.historyConnection}>{item.connectionName}</Text>
+                  <Text style={styles.historyTime}>
+                    {new Date(item.timestamp).toLocaleDateString()}
+                  </Text>
+                </View>
+              </Pressable>
+            ))
+          )}
+        </ScrollView>
+      </Dialog>
 
-      <Modal
-        visible={showSaveSnippetPrompt}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setShowSaveSnippetPrompt(false)}
+      <Dialog
+        open={showSnippets}
+        onOpenChange={setShowSnippets}
+        title="Saved snippets"
+        description="Tap to load. Long-press to delete."
+        confirmText="Close"
+        primaryAction={{ label: "Close", onPress: () => setShowSnippets(false) }}
       >
-        <View style={styles.saveSnippetModal}>
-          <View style={styles.saveSnippetModalContent}>
-            <Text style={styles.saveSnippetModalTitle}>Save Snippet</Text>
-            <TextInput
-              style={styles.saveSnippetInput}
-              value={snippetName}
-              onChangeText={setSnippetName}
-              placeholder="Snippet name..."
-              placeholderTextColor={theme.colors.placeholder}
-              autoFocus
-              autoCapitalize="none"
-              autoCorrect={false}
-            />
-            <View style={styles.saveSnippetActions}>
-              <Pressable onPress={() => setShowSaveSnippetPrompt(false)}>
-                <Text style={styles.saveSnippetCancelText}>Cancel</Text>
+        <ScrollView style={{ maxHeight: 360 }} contentContainerStyle={{ paddingVertical: 4 }}>
+          {snippets.length === 0 ? (
+            <Text style={styles.dialogEmpty}>
+              No snippets yet. Save the current query with "+ Save".
+            </Text>
+          ) : (
+            snippets.map((snippet) => (
+              <Pressable
+                key={snippet.id}
+                style={styles.snippetItem}
+                onPress={() => handleSelectSnippet(snippet)}
+                onLongPress={() => handleDeleteSnippet(snippet.id, snippet.name)}
+              >
+                <Text style={styles.snippetName}>{snippet.name}</Text>
+                <Text style={styles.snippetQuery} numberOfLines={2}>
+                  {snippet.query}
+                </Text>
               </Pressable>
-              <Pressable onPress={confirmSaveSnippet}>
-                <Text style={styles.saveSnippetSaveText}>Save</Text>
-              </Pressable>
-            </View>
-          </View>
-        </View>
-      </Modal>
+            ))
+          )}
+        </ScrollView>
+      </Dialog>
+
+      <Dialog
+        open={showSaveSnippetPrompt}
+        onOpenChange={setShowSaveSnippetPrompt}
+        title="Save snippet"
+        confirmText="Save"
+        cancelText="Cancel"
+        onConfirm={confirmSaveSnippet}
+        onCancel={() => setShowSaveSnippetPrompt(false)}
+      >
+        <TextInput
+          style={styles.saveSnippetInput}
+          value={snippetName}
+          onChangeText={setSnippetName}
+          placeholder="Snippet name"
+          placeholderTextColor={theme.colors.placeholder}
+          autoFocus
+          autoCapitalize="none"
+          autoCorrect={false}
+        />
+      </Dialog>
+
+      <Dialog
+        open={alert.open}
+        onOpenChange={(open) => setAlert((prev) => ({ ...prev, open }))}
+        title={alert.title}
+        description={alert.message}
+        confirmText="OK"
+        primaryAction={{ label: "OK", onPress: () => {} }}
+      />
+
+      <Dialog
+        open={Boolean(confirm?.open)}
+        onOpenChange={(open) => {
+          if (!open) setConfirm(null);
+        }}
+        title={confirm?.title ?? ""}
+        description={confirm?.message}
+        variant={confirm?.variant ?? "default"}
+        confirmText={confirm?.confirmLabel ?? "Confirm"}
+        cancelText="Cancel"
+        onConfirm={() => {
+          confirm?.onConfirm();
+          setConfirm(null);
+        }}
+        onCancel={() => setConfirm(null)}
+      />
+
+      <Dialog
+        open={showMore}
+        onOpenChange={setShowMore}
+        title="More"
+        actions={[
+          {
+            label: "Query history",
+            variant: "neutral",
+            onPress: () => {
+              loadHistory();
+              setShowHistory(true);
+            },
+          },
+          {
+            label: "Saved snippets",
+            variant: "neutral",
+            onPress: () => {
+              loadSnippets();
+              setShowSnippets(true);
+            },
+          },
+          {
+            label: "Save current query as snippet",
+            variant: "neutral",
+            onPress: handleSaveSnippet,
+          },
+          {
+            label: "Cancel",
+            variant: "neutral",
+            onPress: () => {},
+          },
+        ]}
+      />
+
+      <Dialog
+        open={dangerousState.open}
+        onOpenChange={(open) => {
+          if (!open) {
+            dangerousState.resolve?.("cancel");
+            setDangerousState({ open: false, keyword: "" });
+          }
+        }}
+        title={`Run ${dangerousState.keyword}?`}
+        description={`This statement may modify or destroy data. Wrapping it in a transaction lets you roll back if it goes wrong.`}
+        actions={[
+          {
+            label: "Wrap in transaction",
+            onPress: () => {
+              dangerousState.resolve?.("wrap");
+              setDangerousState({ open: false, keyword: "" });
+            },
+          },
+          {
+            label: "Run anyway",
+            variant: "danger",
+            onPress: () => {
+              dangerousState.resolve?.("run");
+              setDangerousState({ open: false, keyword: "" });
+            },
+          },
+          {
+            label: "Cancel",
+            variant: "neutral",
+            onPress: () => {
+              dangerousState.resolve?.("cancel");
+              setDangerousState({ open: false, keyword: "" });
+            },
+          },
+        ]}
+      />
     </View>
   );
 }
+
+const STARTER_QUERIES: Partial<Record<DatabaseType, string[]>> = {
+  postgres: ["SELECT version();", "SELECT NOW();", "SELECT tablename FROM pg_tables LIMIT 5;"],
+  cockroachdb: ["SELECT version();", "SHOW DATABASES;", "SHOW TABLES;"],
+  mysql: ["SELECT VERSION();", "SHOW DATABASES;", "SHOW TABLES;"],
+  mariadb: ["SELECT VERSION();", "SHOW DATABASES;", "SHOW TABLES;"],
+  sqlite: ["SELECT sqlite_version();", "SELECT name FROM sqlite_master WHERE type='table';"],
+};
 
 const createStyles = (theme: Theme) => StyleSheet.create({
   container: {
@@ -1257,7 +1330,7 @@ const createStyles = (theme: Theme) => StyleSheet.create({
     borderColor: theme.colors.accent,
   },
   templateText: {
-    color: '#98c379',
+    color: theme.syntax.string,
     fontSize: 12,
     fontFamily: 'JetBrainsMono',
   },
@@ -1268,14 +1341,14 @@ const createStyles = (theme: Theme) => StyleSheet.create({
   editorWrapper: {
     position: 'relative',
     backgroundColor: theme.colors.surface,
-    borderRadius: 8,
-    minHeight: 100,
-    maxHeight: 200,
+    borderRadius: 10,
+    minHeight: 140,
+    maxHeight: 360,
     borderWidth: 1,
-    borderColor: 'transparent',
+    borderColor: theme.colors.border,
   },
   editorWrapperFocused: {
-    borderColor: theme.colors.accentMuted,
+    borderColor: theme.colors.primary,
   },
   highlightedTextContainer: {
     position: 'absolute',
@@ -1298,8 +1371,8 @@ const createStyles = (theme: Theme) => StyleSheet.create({
     color: 'transparent',
     fontSize: 14,
     fontFamily: "JetBrainsMono",
-    minHeight: 100,
-    maxHeight: 200,
+    minHeight: 140,
+    maxHeight: 360,
     lineHeight: 20,
   },
   quickActionsContainer: {
@@ -1364,10 +1437,10 @@ const createStyles = (theme: Theme) => StyleSheet.create({
     fontWeight: '600',
   },
   runButton: {
-    backgroundColor: theme.colors.success,
+    backgroundColor: theme.colors.primary,
     paddingHorizontal: 20,
     paddingVertical: 10,
-    borderRadius: 6,
+    borderRadius: 8,
     alignSelf: "flex-end",
     marginTop: 12,
     flexDirection: "row",
@@ -1409,61 +1482,6 @@ const createStyles = (theme: Theme) => StyleSheet.create({
     fontSize: 12,
     fontWeight: '500',
   },
-  historyToggle: {
-    backgroundColor: theme.colors.surface,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 6,
-  },
-  historyToggleText: {
-    color: theme.colors.text,
-    fontSize: 12,
-    fontWeight: '500',
-  },
-  dialogOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 24,
-  },
-  dialogContainer: {
-    backgroundColor: theme.colors.background,
-    borderRadius: 16,
-    width: '100%',
-    maxWidth: 400,
-    maxHeight: '80%',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
-  },
-  dialogHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
-  },
-  dialogTitle: {
-    color: theme.colors.text,
-    fontSize: 18,
-    fontWeight: '600',
-  },
-  dialogCloseText: {
-    color: theme.colors.textMuted,
-    fontSize: 18,
-    fontWeight: '400',
-  },
-  dialogList: {
-    flexGrow: 0,
-    flexShrink: 1,
-  },
-  dialogListContent: {
-    paddingBottom: 8,
-  },
   dialogEmpty: {
     color: theme.colors.textMuted,
     textAlign: 'center',
@@ -1492,30 +1510,6 @@ const createStyles = (theme: Theme) => StyleSheet.create({
   historyTime: {
     color: theme.colors.textMuted,
     fontSize: 11,
-  },
-  snippetsToggle: {
-    backgroundColor: theme.colors.surface,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 6,
-  },
-  snippetsToggleText: {
-    color: theme.colors.text,
-    fontSize: 12,
-    fontWeight: '500',
-  },
-  saveSnippetToggle: {
-    backgroundColor: theme.colors.surface,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: theme.colors.success,
-  },
-  saveSnippetToggleText: {
-    color: theme.colors.success,
-    fontSize: 12,
-    fontWeight: '600',
   },
   snippetItem: {
     padding: 14,
@@ -1713,10 +1707,40 @@ const createStyles = (theme: Theme) => StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
+    paddingHorizontal: 24,
+  },
+  placeholderTitle: {
+    color: theme.colors.text,
+    fontSize: 18,
+    fontWeight: "600",
+    letterSpacing: -0.2,
+    marginBottom: 6,
   },
   placeholderText: {
-    color: theme.colors.placeholder,
-    fontSize: 14,
+    color: theme.colors.textSubtle,
+    fontSize: 13,
+    textAlign: "center",
+    lineHeight: 18,
+    marginBottom: 16,
+  },
+  starterRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "center",
+    gap: 6,
+  },
+  starterChip: {
+    backgroundColor: theme.colors.surface,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+  },
+  starterChipText: {
+    color: theme.colors.textMuted,
+    fontSize: 11,
+    fontFamily: "JetBrainsMono",
   },
   errorText: {
     color: theme.colors.danger,
@@ -1799,53 +1823,13 @@ const createStyles = (theme: Theme) => StyleSheet.create({
     fontSize: 12,
     fontWeight: "600",
   },
-  saveSnippetModal: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 32,
-  },
-  saveSnippetModalContent: {
-    backgroundColor: theme.colors.background,
-    borderRadius: 16,
-    padding: 20,
-    width: '100%',
-    maxWidth: 320,
-  },
-  saveSnippetModalTitle: {
-    color: theme.colors.text,
-    fontSize: 18,
-    fontWeight: '600',
-    marginBottom: 16,
-  },
   saveSnippetInput: {
     backgroundColor: theme.colors.surface,
     padding: 12,
-    borderRadius: 8,
+    borderRadius: 10,
     color: theme.colors.text,
-    fontSize: 14,
+    fontSize: 15,
     borderWidth: 1,
     borderColor: theme.colors.border,
-  },
-  saveSnippetActions: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    gap: 16,
-    marginTop: 16,
-  },
-  saveSnippetCancelText: {
-    color: theme.colors.textSubtle,
-    fontSize: 14,
-    fontWeight: '500',
-    paddingVertical: 8,
-    paddingHorizontal: 4,
-  },
-  saveSnippetSaveText: {
-    color: theme.colors.success,
-    fontSize: 14,
-    fontWeight: '600',
-    paddingVertical: 8,
-    paddingHorizontal: 4,
   },
 });

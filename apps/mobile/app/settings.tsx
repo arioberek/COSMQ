@@ -1,11 +1,9 @@
 import { Ionicons } from "@expo/vector-icons";
 import Constants from "expo-constants";
-import { LinearGradient } from "expo-linear-gradient";
 import * as Linking from "expo-linking";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Pressable, StyleSheet, TextInput } from "react-native";
-import Animated, { FadeInDown, FadeInUp } from "react-native-reanimated";
-import { ScrollView, Text, useTheme, XStack, YStack } from "tamagui";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { Pressable, TextInput } from "react-native";
+import { ScrollView, Text, XStack, YStack, useTheme } from "tamagui";
 import { useSettingsStore } from "../stores/settings";
 import {
   checkBiometricCapability,
@@ -24,7 +22,6 @@ import { Switch, Dialog } from "../components/ui";
 const TIMEOUT_OPTIONS: AppLockTimeout[] = ["immediate", "15s", "1m", "5m"];
 
 export default function SettingsScreen() {
-  const theme = useTheme();
   const { settings, updateSettings } = useSettingsStore();
   const appVersion = Constants.expoConfig?.version ?? "1.0.0";
   const [biometricCapability, setBiometricCapability] = useState<BiometricCapability | null>(null);
@@ -134,7 +131,7 @@ export default function SettingsScreen() {
     versionTapCount.current += 1;
     if (versionTapCount.current >= 5) {
       versionTapCount.current = 0;
-      setAlertContent({ title: "You found the Cosmos!", message: "Thanks for exploring. Keep building." });
+      setAlertContent({ title: "Nice find.", message: "Thanks for poking around. Build something." });
       setShowAlertDialog(true);
       return;
     }
@@ -144,77 +141,33 @@ export default function SettingsScreen() {
     }, 1200);
   }, []);
 
-  const auroraGradient = useMemo(
-    () =>
-      [
-        theme.gradientCosmicStart.val,
-        theme.gradientCosmicMid.val,
-        theme.gradientCosmicEnd.val,
-      ] as const,
-    [theme.gradientCosmicStart.val, theme.gradientCosmicMid.val, theme.gradientCosmicEnd.val]
-  );
-  const cardGradient = useMemo(
-    () => [theme.card.val, theme.surfaceAlt.val] as const,
-    [theme.card.val, theme.surfaceAlt.val]
-  );
-  const primaryGradient = useMemo(
-    () => [theme.gradientPrimaryStart.val, theme.gradientPrimaryEnd.val] as const,
-    [theme.gradientPrimaryStart.val, theme.gradientPrimaryEnd.val]
-  );
-
   return (
     <YStack flex={1} backgroundColor="$background">
-      <LinearGradient
-        colors={auroraGradient}
-        style={{
-          position: "absolute",
-          top: 0,
-          left: 0,
-          right: 0,
-          height: 350,
-          opacity: 0.12,
-        }}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-      />
-      <YStack
-        position="absolute"
-        top={0}
-        left={0}
-        right={0}
-        bottom={0}
-        backgroundColor="$background"
-        opacity={0.9}
-      />
-
       <ScrollView flex={1} contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 48 }}>
-        <Animated.View
-          entering={FadeInUp.delay(50).springify()}
-          style={{ paddingTop: 24, paddingBottom: 24 }}
-        >
-          <Text color="$color" fontSize={32} fontWeight="700" letterSpacing={-0.5}>
+        <YStack paddingTop="$lg" paddingBottom="$lg" gap={2}>
+          <Text color="$color" fontSize={26} fontWeight="600" letterSpacing={-0.4}>
             Settings
           </Text>
-          <Text color="$textSubtle" fontSize={15} marginTop="$xs">
-            Customize your experience
+          <Text color="$textSubtle" fontSize={13}>
+            App preferences
           </Text>
-        </Animated.View>
+        </YStack>
 
-        <Section title="Appearance" index={0} cardGradient={cardGradient}>
+        <Section title="Appearance">
           <SettingRow
-            label="Dark Mode"
+            label="Dark mode"
             description="Switch between light and dark themes"
             value={settings.darkMode}
             onValueChange={(value) => updateSettings({ darkMode: value })}
           />
         </Section>
 
-        <Section title="Security" index={1} cardGradient={cardGradient}>
+        <Section title="Security">
           <SettingRow
-            label={`App Lock (${biometricName})`}
+            label={`App lock (${biometricName})`}
             description={
               canEnableAppLock
-                ? "Require biometric authentication to access the app"
+                ? "Require biometric authentication to open the app"
                 : biometricCapability?.isSupported
                   ? "Set up Face ID or fingerprint in device settings to enable"
                   : "Not supported on this device"
@@ -228,30 +181,29 @@ export default function SettingsScreen() {
               <TimeoutSelector
                 value={settings.appLockTimeout}
                 onChange={(value) => updateSettings({ appLockTimeout: value })}
-                primaryGradient={primaryGradient}
               />
             </>
           ) : null}
         </Section>
 
-        <Section title="Safety" index={2} cardGradient={cardGradient}>
+        <Section title="Safety">
           <SettingRow
-            label="Dangerous Operations Hint"
-            description="Confirm UPDATE/DELETE/DROP statements"
+            label="Confirm dangerous statements"
+            description="Prompt before running UPDATE / DELETE / DROP"
             value={settings.dangerousOpsHint}
             onValueChange={(value) => updateSettings({ dangerousOpsHint: value })}
           />
           <YStack height={1} backgroundColor="$borderColor" marginVertical="$sm" />
           <SettingRow
-            label="Auto-rollback Transactions"
-            description="Automatically rollback unfinished transactions"
+            label="Auto-rollback transactions"
+            description="Roll back unfinished transactions automatically"
             value={settings.autoRollbackEnabled}
             onValueChange={handleAutoRollbackToggle}
           />
           <YStack height={1} backgroundColor="$borderColor" marginVertical="$sm" />
           <NumberSettingRow
-            label="Auto-rollback Timer"
-            description={`Timeout before rollback (${AUTO_ROLLBACK_RANGE.min}-${AUTO_ROLLBACK_RANGE.max}s)`}
+            label="Auto-rollback timer"
+            description={`${AUTO_ROLLBACK_RANGE.min}–${AUTO_ROLLBACK_RANGE.max} seconds`}
             value={autoRollbackInput}
             onChangeText={setAutoRollbackInput}
             onFocus={() => setIsAutoRollbackEditing(true)}
@@ -263,39 +215,39 @@ export default function SettingsScreen() {
           />
         </Section>
 
-        <Section title="Editor" index={3} cardGradient={cardGradient}>
+        <Section title="Editor">
           <SettingRow
-            label="Autocomplete Suggestions"
-            description="Show SQL keyword autocomplete as you type"
+            label="Autocomplete"
+            description="Suggest SQL keywords as you type"
             value={settings.enableAutocomplete}
             onValueChange={(value) => updateSettings({ enableAutocomplete: value })}
           />
           <YStack height={1} backgroundColor="$borderColor" marginVertical="$sm" />
           <SettingRow
-            label="SQL Templates"
-            description="Show quick templates for common queries"
+            label="Templates"
+            description="Show common-query templates above the editor"
             value={settings.showSqlTemplates}
             onValueChange={(value) => updateSettings({ showSqlTemplates: value })}
           />
           <YStack height={1} backgroundColor="$borderColor" marginVertical="$sm" />
           <SettingRow
-            label="Quick Actions"
-            description="Show one-tap SQL snippets under the editor"
+            label="Quick actions"
+            description="Show keyword chips below the editor"
             value={settings.showQuickActions}
             onValueChange={(value) => updateSettings({ showQuickActions: value })}
           />
         </Section>
 
-        <Section title="Feedback" index={4} cardGradient={cardGradient}>
+        <Section title="Feedback">
           <SettingRow
-            label="Haptic Feedback"
-            description="Vibrate on query success, errors, and transactions"
+            label="Haptics"
+            description="Vibrate on success, errors, and transaction events"
             value={settings.hapticFeedbackEnabled}
             onValueChange={(value) => updateSettings({ hapticFeedbackEnabled: value })}
           />
         </Section>
 
-        <Section title="About" index={5} cardGradient={cardGradient}>
+        <Section title="About">
           <InfoRow label="Version" value={appVersion} onPress={handleVersionTap} />
           <YStack height={1} backgroundColor="$borderColor" marginVertical="$sm" />
           <InfoRow label="Author" value="Arielton Oberek" />
@@ -313,20 +265,11 @@ export default function SettingsScreen() {
           />
         </Section>
 
-        <Animated.View
-          entering={FadeInDown.delay(500).springify()}
-          style={{ alignItems: "center", paddingTop: 32 }}
-        >
-          <XStack alignItems="center">
-            <Text color="$textSubtle" fontSize={13}>
-              Made with{" "}
-            </Text>
-            <Ionicons name="heart" size={13} color={theme.primary.val} />
-            <Text color="$textSubtle" fontSize={13}>
-              {" "}for database enthusiasts
-            </Text>
-          </XStack>
-        </Animated.View>
+        <YStack alignItems="center" paddingTop="$xl">
+          <Text color="$textSubtle" fontSize={12}>
+            Run queries from anywhere.
+          </Text>
+        </YStack>
       </ScrollView>
 
       <Dialog
@@ -345,45 +288,32 @@ export default function SettingsScreen() {
 const Section = ({
   title,
   children,
-  index,
-  cardGradient,
 }: {
   title: string;
   children: React.ReactNode;
-  index: number;
-  cardGradient: readonly [string, string];
 }) => (
-  <Animated.View
-    entering={FadeInDown.delay(index * 80).springify()}
-    style={{ marginBottom: 24 }}
-  >
+  <YStack marginBottom="$lg">
     <Text
-      color="$primary"
-      fontSize={13}
-      fontWeight="700"
+      color="$textSubtle"
+      fontSize={11}
+      fontWeight="600"
       textTransform="uppercase"
-      letterSpacing={1.5}
+      letterSpacing={1.2}
       marginBottom="$sm"
       marginLeft="$xs"
     >
       {title}
     </Text>
     <YStack
-      borderRadius="$lg"
+      borderRadius="$md"
       padding="$md"
-      overflow="hidden"
       borderWidth={1}
       borderColor="$cardBorder"
+      backgroundColor="$surface"
     >
-      <LinearGradient
-        colors={cardGradient}
-        style={StyleSheet.absoluteFill}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-      />
       {children}
     </YStack>
-  </Animated.View>
+  </YStack>
 );
 
 const SettingRow = ({
@@ -570,47 +500,43 @@ const LinkRow = ({
 const TimeoutSelector = ({
   value,
   onChange,
-  primaryGradient,
 }: {
   value: AppLockTimeout;
   onChange: (value: AppLockTimeout) => void;
-  primaryGradient: readonly [string, string];
-}) => (
-  <YStack gap="$sm" paddingVertical="$xs">
-    <Text color="$textSubtle" fontSize={13}>
-      Lock after leaving app:
-    </Text>
-    <XStack flexWrap="wrap" gap="$sm">
-      {TIMEOUT_OPTIONS.map((option) => (
-        <Pressable
-          key={option}
-          style={{
-            paddingHorizontal: 16,
-            paddingVertical: 8,
-            borderRadius: 12,
-            overflow: "hidden",
-            borderWidth: 1,
-            borderColor: value === option ? "transparent" : "rgba(255,255,255,0.08)",
-          }}
-          onPress={() => onChange(option)}
-        >
-          {value === option && (
-            <LinearGradient
-              colors={primaryGradient}
-              style={StyleSheet.absoluteFill}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-            />
-          )}
-          <Text
-            color={value === option ? "$textOnPrimary" : "$textSubtle"}
-            fontSize={13}
-            fontWeight="600"
-          >
-            {APP_LOCK_TIMEOUT_LABELS[option]}
-          </Text>
-        </Pressable>
-      ))}
-    </XStack>
-  </YStack>
-);
+}) => {
+  const theme = useTheme();
+  return (
+    <YStack gap="$sm" paddingVertical="$xs">
+      <Text color="$textSubtle" fontSize={13}>
+        Lock after leaving app
+      </Text>
+      <XStack flexWrap="wrap" gap="$sm">
+        {TIMEOUT_OPTIONS.map((option) => {
+          const isActive = value === option;
+          return (
+            <Pressable
+              key={option}
+              style={{
+                paddingHorizontal: 14,
+                paddingVertical: 8,
+                borderRadius: 8,
+                borderWidth: 1,
+                borderColor: isActive ? theme.primary.val : theme.borderColor.val,
+                backgroundColor: isActive ? theme.primaryMuted.val : "transparent",
+              }}
+              onPress={() => onChange(option)}
+            >
+              <Text
+                color={isActive ? "$primary" : "$textSubtle"}
+                fontSize={13}
+                fontWeight={isActive ? "600" : "500"}
+              >
+                {APP_LOCK_TIMEOUT_LABELS[option]}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </XStack>
+    </YStack>
+  );
+};
