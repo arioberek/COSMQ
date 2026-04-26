@@ -1,13 +1,12 @@
 import { memo } from "react";
-import { LinearGradient } from "expo-linear-gradient";
-import { StyleSheet } from "react-native";
-import { Dialog as TamaguiDialog, Adapt, Sheet, XStack, YStack, Text, Button, useTheme } from "tamagui";
+import { Dialog as TamaguiDialog, Adapt, Sheet, XStack, YStack, Text, Button } from "tamagui";
 
 type DialogVariant = "default" | "danger";
 
 type DialogAction = {
   label: string;
   onPress: () => void;
+  variant?: DialogVariant | "neutral";
 };
 
 type DialogProps = {
@@ -23,6 +22,30 @@ type DialogProps = {
   children?: React.ReactNode;
   primaryAction?: DialogAction;
   secondaryAction?: DialogAction;
+  actions?: DialogAction[];
+  hideActions?: boolean;
+};
+
+const actionBackground = (variant: DialogAction["variant"]) => {
+  switch (variant) {
+    case "danger":
+      return "$danger";
+    case "neutral":
+      return "transparent";
+    default:
+      return "$primary";
+  }
+};
+
+const actionTextColor = (variant: DialogAction["variant"]) => {
+  switch (variant) {
+    case "danger":
+      return "$textOnDanger";
+    case "neutral":
+      return "$dialogTextMuted";
+    default:
+      return "$textOnPrimary";
+  }
 };
 
 export const Dialog = memo(function Dialog({
@@ -38,15 +61,9 @@ export const Dialog = memo(function Dialog({
   children,
   primaryAction,
   secondaryAction,
+  actions,
+  hideActions,
 }: DialogProps) {
-  const theme = useTheme();
-  
-  const dialogGradient = [
-    theme.dialogGradientStart.val,
-    theme.dialogGradientMid.val,
-    theme.dialogGradientEnd.val,
-  ] as const;
-
   const handleCancel = () => {
     if (secondaryAction) {
       secondaryAction.onPress();
@@ -65,9 +82,102 @@ export const Dialog = memo(function Dialog({
     onOpenChange(false);
   };
 
+  const handleAction = (action: DialogAction) => {
+    action.onPress();
+    onOpenChange(false);
+  };
+
   const showCancelButton = !primaryAction || secondaryAction;
   const confirmLabel = primaryAction?.label ?? confirmText;
   const cancelLabel = secondaryAction?.label ?? cancelText;
+
+  const renderActions = (compact: boolean) => {
+    if (hideActions) return null;
+    if (actions && actions.length > 0) {
+      return (
+        <YStack gap="$sm" marginTop="$md">
+          {actions.map((action) => (
+            <Button
+              key={action.label}
+              unstyled
+              backgroundColor={actionBackground(action.variant)}
+              borderWidth={action.variant === "neutral" ? 1 : 0}
+              borderColor="$dialogButtonBorder"
+              onPress={() => handleAction(action)}
+              height={compact ? 56 : 48}
+              borderRadius="$md"
+              alignItems="center"
+              justifyContent="center"
+              pressStyle={{
+                opacity: 0.85,
+                backgroundColor:
+                  action.variant === "neutral"
+                    ? "$dialogButtonHover"
+                    : actionBackground(action.variant),
+              }}
+            >
+              <Text
+                color={actionTextColor(action.variant)}
+                fontWeight="600"
+                fontSize={compact ? 16 : 15}
+              >
+                {action.label}
+              </Text>
+            </Button>
+          ))}
+        </YStack>
+      );
+    }
+    return (
+      <XStack
+        gap="$md"
+        justifyContent="flex-end"
+        marginTop="$md"
+      >
+        {showCancelButton && (
+          <Button
+            unstyled
+            flex={compact ? 1 : undefined}
+            backgroundColor="transparent"
+            borderWidth={1}
+            borderColor="$dialogButtonBorder"
+            onPress={handleCancel}
+            paddingHorizontal={compact ? undefined : "$lg"}
+            height={compact ? 56 : 44}
+            borderRadius="$md"
+            alignItems="center"
+            justifyContent="center"
+            pressStyle={{ opacity: 0.85, backgroundColor: "$dialogButtonHover" }}
+          >
+            <Text color="$dialogTextMuted" fontWeight="500" fontSize={compact ? 16 : 15}>
+              {cancelLabel}
+            </Text>
+          </Button>
+        )}
+
+        <Button
+          unstyled
+          flex={compact ? 1 : undefined}
+          backgroundColor={variant === "danger" ? "$danger" : "$primary"}
+          onPress={handleConfirm}
+          paddingHorizontal={compact ? undefined : "$lg"}
+          height={compact ? 56 : 44}
+          borderRadius="$md"
+          alignItems="center"
+          justifyContent="center"
+          pressStyle={{ opacity: 0.9 }}
+        >
+          <Text
+            color={variant === "danger" ? "$textOnDanger" : "$textOnPrimary"}
+            fontWeight="600"
+            fontSize={compact ? 16 : 15}
+          >
+            {confirmLabel}
+          </Text>
+        </Button>
+      </XStack>
+    );
+  };
 
   return (
     <TamaguiDialog modal open={open} onOpenChange={onOpenChange}>
@@ -75,7 +185,7 @@ export const Dialog = memo(function Dialog({
         <TamaguiDialog.Overlay
           key="overlay"
           animation="medium"
-          opacity={0.95}
+          opacity={1}
           enterStyle={{ opacity: 0 }}
           exitStyle={{ opacity: 0 }}
           backgroundColor="$dialogOverlay"
@@ -85,36 +195,24 @@ export const Dialog = memo(function Dialog({
           elevate
           key="content"
           animation={[
-            "bouncy",
+            "quick",
             {
-              opacity: {
-                overshootClamping: true,
-              },
-              scale: {
-                overshootClamping: false,
-              },
+              opacity: { overshootClamping: true },
+              scale: { overshootClamping: true },
             },
           ]}
-          enterStyle={{ y: -30, opacity: 0, scale: 0.85 }}
-          exitStyle={{ y: 20, opacity: 0, scale: 0.9 }}
+          enterStyle={{ y: -8, opacity: 0, scale: 0.96 }}
+          exitStyle={{ y: 4, opacity: 0, scale: 0.98 }}
           borderRadius="$lg"
-          padding={0}
-          maxWidth={400}
+          padding="$lg"
+          maxWidth={420}
           width="90%"
-          overflow="hidden"
           borderWidth={1}
           borderColor="$dialogBorder"
-          backgroundColor={theme.dialogGradientStart.val}
+          backgroundColor="$surfaceElevated"
         >
-          <LinearGradient
-            colors={dialogGradient}
-            style={StyleSheet.absoluteFill}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-          />
-          
-          <YStack padding="$lg" gap="$md">
-            <TamaguiDialog.Title fontSize={20} fontWeight="700" color="$dialogText">
+          <YStack gap="$md">
+            <TamaguiDialog.Title fontSize={18} fontWeight="600" color="$dialogText" letterSpacing={-0.2}>
               {title}
             </TamaguiDialog.Title>
 
@@ -126,51 +224,14 @@ export const Dialog = memo(function Dialog({
 
             {children}
 
-            <XStack gap="$md" justifyContent="flex-end" marginTop="$md">
-              {showCancelButton && (
-                <Button
-                  unstyled
-                  backgroundColor="transparent"
-                  borderWidth={1}
-                  borderColor="$dialogButtonBorder"
-                  onPress={handleCancel}
-                  paddingHorizontal="$lg"
-                  height={44}
-                  borderRadius="$md"
-                  alignItems="center"
-                  justifyContent="center"
-                  pressStyle={{ scale: 0.95, opacity: 0.8, backgroundColor: "$dialogButtonHover" }}
-                >
-                  <Text color="$dialogTextMuted" fontWeight="500" fontSize={15}>
-                    {cancelLabel}
-                  </Text>
-                </Button>
-              )}
-
-              <Button
-                unstyled
-                backgroundColor={variant === "danger" ? "$danger" : "$primary"}
-                onPress={handleConfirm}
-                paddingHorizontal="$lg"
-                height={44}
-                borderRadius="$md"
-                alignItems="center"
-                justifyContent="center"
-                pressStyle={{ scale: 0.95, opacity: 0.9 }}
-                hoverStyle={{ opacity: 0.9 }}
-              >
-                <Text color={variant === "danger" ? "$textOnDanger" : "$textOnPrimary"} fontWeight="600" fontSize={15}>
-                  {confirmLabel}
-                </Text>
-              </Button>
-            </XStack>
+            {renderActions(false)}
           </YStack>
         </TamaguiDialog.Content>
       </TamaguiDialog.Portal>
 
       <Adapt when="sm" platform="touch">
         <Sheet
-          animation="bouncy"
+          animation="quick"
           zIndex={200000}
           modal
           dismissOnSnapToBottom
@@ -178,29 +239,21 @@ export const Dialog = memo(function Dialog({
         >
           <Sheet.Overlay
             animation="medium"
-            opacity={0.95}
+            opacity={1}
             enterStyle={{ opacity: 0 }}
             exitStyle={{ opacity: 0 }}
             backgroundColor="$dialogOverlay"
           />
           <Sheet.Frame
-            padding={0}
-            overflow="hidden"
-            borderTopLeftRadius={24}
-            borderTopRightRadius={24}
-            backgroundColor={theme.dialogGradientStart.val}
+            padding="$lg"
+            borderTopLeftRadius={20}
+            borderTopRightRadius={20}
+            backgroundColor="$surfaceElevated"
           >
-            <LinearGradient
-              colors={dialogGradient}
-              style={StyleSheet.absoluteFill}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-            />
-            
-            <YStack padding="$lg" gap="$md">
-              <Sheet.Handle backgroundColor="$dialogHandle" marginBottom="$sm" />
+            <YStack gap="$md">
+              <Sheet.Handle backgroundColor="$dialogHandle" alignSelf="center" />
 
-              <Text fontSize={20} fontWeight="700" color="$dialogText">
+              <Text fontSize={18} fontWeight="600" color="$dialogText" letterSpacing={-0.2}>
                 {title}
               </Text>
 
@@ -212,43 +265,7 @@ export const Dialog = memo(function Dialog({
 
               {children}
 
-              <XStack gap="$md" marginTop="$md">
-                {showCancelButton && (
-                  <Button
-                    unstyled
-                    flex={1}
-                    backgroundColor="transparent"
-                    borderWidth={1}
-                    borderColor="$dialogButtonBorder"
-                    onPress={handleCancel}
-                    height={56}
-                    borderRadius="$md"
-                    alignItems="center"
-                    justifyContent="center"
-                    pressStyle={{ scale: 0.97, opacity: 0.8, backgroundColor: "$dialogButtonHover" }}
-                  >
-                    <Text color="$dialogTextMuted" fontWeight="500" fontSize={16}>
-                      {cancelLabel}
-                    </Text>
-                  </Button>
-                )}
-
-                <Button
-                  unstyled
-                  flex={1}
-                  backgroundColor={variant === "danger" ? "$danger" : "$primary"}
-                  onPress={handleConfirm}
-                  height={56}
-                  borderRadius="$md"
-                  alignItems="center"
-                  justifyContent="center"
-                  pressStyle={{ scale: 0.97, opacity: 0.9 }}
-                >
-                  <Text color={variant === "danger" ? "$textOnDanger" : "$textOnPrimary"} fontWeight="600" fontSize={16}>
-                    {confirmLabel}
-                  </Text>
-                </Button>
-              </XStack>
+              {renderActions(true)}
             </YStack>
           </Sheet.Frame>
         </Sheet>

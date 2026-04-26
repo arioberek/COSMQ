@@ -2,17 +2,14 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import * as DocumentPicker from "expo-document-picker";
 import * as LegacyFileSystem from "expo-file-system/legacy";
 import { router, useLocalSearchParams } from "expo-router";
-import { LinearGradient } from "expo-linear-gradient";
 import type { FC } from "react";
 import { useEffect, useState } from "react";
 import {
   KeyboardAvoidingView,
   Platform,
   Pressable,
-  StyleSheet,
   TextInput,
 } from "react-native";
-import Animated, { FadeInDown } from "react-native-reanimated";
 import type { SvgProps } from "react-native-svg";
 import {
   ScrollView,
@@ -202,17 +199,29 @@ const FormInput = ({
       onFocus={() => setIsFocused(true)}
       onBlur={() => setIsFocused(false)}
       style={{
-        backgroundColor: theme.card.val,
+        backgroundColor: theme.surface.val,
         borderWidth: 1,
         borderColor: isFocused ? theme.primary.val : theme.cardBorder.val,
-        borderRadius: 12,
-        padding: 16,
+        borderRadius: 10,
+        paddingHorizontal: 14,
+        paddingVertical: 12,
         color: theme.color.val,
-        fontSize: 16,
+        fontSize: 15,
       }}
     />
   );
 };
+
+const FieldLabel = ({ children }: { children: React.ReactNode }) => (
+  <Text
+    color="$textSubtle"
+    fontSize={12}
+    fontWeight="500"
+    marginLeft={2}
+  >
+    {children}
+  </Text>
+);
 
 export default function NewConnectionScreen() {
   const theme = useTheme();
@@ -462,336 +471,229 @@ export default function NewConnectionScreen() {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          <Animated.View entering={FadeInDown.delay(100).springify()}>
-            <YStack gap="$sm">
-              <Text
-                color="$textMuted"
-                fontSize={13}
-                fontWeight="600"
-                textTransform="uppercase"
-                marginLeft={4}
-              >
-                Connection Name
-              </Text>
-              <FormInput
-                value={name}
-                onChangeText={setName}
-                placeholder="My Database"
-              />
-            </YStack>
-          </Animated.View>
+          <YStack gap="$sm">
+            <FieldLabel>Name</FieldLabel>
+            <FormInput
+              value={name}
+              onChangeText={setName}
+              placeholder="My database"
+            />
+          </YStack>
 
-          <Animated.View entering={FadeInDown.delay(200).springify()}>
-            <YStack gap="$sm">
-              <Text
-                color="$textMuted"
-                fontSize={13}
-                fontWeight="600"
-                textTransform="uppercase"
-                marginLeft={4}
+          <YStack gap="$sm">
+            <FieldLabel>Color tag (optional)</FieldLabel>
+            <XStack flexWrap="wrap" gap="$sm" paddingTop="$xs">
+              <Pressable
+                style={{
+                  width: 32,
+                  height: 32,
+                  borderRadius: 16,
+                  borderWidth: 1,
+                  borderColor: !color ? theme.primary.val : theme.cardBorder.val,
+                  justifyContent: "center",
+                  alignItems: "center",
+                  backgroundColor: theme.surface.val,
+                }}
+                onPress={() => setColor(undefined)}
               >
-                Color Tag (Optional)
-              </Text>
-              <XStack flexWrap="wrap" gap="$md" padding="$sm">
+                <Text color={!color ? "$primary" : "$textSubtle"} fontSize={10} fontWeight="600">
+                  None
+                </Text>
+              </Pressable>
+              {CONNECTION_COLORS.map((c) => (
                 <Pressable
+                  key={c}
                   style={{
-                    width: 36,
-                    height: 36,
-                    borderRadius: 18,
-                    borderWidth: 2,
-                    borderColor: !color ? theme.color.val : theme.cardBorder.val,
-                    justifyContent: "center",
-                    alignItems: "center",
-                    backgroundColor: theme.card.val,
-                    transform: !color ? [{ scale: 1.1 }] : [{ scale: 1 }],
+                    width: 32,
+                    height: 32,
+                    borderRadius: 16,
+                    borderWidth: color === c ? 2 : 1,
+                    borderColor: color === c ? theme.color.val : theme.cardBorder.val,
+                    backgroundColor: c,
                   }}
-                  onPress={() => setColor(undefined)}
-                >
-                  <Text color={!color ? "$color" : "$textMuted"} fontSize={10} fontWeight="600">
-                    None
-                  </Text>
-                </Pressable>
-                {CONNECTION_COLORS.map((c) => (
-                  <Pressable
-                    key={c}
-                    style={{
-                      width: 36,
-                      height: 36,
-                      borderRadius: 18,
-                      borderWidth: 2,
-                      borderColor: color === c ? theme.color.val : theme.cardBorder.val,
-                      backgroundColor: c,
-                      transform: color === c ? [{ scale: 1.1 }] : [{ scale: 1 }],
-                    }}
-                    onPress={() => setColor(c)}
-                  />
-                ))}
-              </XStack>
-            </YStack>
-          </Animated.View>
+                  onPress={() => setColor(c)}
+                />
+              ))}
+            </XStack>
+          </YStack>
 
           {!isSqlite(type) && (
-            <Animated.View entering={FadeInDown.delay(300).springify()}>
-              <YStack gap="$sm">
-                <Text
-                  color="$textMuted"
-                  fontSize={13}
-                  fontWeight="600"
-                  textTransform="uppercase"
-                  marginLeft={4}
-                >
-                  Connection URL
-                </Text>
+            <YStack gap="$sm">
+              <FieldLabel>Connection URL</FieldLabel>
+              <FormInput
+                value={connectionUrl}
+                onChangeText={handleUrlChange}
+                placeholder="postgres://user:pass@host:5432/db?sslmode=require"
+                autoCapitalize="none"
+                autoCorrect={false}
+              />
+            </YStack>
+          )}
+
+          <YStack gap="$sm">
+            <FieldLabel>Database type</FieldLabel>
+            <XStack flexWrap="wrap" gap="$sm">
+              {DATABASE_OPTIONS.map((option) => {
+                const isActive = type === option.type;
+                return (
+                  <Pressable
+                    key={option.type}
+                    style={{
+                      width: "31%",
+                      borderRadius: 10,
+                      padding: 14,
+                      alignItems: "center",
+                      borderWidth: 1,
+                      borderColor: isActive ? theme.primary.val : theme.cardBorder.val,
+                      backgroundColor: isActive ? theme.primaryMuted.val : theme.surface.val,
+                    }}
+                    onPress={() => handleTypeChange(option.type)}
+                  >
+                    <View marginBottom="$xs">
+                      <option.Icon width={22} height={22} fill={isActive ? theme.primary.val : theme.color.val} />
+                    </View>
+                    <Text
+                      color={isActive ? "$primary" : "$textSubtle"}
+                      fontSize={11}
+                      fontWeight={isActive ? "600" : "500"}
+                      textAlign="center"
+                    >
+                      {option.label}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </XStack>
+          </YStack>
+
+          {!isSqlite(type) && (
+            <XStack gap="$md">
+              <YStack gap="$sm" flex={2}>
+                <FieldLabel>Host</FieldLabel>
                 <FormInput
-                  value={connectionUrl}
-                  onChangeText={handleUrlChange}
-                  placeholder="postgres://user:pass@host:5432/db?sslmode=require"
+                  value={host}
+                  onChangeText={setHost}
+                  placeholder="localhost"
                   autoCapitalize="none"
                   autoCorrect={false}
                 />
               </YStack>
-            </Animated.View>
+
+              <YStack gap="$sm" flex={1}>
+                <FieldLabel>Port</FieldLabel>
+                <FormInput
+                  value={port}
+                  onChangeText={setPort}
+                  placeholder={DEFAULT_PORTS[type].toString()}
+                  keyboardType="number-pad"
+                />
+              </YStack>
+            </XStack>
           )}
 
-          <Animated.View entering={FadeInDown.delay(400).springify()}>
-            <YStack gap="$sm">
-              <Text
-                color="$textMuted"
-                fontSize={13}
-                fontWeight="600"
-                textTransform="uppercase"
-                marginLeft={4}
-              >
-                Database Type
-              </Text>
-              <XStack flexWrap="wrap" gap="$sm">
-                {DATABASE_OPTIONS.map((option) => {
-                  const isActive = type === option.type;
-                  return (
-                    <Pressable
-                      key={option.type}
-                      style={{
-                        width: "31%",
-                        borderRadius: 12,
-                        padding: 16,
-                        alignItems: "center",
-                        borderWidth: 1,
-                        borderColor: isActive ? "transparent" : theme.cardBorder.val,
-                        backgroundColor: isActive ? "transparent" : theme.card.val,
-                        overflow: "hidden",
-                      }}
-                      onPress={() => handleTypeChange(option.type)}
-                    >
-                      {isActive && (
-                        <LinearGradient
-                          colors={[theme.gradientPrimaryStart.val, theme.gradientPrimaryEnd.val]}
-                          style={StyleSheet.absoluteFill}
-                          start={{ x: 0, y: 0 }}
-                          end={{ x: 1, y: 1 }}
-                        />
-                      )}
-                      <View marginBottom="$xs" zIndex={1}>
-                        <option.Icon width={24} height={24} fill={isActive ? "#fff" : theme.color.val} />
-                      </View>
-                      <Text
-                        color={isActive ? "#fff" : "$textSubtle"}
-                        fontSize={11}
-                        fontWeight={isActive ? "600" : "500"}
-                        textAlign="center"
-                        zIndex={1}
-                      >
-                        {option.label}
-                      </Text>
-                    </Pressable>
-                  );
-                })}
-              </XStack>
-            </YStack>
-          </Animated.View>
+          <YStack gap="$sm">
+            <FieldLabel>{isSqlite(type) ? "Database file" : "Database"}</FieldLabel>
+            <XStack gap="$sm">
+              <View flex={1}>
+                <FormInput
+                  value={database}
+                  onChangeText={setDatabase}
+                  placeholder={isSqlite(type) ? "local.db" : "mydb"}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                />
+              </View>
+              {isSqlite(type) && (
+                <Pressable
+                  style={{
+                    backgroundColor: theme.surface.val,
+                    borderRadius: 10,
+                    paddingHorizontal: 16,
+                    justifyContent: "center",
+                    borderWidth: 1,
+                    borderColor: theme.cardBorder.val,
+                  }}
+                  onPress={async () => {
+                    const uri = await pickDatabaseFile();
+                    if (uri) setDatabase(uri);
+                  }}
+                >
+                  <Text color="$color" fontSize={14} fontWeight="500">
+                    Browse
+                  </Text>
+                </Pressable>
+              )}
+            </XStack>
+          </YStack>
 
           {!isSqlite(type) && (
-            <Animated.View entering={FadeInDown.delay(500).springify()}>
+            <>
               <XStack gap="$md">
-                <YStack gap="$sm" flex={2}>
-                  <Text
-                    color="$textMuted"
-                    fontSize={13}
-                    fontWeight="600"
-                    textTransform="uppercase"
-                    marginLeft={4}
-                  >
-                    Host
-                  </Text>
+                <YStack gap="$sm" flex={1}>
+                  <FieldLabel>Username</FieldLabel>
                   <FormInput
-                    value={host}
-                    onChangeText={setHost}
-                    placeholder="localhost"
+                    value={username}
+                    onChangeText={setUsername}
+                    placeholder={type === "mongodb" ? "admin" : "postgres"}
                     autoCapitalize="none"
                     autoCorrect={false}
                   />
                 </YStack>
 
                 <YStack gap="$sm" flex={1}>
-                  <Text
-                    color="$textMuted"
-                    fontSize={13}
-                    fontWeight="600"
-                    textTransform="uppercase"
-                    marginLeft={4}
-                  >
-                    Port
-                  </Text>
+                  <FieldLabel>Password</FieldLabel>
                   <FormInput
-                    value={port}
-                    onChangeText={setPort}
-                    placeholder={DEFAULT_PORTS[type].toString()}
-                    keyboardType="number-pad"
+                    value={password}
+                    onChangeText={setPassword}
+                    placeholder="••••••••"
+                    secureTextEntry
                   />
                 </YStack>
               </XStack>
-            </Animated.View>
-          )}
 
-          <Animated.View entering={FadeInDown.delay(600).springify()}>
-            <YStack gap="$sm">
-              <Text
-                color="$textMuted"
-                fontSize={13}
-                fontWeight="600"
-                textTransform="uppercase"
-                marginLeft={4}
+              <XStack
+                justifyContent="space-between"
+                alignItems="center"
+                backgroundColor="$surface"
+                padding="$md"
+                borderRadius="$md"
+                borderWidth={1}
+                borderColor="$cardBorder"
               >
-                {isSqlite(type) ? "Database File" : "Database"}
-              </Text>
-              <XStack gap="$sm">
-                <View flex={1}>
-                  <FormInput
-                    value={database}
-                    onChangeText={setDatabase}
-                    placeholder={isSqlite(type) ? "local.db" : "mydb"}
-                    autoCapitalize="none"
-                    autoCorrect={false}
-                  />
-                </View>
-                {isSqlite(type) && (
-                  <Pressable
-                    style={{
-                      backgroundColor: theme.surfaceAlt.val,
-                      borderRadius: 12,
-                      paddingHorizontal: 16,
-                      justifyContent: "center",
-                      borderWidth: 1,
-                      borderColor: theme.cardBorder.val,
-                    }}
-                    onPress={async () => {
-                      const uri = await pickDatabaseFile();
-                      if (uri) setDatabase(uri);
-                    }}
-                  >
-                    <Text color="$color" fontSize={14} fontWeight="500">
-                      Browse
-                    </Text>
-                  </Pressable>
-                )}
-              </XStack>
-            </YStack>
-          </Animated.View>
-
-          {!isSqlite(type) && (
-            <>
-              <Animated.View entering={FadeInDown.delay(700).springify()}>
-                <XStack gap="$md">
-                  <YStack gap="$sm" flex={1}>
-                    <Text
-                      color="$textMuted"
-                      fontSize={13}
-                      fontWeight="600"
-                      textTransform="uppercase"
-                      marginLeft={4}
-                    >
-                      Username
-                    </Text>
-                    <FormInput
-                      value={username}
-                      onChangeText={setUsername}
-                      placeholder={type === "mongodb" ? "admin" : "postgres"}
-                      autoCapitalize="none"
-                      autoCorrect={false}
-                    />
-                  </YStack>
-
-                  <YStack gap="$sm" flex={1}>
-                    <Text
-                      color="$textMuted"
-                      fontSize={13}
-                      fontWeight="600"
-                      textTransform="uppercase"
-                      marginLeft={4}
-                    >
-                      Password
-                    </Text>
-                    <FormInput
-                      value={password}
-                      onChangeText={setPassword}
-                      placeholder="••••••••"
-                      secureTextEntry
-                    />
-                  </YStack>
-                </XStack>
-              </Animated.View>
-
-              <Animated.View entering={FadeInDown.delay(800).springify()}>
-                <XStack
-                  justifyContent="space-between"
-                  alignItems="center"
-                  backgroundColor="$card"
-                  padding="$md"
-                  borderRadius="$md"
-                  borderWidth={1}
-                  borderColor="$cardBorder"
+                <Text color="$color" fontSize={14} fontWeight="500">
+                  Use SSL / TLS
+                </Text>
+                <Switch
+                  checked={ssl}
+                  onCheckedChange={setSsl}
+                  backgroundColor={ssl ? "$primary" : "$surfaceAlt"}
                 >
-                  <Text
-                    color="$textMuted"
-                    fontSize={13}
-                    fontWeight="600"
-                    textTransform="uppercase"
-                  >
-                    Use SSL/TLS
-                  </Text>
-                  <Switch
-                    checked={ssl}
-                    onCheckedChange={setSsl}
-                    backgroundColor={ssl ? "$primary" : "$surfaceAlt"}
-                  >
-                    <Switch.Thumb
-                      animation="quick"
-                      backgroundColor="white"
-                    />
-                  </Switch>
-                </XStack>
-              </Animated.View>
+                  <Switch.Thumb
+                    animation="quick"
+                    backgroundColor="white"
+                  />
+                </Switch>
+              </XStack>
             </>
           )}
 
-          <Animated.View entering={FadeInDown.delay(900).springify()}>
-            <YStack gap="$md" marginTop="$sm">
-              <Button
-                variant="outlined"
-                onPress={handleTestConnection}
-                disabled={testing || saving}
-              >
-                {testing ? "Testing..." : "Test Connection"}
-              </Button>
+          <YStack gap="$sm" marginTop="$sm">
+            <Button
+              variant="outlined"
+              onPress={handleTestConnection}
+              disabled={testing || saving}
+            >
+              {testing ? "Testing…" : "Test connection"}
+            </Button>
 
-              <Button
-                variant="primary"
-                onPress={handleSave}
-                disabled={saving}
-              >
-                {saving ? "Saving..." : isEditMode ? "Update Connection" : "Save Connection"}
-              </Button>
-            </YStack>
-          </Animated.View>
+            <Button
+              variant="primary"
+              onPress={handleSave}
+              disabled={saving}
+            >
+              {saving ? "Saving…" : isEditMode ? "Update connection" : "Save connection"}
+            </Button>
+          </YStack>
         </ScrollView>
       </KeyboardAvoidingView>
     </View>

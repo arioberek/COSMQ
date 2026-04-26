@@ -3,7 +3,6 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { router, useLocalSearchParams } from "expo-router";
 import { useState } from "react";
 import { ActivityIndicator } from "react-native";
-import Animated, { FadeInDown } from "react-native-reanimated";
 import { ScrollView, Text, useTheme, XStack, YStack } from "tamagui";
 import {
   deleteConnection,
@@ -152,19 +151,17 @@ export default function ConnectionDetailScreen() {
             </Button>
           )}
 
-          <Animated.View entering={FadeInDown.delay(200).springify()}>
-            <Button
-              variant="secondary"
-              onPress={() => router.push(`/connection/new?edit=${connection.id}`)}
-            >
-              <XStack alignItems="center" gap="$sm">
-                <Ionicons name="create-outline" size={18} color={theme.color.val} />
-                <Text color="$color" fontWeight="500">
-                  Edit Connection
-                </Text>
-              </XStack>
-            </Button>
-          </Animated.View>
+          <Button
+            variant="secondary"
+            onPress={() => router.push(`/connection/new?edit=${connection.id}`)}
+          >
+            <XStack alignItems="center" gap="$sm">
+              <Ionicons name="create-outline" size={18} color={theme.color.val} />
+              <Text color="$color" fontWeight="500">
+                Edit connection
+              </Text>
+            </XStack>
+          </Button>
 
           <Button
             variant="ghost"
