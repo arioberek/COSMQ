@@ -221,7 +221,7 @@ const cosmicTokens = createTokens({
     lightSecondaryMuted: "rgba(107, 78, 255, 0.10)",
     lightSuccess: "#1f9d55",
     lightSuccessMuted: "rgba(31, 157, 85, 0.10)",
-    lightSuccessLight: "#69f0ae",
+    lightSuccessLight: "#4ade80",
     lightWarning: "#d97706",
     lightWarningMuted: "rgba(217, 119, 6, 0.10)",
     lightDanger: "#dc2626",
@@ -386,8 +386,8 @@ const lightTheme = {
   dialogButtonHover: "rgba(15, 15, 26, 0.05)",
   dialogHandle: "rgba(15, 15, 26, 0.20)",
 
-  shadowColor: "#6b4eff",
-  shadowColorStrong: "rgba(107, 78, 255, 0.2)",
+  shadowColor: "#0f0f1a",
+  shadowColorStrong: "rgba(15, 15, 26, 0.12)",
 
   switchThumb: "#ffffff",
   textOnPrimary: "#ffffff",

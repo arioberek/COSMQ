@@ -209,7 +209,7 @@ const light: Theme = {
     secondaryMuted: "rgba(107, 78, 255, 0.10)",
     success: "#1f9d55",
     successMuted: "rgba(31, 157, 85, 0.10)",
-    successLight: "#69f0ae",
+    successLight: "#4ade80",
     warning: "#d97706",
     warningMuted: "rgba(217, 119, 6, 0.10)",
     danger: "#dc2626",
