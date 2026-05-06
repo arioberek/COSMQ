@@ -23,7 +23,10 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.cosmq.app",
-      "buildNumber": "1"
+      "buildNumber": "1",
+      "infoPlist": {
+        "NSFaceIDUsageDescription": "Allow $(PRODUCT_NAME) to use Face ID to unlock the app and protect your database connections."
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -40,12 +43,6 @@
     "plugins": [
       "expo-router",
       "expo-secure-store",
-      [
-        "expo-local-authentication",
-        {
-          "faceIDPermission": "Allow $(PRODUCT_NAME) to use Face ID to unlock the app and protect your database connections."
-        }
-      ],
       [
         "expo-splash-screen",
         {

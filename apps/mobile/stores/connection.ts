@@ -4,16 +4,26 @@ import type {
   ConnectionConfig,
   ConnectionState,
   DatabaseConnection,
+  DatabaseType,
   QueryResult,
 } from "../lib/types";
 import { PostgresConnection } from "../lib/protocols/postgres/connection";
 import { MySQLConnection } from "../lib/protocols/mysql/connection";
 import { SQLiteConnection } from "../lib/protocols/sqlite/connection";
 import { MongoDBConnection } from "../lib/protocols/mongodb/connection";
-import { MockConnection } from "../lib/protocols/mock/connection";
 import { formatConnectionError, formatQueryError } from "../lib/errors";
 
 const isExpoGo = Constants.executionEnvironment === ExecutionEnvironment.StoreClient;
+
+// Protocols that need react-native-tcp-socket (unavailable in Expo Go).
+// SQLite uses expo-sqlite, which works fine in Expo Go.
+const TCP_PROTOCOLS: ReadonlySet<DatabaseType> = new Set([
+  "postgres",
+  "cockroachdb",
+  "mysql",
+  "mariadb",
+  "mongodb",
+]);
 
 type ConnectionFactory = (config: ConnectionConfig) => DatabaseConnection;
 
@@ -55,17 +65,17 @@ export const useConnectionStore = create<ConnectionStore>((set, get) => ({
       return;
     }
 
-    let instance: DatabaseConnection;
-
-    if (isExpoGo) {
-      instance = new MockConnection(config);
-    } else {
-      const factory = connectionFactories[config.type];
-      if (!factory) {
-        throw new Error(`Unknown database type: ${config.type}`);
-      }
-      instance = factory(config);
+    if (isExpoGo && TCP_PROTOCOLS.has(config.type)) {
+      throw new Error(
+        `${config.type} connections require a development build. Expo Go cannot load native TCP sockets — run \`expo run:ios\` (or \`expo run:android\`) and open that build instead.`
+      );
     }
+
+    const factory = connectionFactories[config.type];
+    if (!factory) {
+      throw new Error(`Unknown database type: ${config.type}`);
+    }
+    const instance: DatabaseConnection = factory(config);
 
     const activeConnection: ActiveConnection = {
       config,
