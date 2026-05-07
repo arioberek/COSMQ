@@ -112,9 +112,18 @@ export class MySQLConnection implements DatabaseConnection {
   private async handleAuthSwitch(payload: Buffer): Promise<void> {
     let offset = 1;
     const pluginNameEnd = payload.indexOf(0, offset);
+    if (pluginNameEnd <= offset) {
+      throw new Error("Invalid auth switch packet: missing plugin name terminator");
+    }
     const pluginName = payload.toString("utf8", offset, pluginNameEnd);
     offset = pluginNameEnd + 1;
-    const newScramble = payload.subarray(offset, offset + 20);
+    if (offset >= payload.length) {
+      throw new Error("Invalid auth switch packet: missing auth plugin data");
+    }
+    let newScramble = payload.subarray(offset);
+    if (newScramble.length > 0 && newScramble[newScramble.length - 1] === 0x00) {
+      newScramble = newScramble.subarray(0, newScramble.length - 1);
+    }
 
     const authResponse = createAuthResponse(this.config.password, newScramble, pluginName);
 
