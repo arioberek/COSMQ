@@ -69,8 +69,14 @@ export default function ConnectionDetailScreen() {
 
   const handleDisconnect = async () => {
     if (!id) return;
-    haptic.light();
-    await disconnect(id);
+    try {
+      await disconnect(id);
+      haptic.success();
+    } catch (error) {
+      haptic.error();
+      setErrorMessage(error instanceof Error ? error.message : "Failed to disconnect");
+      setShowErrorDialog(true);
+    }
   };
 
   const handleDeleteConfirm = async () => {

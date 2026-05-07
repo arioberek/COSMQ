@@ -30,6 +30,11 @@ export const RunButton = memo(function RunButton({
 	const measured = useRef(false);
 
 	useEffect(() => {
+		measured.current = false;
+		naturalWidth.value = 0;
+	}, [label, naturalWidth]);
+
+	useEffect(() => {
 		const target = executing ? 1 : 0;
 		if (reducedMotion) {
 			progress.value = withTiming(target, { duration: 120 });

@@ -27,7 +27,7 @@ const TCP_PROTOCOLS: ReadonlySet<DatabaseType> = new Set([
 
 type ConnectionFactory = (config: ConnectionConfig) => DatabaseConnection;
 
-const connectionFactories: Record<string, ConnectionFactory> = {
+const connectionFactories: Record<DatabaseType, ConnectionFactory> = {
   postgres: (config) => new PostgresConnection(config),
   cockroachdb: (config) => new PostgresConnection(config),
   mysql: (config) => new MySQLConnection(config),
@@ -67,7 +67,7 @@ export const useConnectionStore = create<ConnectionStore>((set, get) => ({
 
     if (isExpoGo && TCP_PROTOCOLS.has(config.type)) {
       throw new Error(
-        `${config.type} connections require a development build. Expo Go cannot load native TCP sockets — run \`expo run:ios\` (or \`expo run:android\`) and open that build instead.`
+        `${config.type} connections require a development build. Expo Go cannot load native TCP sockets — run \`npx expo run:ios\` (or \`npx expo run:android\`) and open that build instead.`
       );
     }
 
