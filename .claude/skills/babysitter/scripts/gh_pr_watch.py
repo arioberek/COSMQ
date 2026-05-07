@@ -325,19 +325,66 @@ def collect_checks(pr: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _graphql_thread_comments(
+    owner: str, repo: str, pr_number: int, thread_id: str, after: str | None
+) -> list[dict[str, Any]]:
+    query = """
+    query($owner: String!, $repo: String!, $number: Int!, $threadId: ID!, $after: String) {
+      node(id: $threadId) {
+        ... on PullRequestReviewThread {
+          comments(first: 100, after: $after) {
+            pageInfo { hasNextPage endCursor }
+            nodes {
+              id
+              body
+              url
+              createdAt
+              author { login }
+            }
+          }
+        }
+      }
+    }
+    """
+    args = [
+        "gh", "api", "graphql",
+        "-f", f"query={query}",
+        "-F", f"owner={owner}",
+        "-F", f"repo={repo}",
+        "-F", f"number={pr_number}",
+        "-F", f"threadId={thread_id}",
+    ]
+    if after is not None:
+        args.extend(["-F", f"after={after}"])
+    data = run_json(args, check=False)
+    try:
+        block = data["data"]["node"]["comments"]
+    except (TypeError, KeyError):
+        return []
+    nodes = [n for n in block.get("nodes") or [] if isinstance(n, dict)]
+    page_info = block.get("pageInfo") or {}
+    if page_info.get("hasNextPage") and page_info.get("endCursor"):
+        nodes.extend(
+            _graphql_thread_comments(owner, repo, pr_number, thread_id, page_info["endCursor"])
+        )
+    return nodes
+
+
 def graphql_review_threads(owner: str, repo: str, pr_number: int) -> list[dict[str, Any]]:
     query = """
-    query($owner: String!, $repo: String!, $number: Int!) {
+    query($owner: String!, $repo: String!, $number: Int!, $after: String) {
       repository(owner: $owner, name: $repo) {
         pullRequest(number: $number) {
-          reviewThreads(first: 100) {
+          reviewThreads(first: 100, after: $after) {
+            pageInfo { hasNextPage endCursor }
             nodes {
               id
               isResolved
               isOutdated
               path
               line
-              comments(first: 20) {
+              comments(first: 100) {
+                pageInfo { hasNextPage endCursor }
                 nodes {
                   id
                   body
@@ -354,27 +401,42 @@ def graphql_review_threads(owner: str, repo: str, pr_number: int) -> list[dict[s
       }
     }
     """
-    data = run_json(
-        [
-            "gh",
-            "api",
-            "graphql",
-            "-f",
-            f"query={query}",
-            "-F",
-            f"owner={owner}",
-            "-F",
-            f"repo={repo}",
-            "-F",
-            f"number={pr_number}",
-        ],
-        check=False,
-    )
-    try:
-        nodes = data["data"]["repository"]["pullRequest"]["reviewThreads"]["nodes"]
-    except (TypeError, KeyError):
-        return []
-    return [node for node in nodes if isinstance(node, dict)]
+    threads: list[dict[str, Any]] = []
+    after: str | None = None
+    while True:
+        args = [
+            "gh", "api", "graphql",
+            "-f", f"query={query}",
+            "-F", f"owner={owner}",
+            "-F", f"repo={repo}",
+            "-F", f"number={pr_number}",
+        ]
+        if after is not None:
+            args.extend(["-F", f"after={after}"])
+        data = run_json(args, check=False)
+        try:
+            block = data["data"]["repository"]["pullRequest"]["reviewThreads"]
+        except (TypeError, KeyError):
+            break
+        nodes = [n for n in block.get("nodes") or [] if isinstance(n, dict)]
+        for thread in nodes:
+            thread_id = thread.get("id")
+            comments = thread.get("comments") or {}
+            comment_nodes = [c for c in comments.get("nodes") or [] if isinstance(c, dict)]
+            page_info = comments.get("pageInfo") or {}
+            if thread_id and page_info.get("hasNextPage") and page_info.get("endCursor"):
+                comment_nodes.extend(
+                    _graphql_thread_comments(
+                        owner, repo, pr_number, thread_id, page_info["endCursor"]
+                    )
+                )
+            thread["comments"] = {"nodes": comment_nodes}
+        threads.extend(nodes)
+        page_info = block.get("pageInfo") or {}
+        if not page_info.get("hasNextPage") or not page_info.get("endCursor"):
+            break
+        after = page_info["endCursor"]
+    return threads
 
 
 def summarize_review_threads(threads: list[dict[str, Any]]) -> dict[str, Any]:
@@ -428,19 +490,60 @@ def gh_api(path: str) -> Any:
     return run_json(["gh", "api", path], check=False)
 
 
+def gh_api_list(path: str) -> list[Any]:
+    """Fetch a paginated REST endpoint that returns a JSON array, concatenating all pages.
+
+    `gh api --paginate` emits each page as a separate top-level JSON value rather
+    than concatenating them into one array, so we walk the stream with
+    `json.JSONDecoder.raw_decode` and flatten.
+    """
+    result = run_command(["gh", "api", "--paginate", path], check=False)
+    if result.returncode != 0 or not result.stdout.strip():
+        return []
+    decoder = json.JSONDecoder()
+    items: list[Any] = []
+    text = result.stdout
+    idx = 0
+    length = len(text)
+    while idx < length:
+        while idx < length and text[idx].isspace():
+            idx += 1
+        if idx >= length:
+            break
+        try:
+            value, end = decoder.raw_decode(text, idx)
+        except json.JSONDecodeError:
+            break
+        if isinstance(value, list):
+            items.extend(value)
+        else:
+            items.append(value)
+        idx = end
+    return items
+
+
 def collect_issue_comments(owner: str, repo: str, pr_number: int) -> list[dict[str, Any]]:
-    data = gh_api(f"repos/{owner}/{repo}/issues/{pr_number}/comments?per_page=100")
-    return data if isinstance(data, list) else []
+    return [
+        item
+        for item in gh_api_list(f"repos/{owner}/{repo}/issues/{pr_number}/comments?per_page=100")
+        if isinstance(item, dict)
+    ]
 
 
 def collect_reviews(owner: str, repo: str, pr_number: int) -> list[dict[str, Any]]:
-    data = gh_api(f"repos/{owner}/{repo}/pulls/{pr_number}/reviews?per_page=100")
-    return data if isinstance(data, list) else []
+    return [
+        item
+        for item in gh_api_list(f"repos/{owner}/{repo}/pulls/{pr_number}/reviews?per_page=100")
+        if isinstance(item, dict)
+    ]
 
 
 def collect_pull_review_comments(owner: str, repo: str, pr_number: int) -> list[dict[str, Any]]:
-    data = gh_api(f"repos/{owner}/{repo}/pulls/{pr_number}/comments?per_page=100")
-    return data if isinstance(data, list) else []
+    return [
+        item
+        for item in gh_api_list(f"repos/{owner}/{repo}/pulls/{pr_number}/comments?per_page=100")
+        if isinstance(item, dict)
+    ]
 
 
 def collect_review_specific_comments(
@@ -455,11 +558,9 @@ def collect_review_specific_comments(
         review_id = review.get("id")
         if review_id is None:
             continue
-        data = gh_api(
+        data = gh_api_list(
             f"repos/{owner}/{repo}/pulls/{pr_number}/reviews/{review_id}/comments?per_page=100"
         )
-        if not isinstance(data, list):
-            continue
         original_comments = [
             item
             for item in data
@@ -914,15 +1015,18 @@ def failed_check_categories(failing: list[dict[str, Any]]) -> list[str]:
     return categories
 
 
-def pr_diff_files(pr_number: int) -> list[str]:
+def pr_diff_files(pr_number: int) -> tuple[list[str], bool, str]:
+    """Return (files, diff_available, error_text). diff_available=False means we
+    couldn't fetch the diff and the caller should not infer "no changes"."""
     result = run_command(["gh", "pr", "diff", str(pr_number), "--name-only"], check=False)
     if result.returncode != 0:
-        return []
-    return [line.strip() for line in result.stdout.splitlines() if line.strip()]
+        return [], False, result.stderr.strip()
+    files = [line.strip() for line in result.stdout.splitlines() if line.strip()]
+    return files, True, ""
 
 
 def collect_changeset_status(pr_number: int) -> dict[str, Any]:
-    files = pr_diff_files(pr_number)
+    files, diff_available, diff_error = pr_diff_files(pr_number)
     changeset_files = [
         path
         for path in files
@@ -935,12 +1039,17 @@ def collect_changeset_status(pr_number: int) -> dict[str, Any]:
         and not path.endswith((".md", ".mdx"))
         and "/__snapshots__/" not in path
     ]
-    missing = bool(release_surface_files and not changeset_files)
+    if not diff_available:
+        missing: bool | None = None
+    else:
+        missing = bool(release_surface_files and not changeset_files)
     return {
         "changedFiles": files,
         "changesetFiles": changeset_files,
         "releaseSurfaceFiles": release_surface_files,
         "missing": missing,
+        "diffAvailable": diff_available,
+        "diffError": diff_error or None,
     }
 
 
@@ -1027,16 +1136,18 @@ def snapshot(target: str) -> dict[str, Any]:
     changeset_status = collect_changeset_status(pr_number)
     actions = choose_actions(pr, checks, reviews, review_items, bot_reports)
     failure_categories = failed_check_categories(checks["failing"])
-    if changeset_status["missing"] and "changeset_missing" not in failure_categories:
+    if changeset_status["missing"] is True and "changeset_missing" not in failure_categories:
         failure_categories.append("changeset_missing")
     if (
-        changeset_status["missing"]
+        changeset_status["missing"] is True
         and pr.get("state") not in {"MERGED", "CLOSED"}
         and "diagnose_ci_failure" not in actions
     ):
         actions.append("diagnose_ci_failure")
     terminal = pr.get("state") in {"MERGED", "CLOSED"}
     user_help_required = has_user_help_blocker(checks, bot_reports)
+    if not changeset_status["diffAvailable"] and pr.get("state") not in {"MERGED", "CLOSED"}:
+        user_help_required = True
     if user_help_required and "escalate_user_help" not in actions:
         actions.append("escalate_user_help")
 
