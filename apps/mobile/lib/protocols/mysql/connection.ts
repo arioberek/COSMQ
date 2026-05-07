@@ -24,6 +24,12 @@ import {
   wrapPacket,
 } from "./packets";
 
+const NULL_BYTE_REGEX = new RegExp(String.fromCharCode(0), "g");
+
+function escapeMySQLStringLiteral(value: string): string {
+  return value.replace(NULL_BYTE_REGEX, "").replace(/\\/g, "\\\\").replace(/'/g, "''");
+}
+
 export class MySQLConnection implements DatabaseConnection {
   config: ConnectionConfig;
   state: ConnectionState = { status: "disconnected" };
@@ -86,7 +92,7 @@ export class MySQLConnection implements DatabaseConnection {
     }
 
     if (firstByte === 0xfe) {
-      await this.handleAuthSwitch(result.payload, scramble);
+      await this.handleAuthSwitch(result.payload);
       return;
     }
 
@@ -103,7 +109,7 @@ export class MySQLConnection implements DatabaseConnection {
     throw new Error("Unexpected authentication response");
   }
 
-  private async handleAuthSwitch(payload: Buffer, _scramble: Buffer): Promise<void> {
+  private async handleAuthSwitch(payload: Buffer): Promise<void> {
     let offset = 1;
     const pluginNameEnd = payload.indexOf(0, offset);
     const pluginName = payload.toString("utf8", offset, pluginNameEnd);
@@ -305,9 +311,10 @@ export class MySQLConnection implements DatabaseConnection {
 
   async listTables(schema?: string): Promise<TableInfo[]> {
     const db = schema || this.config.database;
+    const safeDb = escapeMySQLStringLiteral(db);
 
     const tablesResult = await this.query(
-      `SELECT TABLE_NAME, TABLE_TYPE FROM information_schema.TABLES WHERE TABLE_SCHEMA = '${db}'`,
+      `SELECT TABLE_NAME, TABLE_TYPE FROM information_schema.TABLES WHERE TABLE_SCHEMA = '${safeDb}'`,
     );
 
     return tablesResult.rows.map((row) => ({
@@ -318,8 +325,11 @@ export class MySQLConnection implements DatabaseConnection {
   }
 
   async describeTable(schema: string, table: string): Promise<ColumnInfo[]> {
+    const safeSchema = escapeMySQLStringLiteral(schema);
+    const safeTable = escapeMySQLStringLiteral(table);
+
     const result = await this.query(
-      `SELECT COLUMN_NAME, DATA_TYPE FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = '${schema}' AND TABLE_NAME = '${table}' ORDER BY ORDINAL_POSITION`,
+      `SELECT COLUMN_NAME, DATA_TYPE FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = '${safeSchema}' AND TABLE_NAME = '${safeTable}' ORDER BY ORDINAL_POSITION`,
     );
 
     return result.rows.map((row) => ({

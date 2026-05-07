@@ -32,6 +32,12 @@ import {
   verifyScramServerFinal,
 } from "./scram";
 
+const PG_NULL_BYTE_REGEX = new RegExp(String.fromCharCode(0), "g");
+
+function escapePostgresStringLiteral(value: string): string {
+  return value.replace(PG_NULL_BYTE_REGEX, "").replace(/\\/g, "\\\\").replace(/'/g, "''");
+}
+
 export class PostgresConnection implements DatabaseConnection {
   config: ConnectionConfig;
   state: ConnectionState = { status: "disconnected" };
@@ -268,6 +274,7 @@ export class PostgresConnection implements DatabaseConnection {
   }
 
   async listTables(schema = "public"): Promise<TableInfo[]> {
+    const safeSchema = escapePostgresStringLiteral(schema);
     const result = await this.query(`
       SELECT
         table_schema as schema,
@@ -277,7 +284,7 @@ export class PostgresConnection implements DatabaseConnection {
           ELSE 'view'
         END as type
       FROM information_schema.tables
-      WHERE table_schema = '${schema}'
+      WHERE table_schema = '${safeSchema}'
       ORDER BY table_name
     `);
 
@@ -289,12 +296,14 @@ export class PostgresConnection implements DatabaseConnection {
   }
 
   async describeTable(schema: string, table: string): Promise<ColumnInfo[]> {
+    const safeSchema = escapePostgresStringLiteral(schema);
+    const safeTable = escapePostgresStringLiteral(table);
     const result = await this.query(`
       SELECT
         column_name as name,
         data_type as type
       FROM information_schema.columns
-      WHERE table_schema = '${schema}' AND table_name = '${table}'
+      WHERE table_schema = '${safeSchema}' AND table_name = '${safeTable}'
       ORDER BY ordinal_position
     `);
 
