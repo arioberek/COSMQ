@@ -470,7 +470,9 @@ const LinkRow = ({ label, value, url }: { label: string; value: string; url: str
         },
         pressed && { opacity: 0.7 },
       ]}
-      onPress={() => Linking.openURL(url)}
+      onPress={() => {
+        Linking.openURL(url).catch(() => {});
+      }}
     >
       <Text color="$textSubtle" fontSize={15}>
         {label}

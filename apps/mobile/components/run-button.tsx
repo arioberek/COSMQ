@@ -1,5 +1,5 @@
 import { memo, useEffect, useRef } from "react";
-import { ActivityIndicator, Pressable, StyleSheet, View } from "react-native";
+import { ActivityIndicator, Pressable, StyleSheet } from "react-native";
 import Animated, {
   interpolate,
   useAnimatedStyle,
@@ -45,9 +45,9 @@ export const RunButton = memo(function RunButton({
 
   const containerStyle = useAnimatedStyle(() => {
     if (naturalWidth.value === 0) return {};
-    const width = interpolate(progress.value, [0, 1], [naturalWidth.value, 44]);
-    const borderRadius = interpolate(progress.value, [0, 1], [8, 22]);
-    const paddingH = interpolate(progress.value, [0, 1], [20, 0]);
+    const width = interpolate(progress.value, [0, 1], [naturalWidth.value, 44], "clamp");
+    const borderRadius = interpolate(progress.value, [0, 1], [8, 22], "clamp");
+    const paddingH = interpolate(progress.value, [0, 1], [20, 0], "clamp");
     return {
       width,
       borderRadius,
@@ -66,7 +66,12 @@ export const RunButton = memo(function RunButton({
   }));
 
   return (
-    <Pressable onPress={onPress} disabled={disabled} style={styles.pressable}>
+    <Pressable
+      onPress={onPress}
+      disabled={disabled}
+      style={styles.pressable}
+      accessibilityState={{ busy: executing, disabled: !!disabled }}
+    >
       <Animated.View
         style={[styles.button, { backgroundColor: primaryColor }, containerStyle]}
         onLayout={(e) => {
