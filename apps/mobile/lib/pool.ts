@@ -1,9 +1,10 @@
 import type { ConnectionConfig, DatabaseConnection } from "./types";
 
 type PooledConnection = {
-  connection: DatabaseConnection;
+  connection: DatabaseConnection | null;
   lastUsed: number;
   inUse: boolean;
+  pending: boolean;
 };
 
 type PoolConfig = {
@@ -38,9 +39,9 @@ export class ConnectionPool {
     const now = Date.now();
     for (const [configId, pool] of this.pools) {
       const activeConnections = pool.filter((pc) => {
-        if (pc.inUse) return true;
+        if (pc.inUse || pc.pending) return true;
         if (now - pc.lastUsed > this.config.idleTimeoutMs) {
-          pc.connection.disconnect().catch(() => {});
+          pc.connection?.disconnect().catch(() => {});
           return false;
         }
         return true;
@@ -65,23 +66,34 @@ export class ConnectionPool {
       this.pools.set(poolKey, pool);
     }
 
-    const available = pool.find((pc) => !pc.inUse);
-    if (available) {
+    const available = pool.find((pc) => !pc.inUse && !pc.pending && pc.connection);
+    if (available && available.connection) {
       available.inUse = true;
       available.lastUsed = Date.now();
       return available.connection;
     }
 
     if (pool.length < this.config.maxSize) {
-      const connection = factory(config);
-      await connection.connect();
-      const pooled: PooledConnection = {
-        connection,
+      const placeholder: PooledConnection = {
+        connection: null,
         lastUsed: Date.now(),
         inUse: true,
+        pending: true,
       };
-      pool.push(pooled);
-      return connection;
+      pool.push(placeholder);
+
+      try {
+        const connection = factory(config);
+        await connection.connect();
+        placeholder.connection = connection;
+        placeholder.pending = false;
+        placeholder.lastUsed = Date.now();
+        return connection;
+      } catch (err) {
+        const idx = pool.indexOf(placeholder);
+        if (idx !== -1) pool.splice(idx, 1);
+        throw err;
+      }
     }
 
     return this.waitForAvailable(pool);
@@ -92,8 +104,8 @@ export class ConnectionPool {
 
     return new Promise((resolve, reject) => {
       const checkInterval = setInterval(() => {
-        const available = pool.find((pc) => !pc.inUse);
-        if (available) {
+        const available = pool.find((pc) => !pc.inUse && !pc.pending && pc.connection);
+        if (available && available.connection) {
           clearInterval(checkInterval);
           available.inUse = true;
           available.lastUsed = Date.now();
@@ -126,7 +138,9 @@ export class ConnectionPool {
     const pool = this.pools.get(poolKey);
     if (!pool) return;
 
-    await Promise.all(pool.map((pc) => pc.connection.disconnect().catch(() => {})));
+    await Promise.all(
+      pool.map((pc) => pc.connection?.disconnect().catch(() => {}) ?? Promise.resolve()),
+    );
     this.pools.delete(poolKey);
   }
 
@@ -139,7 +153,9 @@ export class ConnectionPool {
     const destroyPromises: Promise<void>[] = [];
     for (const pool of this.pools.values()) {
       for (const pc of pool) {
-        destroyPromises.push(pc.connection.disconnect().catch(() => {}));
+        if (pc.connection) {
+          destroyPromises.push(pc.connection.disconnect().catch(() => {}));
+        }
       }
     }
     await Promise.all(destroyPromises);
