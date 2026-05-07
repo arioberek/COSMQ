@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
-import * as Haptics from "expo-haptics";
-import { memo, type ReactNode, useRef } from "react";
+import { memo, type ReactNode, useEffect, useRef } from "react";
+import { useHaptic } from "../lib/haptics";
 import {
 	Animated,
 	type GestureResponderEvent,
@@ -48,6 +48,7 @@ export const SwipeableRow = memo(function SwipeableRow({
 	enabled = true,
 }: SwipeableRowProps) {
 	const theme = useTheme();
+	const haptic = useHaptic();
 	const translateX = useRef(new Animated.Value(0)).current;
 	const offsetX = useRef(0);
 	const isOpen = useRef(false);
@@ -63,8 +64,8 @@ export const SwipeableRow = memo(function SwipeableRow({
 	rightWidthRef.current = rightWidth;
 
 	const animateTo = (toValue: number, open: boolean) => {
-		if (open && !isOpen.current) {
-			Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+		if (open && !isOpen.current && !hapticFired.current) {
+			haptic.light();
 		}
 		isOpen.current = open;
 		offsetX.current = toValue;
@@ -104,7 +105,7 @@ export const SwipeableRow = memo(function SwipeableRow({
 		if (!isOpen.current) {
 			if (newValue < hapticPoint && !hapticFired.current) {
 				hapticFired.current = true;
-				Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+				haptic.light();
 			} else if (newValue > hapticPoint && hapticFired.current) {
 				hapticFired.current = false;
 			}
@@ -186,6 +187,15 @@ export const SwipeableRow = memo(function SwipeableRow({
 	};
 
 	const actionTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+	useEffect(() => {
+		return () => {
+			if (actionTimeoutRef.current) {
+				clearTimeout(actionTimeoutRef.current);
+				actionTimeoutRef.current = null;
+			}
+		};
+	}, []);
 
 	const handleActionPress = (action: SwipeAction) => {
 		close();
