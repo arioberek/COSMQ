@@ -10,14 +10,8 @@ repository: arioberek/COSMQ
 
 ## Objective
 
-Babysit an `arioberek/COSMQ` pull request until one of these terminal outcomes
-occurs:
-
-- The PR is merged or closed.
-- The current head SHA has all required checks green, no unresolved actionable
-  review threads, and no unresolved error reports from AI/bot reviewers.
-- User help is required because of permissions, missing credentials, repeated
-  infrastructure failures, or an ambiguous product decision.
+Babysit an `arioberek/COSMQ` pull request until one of the terminal outcomes
+listed in [Stop Conditions](#stop-conditions) is reached.
 
 Do not stop merely because the watcher reports `idle` while checks, review
 threads, or agent reports are still pending.
@@ -212,11 +206,13 @@ bunx changeset status
 
 ## Stop Conditions
 
-Stop only when one of these is true:
+Stop only when one of these terminal outcomes is true:
 
 - PR is merged or closed.
-- The user explicitly asks to stop and the current snapshot is healthy.
-- User help is required.
+- Current head SHA has all required checks green and no unresolved actionable
+  review threads or AI error reports.
+- User help is required due to permissions, credentials, infrastructure, or an
+  ambiguous decision.
 
 Keep polling when:
 

@@ -35,9 +35,7 @@ PR_VIEW_FIELDS = ",".join(
 )
 
 
-BOT_AUTHOR_PATTERNS = (
-    "[bot]",
-    "bot",
+BOT_AUTHOR_NAME_PATTERNS = (
     "devin",
     "codex",
     "github-actions",
@@ -308,7 +306,7 @@ def collect_checks(pr: dict[str, Any]) -> dict[str, Any]:
     agent_checks = [
         item
         for item in checks
-        if any(pattern in item["name"].lower() for pattern in BOT_AUTHOR_PATTERNS)
+        if any(pattern in item["name"].lower() for pattern in BOT_AUTHOR_NAME_PATTERNS)
     ]
 
     return {
@@ -781,7 +779,11 @@ def summarize_review_items(
 
 def is_bot_author(login: str | None) -> bool:
     lowered = (login or "").lower()
-    return any(pattern in lowered for pattern in BOT_AUTHOR_PATTERNS)
+    if not lowered:
+        return False
+    if lowered.endswith("[bot]") or lowered.endswith("-bot") or lowered == "bot":
+        return True
+    return any(pattern in lowered for pattern in BOT_AUTHOR_NAME_PATTERNS)
 
 
 def body_has_problem(body: str) -> bool:
