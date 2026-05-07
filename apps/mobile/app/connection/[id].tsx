@@ -11,6 +11,7 @@ import {
 import { useConnectionStore } from "../../stores/connection";
 import { DatabaseIcon } from "../../components/database-icon";
 import { Button, Dialog } from "../../components/ui";
+import { useHaptic } from "../../lib/haptics";
 
 const InfoRow = ({ label, value }: { label: string; value: string }) => (
   <XStack
@@ -30,6 +31,7 @@ const InfoRow = ({ label, value }: { label: string; value: string }) => (
 
 export default function ConnectionDetailScreen() {
   const theme = useTheme();
+  const haptic = useHaptic();
   const { id } = useLocalSearchParams<{ id: string }>();
   const queryClient = useQueryClient();
   const [connecting, setConnecting] = useState(false);
@@ -54,8 +56,10 @@ export default function ConnectionDetailScreen() {
     setConnecting(true);
     try {
       await connect(connection);
+      haptic.success();
       router.replace(`/query/${connection.id}`);
     } catch (error) {
+      haptic.error();
       setErrorMessage(error instanceof Error ? error.message : "Failed to connect");
       setShowErrorDialog(true);
     } finally {
@@ -65,7 +69,14 @@ export default function ConnectionDetailScreen() {
 
   const handleDisconnect = async () => {
     if (!id) return;
-    await disconnect(id);
+    try {
+      await disconnect(id);
+      haptic.success();
+    } catch (error) {
+      haptic.error();
+      setErrorMessage(error instanceof Error ? error.message : "Failed to disconnect");
+      setShowErrorDialog(true);
+    }
   };
 
   const handleDeleteConfirm = async () => {

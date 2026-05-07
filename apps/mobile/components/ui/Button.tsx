@@ -60,7 +60,7 @@ const StyledButton = styled(TamaguiButton, {
         },
       },
     },
-    size: {
+    buttonSize: {
       sm: {
         paddingHorizontal: "$md",
         paddingVertical: "$xs",
@@ -81,18 +81,21 @@ const StyledButton = styled(TamaguiButton, {
 
   defaultVariants: {
     variant: "primary",
-    size: "md",
+    buttonSize: "md",
   },
 });
 
 type StyledButtonProps = GetProps<typeof StyledButton>;
 
-type ButtonProps = Omit<StyledButtonProps, "children"> & {
+type ButtonSize = "sm" | "md" | "lg";
+
+type ButtonProps = Omit<StyledButtonProps, "children" | "size" | "buttonSize"> & {
+  size?: ButtonSize;
   loading?: boolean;
   children: React.ReactNode;
 };
 
-export const Button = memo(function Button({ loading, disabled, children, variant = "primary", ...props }: ButtonProps) {
+export const Button = memo(function Button({ loading, disabled, children, variant = "primary", size = "md", ...props }: ButtonProps) {
   const theme = useTheme();
   const isDisabled = disabled || loading;
 
@@ -106,6 +109,7 @@ export const Button = memo(function Button({ loading, disabled, children, varian
   return (
     <StyledButton
       variant={variant}
+      buttonSize={size}
       disabled={isDisabled}
       opacity={isDisabled ? 0.6 : 1}
       {...props}

@@ -33,7 +33,7 @@ const StyledInput = styled(TamaguiInput, {
         },
       },
     },
-    size: {
+    inputSize: {
       sm: {
         height: "$inputSm",
         paddingHorizontal: "$sm",
@@ -50,18 +50,21 @@ const StyledInput = styled(TamaguiInput, {
   } as const,
 
   defaultVariants: {
-    size: "md",
+    inputSize: "md",
   },
 });
 
 type StyledInputProps = GetProps<typeof StyledInput>;
 
-type InputProps = StyledInputProps & {
+type InputSize = "sm" | "md" | "lg";
+
+type InputProps = Omit<StyledInputProps, "size" | "inputSize"> & {
+  size?: InputSize;
   label?: string;
   error?: string;
 };
 
-export const Input = memo(function Input({ label, error, hasError, ...props }: InputProps) {
+export const Input = memo(function Input({ label, error, hasError, size = "md", ...props }: InputProps) {
   const showError = Boolean(error) || hasError;
 
   return (
@@ -71,7 +74,7 @@ export const Input = memo(function Input({ label, error, hasError, ...props }: I
           {label}
         </Text>
       ) : null}
-      <StyledInput hasError={showError} {...props} />
+      <StyledInput inputSize={size} hasError={showError} {...props} />
       {error ? (
         <Text color="$danger" fontSize={12}>
           {error}

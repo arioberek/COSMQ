@@ -1,4 +1,3 @@
-import { FlashList } from "@shopify/flash-list";
 import * as Clipboard from "expo-clipboard";
 import { useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -31,6 +30,7 @@ import {
 } from "../../lib/storage/snippets";
 import { useHaptic } from "../../lib/haptics";
 import { Dialog } from "../../components/ui/Dialog";
+import { RunButton } from "../../components/run-button";
 
 const SQL_KEYWORDS = [
   'SELECT', 'FROM', 'WHERE', 'JOIN', 'LEFT', 'RIGHT', 'INNER', 'OUTER',
@@ -236,6 +236,28 @@ const SQL_QUICK_ACTIONS = [
   { label: 'ASC', value: 'ASC ' },
   { label: 'DESC', value: 'DESC ' },
 ];
+
+// Column width: sample rows to find a good fit, clamp between min/max
+const COL_CHAR_PX = 8.2; // JetBrainsMono 13px average char width
+const COL_PAD = 28;
+const COL_MIN = 72;
+const COL_MAX = 244;
+
+const getColumnWidths = (
+  columns: ColumnInfo[],
+  rows: Record<string, unknown>[],
+): number[] =>
+  columns.map((col) => {
+    const headerPx =
+      Math.max(col.name.length, (col.type ?? "").length) * COL_CHAR_PX + COL_PAD;
+    const maxContent = rows.slice(0, 40).reduce((mx, row) => {
+      const val = row[col.name];
+      const str = val === null ? "" : typeof val === "object" ? JSON.stringify(val) : String(val);
+      return Math.max(mx, Math.min(str.length, 36));
+    }, 0);
+    const contentPx = maxContent * COL_CHAR_PX + COL_PAD;
+    return Math.min(Math.max(Math.max(headerPx, contentPx), COL_MIN), COL_MAX);
+  });
 
 const getCurrentWord = (text: string, cursorPosition: number): { word: string; start: number; end: number } => {
   const beforeCursor = text.slice(0, cursorPosition);
@@ -553,16 +575,31 @@ export default function QueryScreen() {
     ? `Txn ${formatCountdown(transactionTimeLeft)}`
     : "Txn Manual";
 
+  const columnWidths = useMemo(
+    () => (result ? getColumnWidths(result.columns, result.rows) : []),
+    [result],
+  );
+
+  const copyCellValue = useCallback(
+    async (value: unknown) => {
+      const str = value === null ? "null" : typeof value === "object" ? JSON.stringify(value) : String(value);
+      await Clipboard.setStringAsync(str);
+      haptic.light();
+    },
+    [haptic],
+  );
+
   const copyAllResults = async () => {
     if (!result) return;
     const header = result.columns.map(c => c.name).join("\t");
     const rows = result.rows.map(row =>
       result.columns.map(c => {
         const val = row[c.name];
-        return val === null ? "NULL" : String(val);
+        return val === null ? "null" : typeof val === "object" ? JSON.stringify(val) : String(val);
       }).join("\t")
     ).join("\n");
     await Clipboard.setStringAsync(`${header}\n${rows}`);
+    haptic.light();
     showAlert("Copied", "Results copied to clipboard.");
   };
 
@@ -915,17 +952,12 @@ export default function QueryScreen() {
                 <Text style={styles.transactionChipText}>{transactionChipLabel}</Text>
               </Pressable>
             )}
-            <Pressable
-              style={[styles.runButton, executing && styles.runButtonDisabled]}
+            <RunButton
+              executing={executing}
               onPress={handleExecute}
               disabled={executing}
-            >
-              {executing ? (
-                <ActivityIndicator color="#fff" size="small" />
-              ) : (
-                <Text style={styles.runButtonText}>Run</Text>
-              )}
-            </Pressable>
+              primaryColor={theme.colors.primary}
+            />
           </View>
         </View>
       </View>
@@ -1033,48 +1065,121 @@ export default function QueryScreen() {
 
         {result && (
           <>
-            <View style={styles.resultsMeta}>
-              <Text style={styles.metaText}>
-                {result.rowCount} rows - {result.executionTime}ms
-              </Text>
-              <View style={styles.resultsActions}>
-                <Pressable style={styles.copyAllButton} onPress={copyAllResults}>
-                  <Text style={styles.copyAllText}>Copy All</Text>
-                </Pressable>
-                <Text style={styles.metaText}>{result.command}</Text>
-              </View>
-            </View>
+            {/* ── Meta bar ── */}
+            {(() => {
+              const cmd = result.command.trim().toUpperCase();
+              return (
+                <View style={styles.resultsMeta}>
+                  <View style={styles.metaStats}>
+                    <Text style={styles.metaCount}>
+                      {result.rowCount.toLocaleString()}
+                    </Text>
+                    <Text style={styles.metaLabel}>
+                      {cmd.startsWith("SELECT") ? " rows" : " affected"}
+                    </Text>
+                    <Text style={styles.metaSep}>·</Text>
+                    <Text style={styles.metaTime}>{result.executionTime}ms</Text>
+                  </View>
+                  <View style={styles.metaActions}>
+                    {result.columns.length > 0 && (
+                      <Pressable style={styles.copyAllButton} onPress={copyAllResults}>
+                        <Text style={styles.copyAllText}>Copy all</Text>
+                      </Pressable>
+                    )}
+                    <View style={styles.commandBadge}>
+                      <Text style={styles.commandBadgeText}>
+                        {cmd.split(" ")[0]}
+                      </Text>
+                    </View>
+                  </View>
+                </View>
+              );
+            })()}
 
+            {/* ── Table ── */}
             {result.columns.length > 0 && (
-              <ScrollView horizontal style={styles.tableContainer}>
-                <View style={styles.tableWrapper}>
+              <ScrollView
+                horizontal
+                style={styles.tableContainer}
+                showsHorizontalScrollIndicator={false}
+              >
+                <ScrollView
+                  nestedScrollEnabled
+                  showsVerticalScrollIndicator={false}
+                  style={styles.tableRows}
+                >
+                  {/* Header row */}
                   <View style={styles.tableHeader}>
-                    {result.columns.map((col) => (
-                      <View key={`header-${col.name}`} style={styles.headerCell}>
-                        <Text style={styles.headerText}>{col.name}</Text>
-                        <Text style={styles.typeText}>{col.type}</Text>
+                    {result.columns.map((col, ci) => (
+                      <View
+                        key={`header-${col.name}`}
+                        style={[styles.headerCell, { width: columnWidths[ci] }]}
+                      >
+                        <Text style={styles.headerText} numberOfLines={1}>
+                          {col.name}
+                        </Text>
+                        {col.type ? (
+                          <Text style={styles.typeText} numberOfLines={1}>
+                            {col.type.toLowerCase()}
+                          </Text>
+                        ) : null}
                       </View>
                     ))}
                   </View>
-                  <FlashList
-                    data={result.rows}
-                    keyExtractor={(_item, index) => `row-${index}`}
-                    renderItem={({ item }) => (
-                      <View style={styles.tableRow}>
-                        {result.columns.map((col) => (
-                          <View key={`cell-${col.name}`} style={styles.cell}>
-                            <Text style={styles.cellText} numberOfLines={3}>
-                              {item[col.name] === null
-                                ? "NULL"
-                                : String(item[col.name])}
-                            </Text>
-                          </View>
-                        ))}
+
+                  {/* Data rows or empty */}
+                  {result.rows.length === 0 ? (
+                    <View style={styles.emptyResult}>
+                      <Text style={styles.emptyResultText}>No rows returned</Text>
+                    </View>
+                  ) : (
+                    result.rows.map((item, index) => (
+                      <View
+                        key={`row-${index}`}
+                        style={[
+                          styles.tableRow,
+                          index % 2 === 1 && styles.tableRowAlt,
+                        ]}
+                      >
+                        {result.columns.map((col, ci) => {
+                          const val = item[col.name];
+                          return (
+                            <Pressable
+                              key={`cell-${col.name}`}
+                              style={({ pressed }) => [
+                                styles.cell,
+                                { width: columnWidths[ci] },
+                                pressed && styles.cellPressed,
+                              ]}
+                              onPress={() => copyCellValue(val)}
+                            >
+                              {val === null ? (
+                                <Text style={styles.nullText}>null</Text>
+                              ) : (
+                                <Text style={styles.cellText} numberOfLines={3}>
+                                  {typeof val === "object" ? JSON.stringify(val) : String(val)}
+                                </Text>
+                              )}
+                            </Pressable>
+                          );
+                        })}
                       </View>
-                    )}
-                  />
-                </View>
+                    ))
+                  )}
+                </ScrollView>
               </ScrollView>
+            )}
+
+            {/* ── Non-SELECT success state (DDL / DML) ── */}
+            {result.columns.length === 0 && (
+              <View style={styles.commandResult}>
+                <Text style={styles.commandResultCheck}>✓</Text>
+                <Text style={styles.commandResultText}>
+                  {result.rowCount > 0
+                    ? `${result.rowCount.toLocaleString()} row${result.rowCount === 1 ? "" : "s"} affected`
+                    : "Query executed successfully"}
+                </Text>
+              </View>
             )}
           </>
         )}
@@ -1600,76 +1705,155 @@ const createStyles = (theme: Theme) => StyleSheet.create({
     color: theme.colors.textMuted,
     fontSize: 10,
   },
+  // ── Meta bar ──
   resultsMeta: {
     flexDirection: "row",
     justifyContent: "space-between",
-    marginBottom: 12,
+    alignItems: "center",
+    marginBottom: 10,
   },
-  metaText: {
+  metaStats: {
+    flexDirection: "row",
+    alignItems: "baseline",
+    gap: 4,
+  },
+  metaCount: {
+    color: theme.colors.text,
+    fontSize: 14,
+    fontWeight: "600",
+    fontFamily: "JetBrainsMono",
+  },
+  metaLabel: {
     color: theme.colors.textSubtle,
     fontSize: 12,
   },
-  resultsActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
+  metaSep: {
+    color: theme.colors.textSubtle,
+    fontSize: 12,
+    marginHorizontal: 2,
+  },
+  metaTime: {
+    color: theme.colors.textSubtle,
+    fontSize: 12,
+    fontFamily: "JetBrainsMono",
+  },
+  metaActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
   },
   copyAllButton: {
-    backgroundColor: theme.colors.surface,
     paddingHorizontal: 10,
     paddingVertical: 4,
-    borderRadius: 4,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
   },
   copyAllText: {
-    color: theme.colors.primary,
-    fontSize: 12,
-    fontWeight: '500',
+    color: theme.colors.textMuted,
+    fontSize: 11,
+    fontWeight: "500",
   },
+  commandBadge: {
+    backgroundColor: theme.colors.surfaceAlt,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 4,
+  },
+  commandBadgeText: {
+    color: theme.colors.textSubtle,
+    fontSize: 10,
+    fontFamily: "JetBrainsMono",
+    fontWeight: "600",
+    letterSpacing: 0.4,
+  },
+  // ── Table ──
   tableContainer: {
     flex: 1,
-    backgroundColor: theme.colors.surface,
     borderRadius: 8,
+    overflow: "hidden",
   },
-  tableWrapper: {
+  tableRows: {
     flex: 1,
   },
   tableHeader: {
     flexDirection: "row",
     backgroundColor: theme.colors.surfaceAlt,
-    borderTopLeftRadius: 8,
-    borderTopRightRadius: 8,
   },
   headerCell: {
-    width: 150,
-    padding: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 9,
     borderRightWidth: 1,
     borderRightColor: theme.colors.border,
   },
   headerText: {
     color: theme.colors.text,
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: "600",
+    fontFamily: "JetBrainsMono",
   },
   typeText: {
     color: theme.colors.textSubtle,
     fontSize: 10,
     marginTop: 2,
+    fontFamily: "JetBrainsMono",
   },
   tableRow: {
     flexDirection: "row",
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.border,
+    backgroundColor: theme.colors.surface,
+  },
+  tableRowAlt: {
+    backgroundColor: theme.colors.surfaceAlt,
   },
   cell: {
-    width: 150,
-    padding: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
     borderRightWidth: 1,
     borderRightColor: theme.colors.border,
+    justifyContent: "center",
+  },
+  cellPressed: {
+    opacity: 0.6,
   },
   cellText: {
     color: theme.colors.textMuted,
     fontSize: 13,
     fontFamily: "JetBrainsMono",
+    lineHeight: 18,
+  },
+  nullText: {
+    color: theme.colors.textSubtle,
+    fontSize: 12,
+    fontFamily: "JetBrainsMono",
+    fontStyle: "italic",
+    opacity: 0.7,
+  },
+  emptyResult: {
+    paddingVertical: 32,
+    alignItems: "center",
+    backgroundColor: theme.colors.surface,
+  },
+  emptyResultText: {
+    color: theme.colors.textSubtle,
+    fontSize: 13,
+  },
+  commandResult: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    paddingVertical: 20,
+    paddingHorizontal: 4,
+  },
+  commandResultCheck: {
+    color: theme.colors.success,
+    fontSize: 18,
+    fontWeight: "600",
+  },
+  commandResultText: {
+    color: theme.colors.textMuted,
+    fontSize: 14,
   },
   errorContainer: {
     backgroundColor: theme.colors.dangerMuted,

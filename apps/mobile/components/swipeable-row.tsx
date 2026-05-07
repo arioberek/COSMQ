@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
-import * as Haptics from "expo-haptics";
-import { memo, type ReactNode, useRef } from "react";
+import { memo, type ReactNode, useEffect, useRef } from "react";
+import { useHaptic } from "../lib/haptics";
 import {
 	Animated,
 	type GestureResponderEvent,
@@ -15,8 +15,11 @@ import { useTheme, XStack } from "tamagui";
 const ACTION_BUTTON_SIZE = 44;
 const ACTION_GAP = 8;
 const ACTION_PADDING_RIGHT = 12;
+// Threshold at which the row "locks in" to the open position
 const OPEN_THRESHOLD = 0.15;
 const CLOSE_THRESHOLD = 0.5;
+// Haptic fires once when drag crosses this fraction of the open width
+const HAPTIC_THRESHOLD = 0.35;
 
 type SwipeAction = {
 	icon: keyof typeof Ionicons.glyphMap;
@@ -45,9 +48,11 @@ export const SwipeableRow = memo(function SwipeableRow({
 	enabled = true,
 }: SwipeableRowProps) {
 	const theme = useTheme();
+	const haptic = useHaptic();
 	const translateX = useRef(new Animated.Value(0)).current;
 	const offsetX = useRef(0);
 	const isOpen = useRef(false);
+	const hapticFired = useRef(false);
 	const rightWidth = calculateActionsWidth(rightActions.length);
 
 	const enabledRef = useRef(enabled);
@@ -59,8 +64,8 @@ export const SwipeableRow = memo(function SwipeableRow({
 	rightWidthRef.current = rightWidth;
 
 	const animateTo = (toValue: number, open: boolean) => {
-		if (open && !isOpen.current) {
-			Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+		if (open && !isOpen.current && !hapticFired.current) {
+			haptic.light();
 		}
 		isOpen.current = open;
 		offsetX.current = toValue;
@@ -68,13 +73,24 @@ export const SwipeableRow = memo(function SwipeableRow({
 		Animated.spring(translateX, {
 			toValue,
 			useNativeDriver: true,
-			damping: 20,
-			stiffness: 200,
+			// Springier config — slight overshoot feel without being bouncy
+			damping: 14,
+			stiffness: 150,
+			mass: 1,
 		}).start();
 	};
 
 	const snapToOpen = () => animateTo(-rightWidthRef.current, true);
-	const snapToClosed = () => animateTo(0, false);
+	const snapToClosed = () => {
+		isOpen.current = false;
+		offsetX.current = 0;
+		Animated.spring(translateX, {
+			toValue: 0,
+			useNativeDriver: true,
+			damping: 16,
+			stiffness: 180,
+		}).start();
+	};
 
 	const handleMove = (_: GestureResponderEvent, gestureState: PanResponderGestureState) => {
 		const newValue = offsetX.current + gestureState.dx;
@@ -83,9 +99,21 @@ export const SwipeableRow = memo(function SwipeableRow({
 			Math.min(20, newValue),
 		);
 		translateX.setValue(clampedX);
+
+		// Fire a single haptic tick when drag crosses the "halfway to open" threshold
+		const hapticPoint = -rightWidthRef.current * HAPTIC_THRESHOLD;
+		if (!isOpen.current) {
+			if (newValue < hapticPoint && !hapticFired.current) {
+				hapticFired.current = true;
+				haptic.light();
+			} else if (newValue > hapticPoint && hapticFired.current) {
+				hapticFired.current = false;
+			}
+		}
 	};
 
 	const handleRelease = (_: GestureResponderEvent, gestureState: PanResponderGestureState) => {
+		hapticFired.current = false;
 		const finalPosition = offsetX.current + gestureState.dx;
 		const hasVelocity = Math.abs(gestureState.vx) > 0.05;
 
@@ -131,10 +159,12 @@ export const SwipeableRow = memo(function SwipeableRow({
 			onPanResponderTerminationRequest: () => false,
 			onPanResponderGrant: () => {
 				translateX.stopAnimation();
+				hapticFired.current = false;
 			},
 			onPanResponderMove: handleMove,
 			onPanResponderRelease: handleRelease,
 			onPanResponderTerminate: () => {
+				hapticFired.current = false;
 				if (isOpen.current) {
 					animateTo(-rightWidthRef.current, true);
 				} else {
@@ -145,17 +175,28 @@ export const SwipeableRow = memo(function SwipeableRow({
 	).current;
 
 	const close = () => {
+		hapticFired.current = false;
 		isOpen.current = false;
 		offsetX.current = 0;
-		Animated.timing(translateX, {
+		Animated.spring(translateX, {
 			toValue: 0,
-			duration: 200,
 			useNativeDriver: true,
+			damping: 16,
+			stiffness: 180,
 		}).start();
 	};
 
 	const actionTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-	
+
+	useEffect(() => {
+		return () => {
+			if (actionTimeoutRef.current) {
+				clearTimeout(actionTimeoutRef.current);
+				actionTimeoutRef.current = null;
+			}
+		};
+	}, []);
+
 	const handleActionPress = (action: SwipeAction) => {
 		close();
 		if (actionTimeoutRef.current) {
@@ -167,9 +208,10 @@ export const SwipeableRow = memo(function SwipeableRow({
 		}, 200);
 	};
 
-	const actionsOpacity = translateX.interpolate({
-		inputRange: [-rightWidth, -rightWidth / 2, 0],
-		outputRange: [1, 0.5, 0],
+	// Reveal: opacity + each action slides in from the right as the row opens
+	const actionsProgress = translateX.interpolate({
+		inputRange: [-rightWidth, 0],
+		outputRange: [1, 0],
 		extrapolate: "clamp",
 	});
 
@@ -182,9 +224,7 @@ export const SwipeableRow = memo(function SwipeableRow({
 			<Animated.View
 				style={[
 					styles.actionsContainer,
-					{
-						opacity: actionsOpacity,
-					},
+					{ opacity: actionsProgress },
 				]}
 			>
 				<XStack
@@ -193,15 +233,27 @@ export const SwipeableRow = memo(function SwipeableRow({
 					gap={ACTION_GAP}
 					paddingRight={ACTION_PADDING_RIGHT}
 				>
-					{rightActions.map((action, index) => (
-						<Pressable
-							key={`${action.icon}-${index}`}
-							style={[styles.actionButton, { backgroundColor: action.color }]}
-							onPress={() => handleActionPress(action)}
-						>
-							<Ionicons name={action.icon} size={20} color={theme.textOnAccent.val} />
-						</Pressable>
-					))}
+					{rightActions.map((action, index) => {
+						// Each icon slides in from slightly right as the row opens
+						const slideTranslate = translateX.interpolate({
+							inputRange: [-rightWidth, -rightWidth * 0.3, 0],
+							outputRange: [0, 4 + index * 6, 16 + index * 8],
+							extrapolate: "clamp",
+						});
+						return (
+							<Animated.View
+								key={`${String(action.icon)}-${index}`}
+								style={{ transform: [{ translateX: slideTranslate }] }}
+							>
+								<Pressable
+									style={[styles.actionButton, { backgroundColor: action.color }]}
+									onPress={() => handleActionPress(action)}
+								>
+									<Ionicons name={action.icon} size={20} color={theme.textOnAccent.val} />
+								</Pressable>
+							</Animated.View>
+						);
+					})}
 				</XStack>
 			</Animated.View>
 

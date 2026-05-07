@@ -1,9 +1,21 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, Stack, router } from "expo-router";
-import { memo, useCallback, useState } from "react";
-import { FlatList, Pressable } from "react-native";
-import Animated, { FadeIn } from "react-native-reanimated";
+import { memo, useCallback, useEffect, useState } from "react";
+import { FlatList, Pressable, View } from "react-native";
+import Animated, {
+	FadeIn,
+	FadeInDown,
+	FadeOutLeft,
+	LinearTransition,
+	useAnimatedStyle,
+	useReducedMotion,
+	useSharedValue,
+	withRepeat,
+	withSequence,
+	withSpring,
+	withTiming,
+} from "react-native-reanimated";
 import { Text, useTheme, XStack, YStack } from "tamagui";
 import { DatabaseIcon } from "../components/database-icon";
 import { SwipeableRow } from "../components/swipeable-row";
@@ -19,6 +31,72 @@ type ConnectionItemProps = {
 	onDelete: (connection: ConnectionConfig) => void;
 };
 
+// Animated status indicator with soft pulse ring when connected
+const StatusPulse = memo(function StatusPulse({ isConnected }: { isConnected: boolean }) {
+	const theme = useTheme();
+	const reducedMotion = useReducedMotion();
+	const haloScale = useSharedValue(1);
+	const haloOpacity = useSharedValue(0);
+
+	useEffect(() => {
+		if (isConnected && !reducedMotion) {
+			haloScale.value = withRepeat(
+				withSequence(
+					withTiming(2.4, { duration: 1200 }),
+					withTiming(1, { duration: 0 }),
+				),
+				-1,
+				false,
+			);
+			haloOpacity.value = withRepeat(
+				withSequence(
+					withTiming(0.45, { duration: 300 }),
+					withTiming(0, { duration: 900 }),
+				),
+				-1,
+				false,
+			);
+		} else {
+			haloScale.value = withTiming(1, { duration: 200 });
+			haloOpacity.value = withTiming(0, { duration: 200 });
+		}
+	}, [isConnected, reducedMotion, haloScale, haloOpacity]);
+
+	const haloStyle = useAnimatedStyle(() => ({
+		transform: [{ scale: haloScale.value }],
+		opacity: haloOpacity.value,
+	}));
+
+	const dotColor = isConnected ? theme.success.val : theme.disabled.val;
+
+	return (
+		<View style={{ width: 14, height: 14, alignItems: "center", justifyContent: "center" }}>
+			{isConnected && (
+				<Animated.View
+					style={[
+						{
+							position: "absolute",
+							width: 6,
+							height: 6,
+							borderRadius: 3,
+							backgroundColor: dotColor,
+						},
+						haloStyle,
+					]}
+				/>
+			)}
+			<View
+				style={{
+					width: 6,
+					height: 6,
+					borderRadius: 3,
+					backgroundColor: dotColor,
+				}}
+			/>
+		</View>
+	);
+});
+
 const ConnectionItem = memo(function ConnectionItem({
 	connection,
 	onEdit,
@@ -28,6 +106,12 @@ const ConnectionItem = memo(function ConnectionItem({
 	const { activeConnections } = useConnectionStore();
 	const activeConnection = activeConnections.get(connection.id);
 	const isConnected = activeConnection?.state.status === "connected";
+	const reducedMotion = useReducedMotion();
+
+	const scale = useSharedValue(1);
+	const cardStyle = useAnimatedStyle(() => ({
+		transform: [{ scale: scale.value }],
+	}));
 
 	const handlePress = useCallback(() => {
 		if (isConnected) {
@@ -59,69 +143,73 @@ const ConnectionItem = memo(function ConnectionItem({
 				},
 			]}
 		>
-			<Pressable
-				style={({ pressed }) => [
-					{
+			<Animated.View style={reducedMotion ? undefined : cardStyle}>
+				<Pressable
+					onPressIn={() => {
+						if (!reducedMotion) {
+							scale.value = withSpring(0.97, { damping: 15, stiffness: 220 });
+						}
+					}}
+					onPressOut={() => {
+						if (!reducedMotion) {
+							scale.value = withSpring(1, { damping: 12, stiffness: 160 });
+						}
+					}}
+					onPress={handlePress}
+					style={{
 						borderRadius: 14,
 						borderWidth: 1,
 						borderColor: theme.cardBorder.val,
 						backgroundColor: theme.surface.val,
-					},
-					pressed && { opacity: 0.85 },
-				]}
-				onPress={handlePress}
-			>
-				<XStack alignItems="center" padding="$md" gap="$md">
-					<YStack
-						width={44}
-						height={44}
-						borderRadius={10}
-						justifyContent="center"
-						alignItems="center"
-						backgroundColor={hasColorTag ? `${connection.color}22` : theme.surfaceAlt.val}
-						borderWidth={1}
-						borderColor={hasColorTag ? `${connection.color}55` : theme.borderColor.val}
-					>
-						<DatabaseIcon
-							type={connection.type}
-							size={22}
-							color={hasColorTag ? (connection.color as string) : theme.color.val}
-						/>
-					</YStack>
-					<YStack flex={1} minWidth={0}>
-						<Text
-							color="$color"
-							fontSize={16}
-							fontWeight="600"
-							letterSpacing={-0.1}
-							numberOfLines={1}
-						>
-							{connection.name}
-						</Text>
-						<Text
-							color="$textSubtle"
-							fontSize={12}
-							marginTop={2}
-							fontFamily="$mono"
-							numberOfLines={1}
-							ellipsizeMode="middle"
-						>
-							{connection.host}:{connection.port}/{connection.database}
-						</Text>
-					</YStack>
-					<XStack alignItems="center" gap="$sm">
+					}}
+				>
+					<XStack alignItems="center" padding="$md" gap="$md">
 						<YStack
-							width={6}
-							height={6}
-							borderRadius="$full"
-							backgroundColor={isConnected ? "$success" : "$disabled"}
-						/>
-						<Text color="$textSubtle" fontSize={11} fontWeight="500">
-							{isConnected ? "Connected" : "Idle"}
-						</Text>
+							width={44}
+							height={44}
+							borderRadius={10}
+							justifyContent="center"
+							alignItems="center"
+							backgroundColor={hasColorTag ? `${connection.color}22` : theme.surfaceAlt.val}
+							borderWidth={1}
+							borderColor={hasColorTag ? `${connection.color}55` : theme.borderColor.val}
+						>
+							<DatabaseIcon
+								type={connection.type}
+								size={22}
+								color={hasColorTag ? (connection.color as string) : theme.color.val}
+							/>
+						</YStack>
+						<YStack flex={1} minWidth={0}>
+							<Text
+								color="$color"
+								fontSize={16}
+								fontWeight="600"
+								letterSpacing={-0.1}
+								numberOfLines={1}
+							>
+								{connection.name}
+							</Text>
+							<Text
+								color="$textSubtle"
+								fontSize={12}
+								marginTop={2}
+								fontFamily="$mono"
+								numberOfLines={1}
+								ellipsizeMode="middle"
+							>
+								{connection.host}:{connection.port}/{connection.database}
+							</Text>
+						</YStack>
+						<XStack alignItems="center" gap={6}>
+							<StatusPulse isConnected={isConnected} />
+							<Text color="$textSubtle" fontSize={11} fontWeight="500">
+								{isConnected ? "Connected" : "Idle"}
+							</Text>
+						</XStack>
 					</XStack>
-				</XStack>
-			</Pressable>
+				</Pressable>
+			</Animated.View>
 		</SwipeableRow>
 	);
 });
@@ -129,6 +217,7 @@ const ConnectionItem = memo(function ConnectionItem({
 export default function HomeScreen() {
 	const theme = useTheme();
 	const queryClient = useQueryClient();
+	const reducedMotion = useReducedMotion();
 	const [connectionToDelete, setConnectionToDelete] =
 		useState<ConnectionConfig | null>(null);
 
@@ -157,6 +246,30 @@ export default function HomeScreen() {
 			setConnectionToDelete(null);
 		}
 	}, [connectionToDelete, queryClient]);
+
+	const renderItem = useCallback(
+		({ item, index }: { item: ConnectionConfig; index: number }) => (
+			<Animated.View
+				entering={
+					reducedMotion
+						? undefined
+						: FadeInDown.delay(Math.min(index, 6) * 45)
+								.springify()
+								.damping(18)
+								.stiffness(160)
+				}
+				exiting={reducedMotion ? undefined : FadeOutLeft.duration(180)}
+				layout={reducedMotion ? undefined : LinearTransition.springify().damping(18)}
+			>
+				<ConnectionItem
+					connection={item}
+					onEdit={handleEdit}
+					onDelete={handleDeleteRequest}
+				/>
+			</Animated.View>
+		),
+		[reducedMotion, handleEdit, handleDeleteRequest],
+	);
 
 	return (
 		<YStack flex={1} backgroundColor="$background">
@@ -275,13 +388,7 @@ export default function HomeScreen() {
 					<FlatList
 						data={connections}
 						keyExtractor={(item) => item.id}
-						renderItem={({ item }) => (
-							<ConnectionItem
-								connection={item}
-								onEdit={handleEdit}
-								onDelete={handleDeleteRequest}
-							/>
-						)}
+						renderItem={renderItem}
 						contentContainerStyle={{ padding: 16, gap: 10, paddingBottom: 100 }}
 						showsVerticalScrollIndicator={false}
 					/>
