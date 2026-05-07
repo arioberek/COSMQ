@@ -27,7 +27,7 @@ export function Iphone({ src, videoSrc, className, style, ...props }: IphoneProp
 
 	return (
 		<div
-			className={`relative inline-block w-full align-middle leading-none ${className}`}
+			className={`relative inline-block w-full align-middle leading-none${className ? ` ${className}` : ""}`}
 			style={{
 				aspectRatio: `${PHONE_WIDTH}/${PHONE_HEIGHT}`,
 				...style,

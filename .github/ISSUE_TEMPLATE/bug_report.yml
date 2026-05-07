@@ -1,6 +1,6 @@
 name: Bug report
 description: Report a reproducible COSMQ bug.
-title: "fix: "
+title: "bug: "
 labels:
   - bug
 body:
