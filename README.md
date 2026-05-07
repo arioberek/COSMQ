@@ -86,7 +86,7 @@ bunx eas build --platform android
 
 ## Architecture
 
-```
+```text
 React Native (Expo) ──▶ Zustand connection store
                               │
                               ▼
@@ -106,7 +106,7 @@ Each protocol implements the same `DatabaseConnection` interface (`connect`, `qu
 
 ## Repo layout
 
-```
+```text
 apps/
   mobile/        # Expo / React Native app
     app/         # expo-router screens
