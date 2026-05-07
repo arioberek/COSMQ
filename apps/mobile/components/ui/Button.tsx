@@ -1,6 +1,6 @@
 import { memo } from "react";
 import { ActivityIndicator } from "react-native";
-import { Button as TamaguiButton, styled, Text, useTheme, type GetProps } from "tamagui";
+import { type GetProps, styled, Button as TamaguiButton, Text, useTheme } from "tamagui";
 
 const StyledButton = styled(TamaguiButton, {
   flexDirection: "row",

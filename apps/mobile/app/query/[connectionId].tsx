@@ -1,6 +1,7 @@
 import * as Clipboard from "expo-clipboard";
 import { useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type { NativeSyntheticEvent, TextInputSelectionChangeEventData } from "react-native";
 import {
   ActivityIndicator,
   Pressable,
@@ -10,12 +11,10 @@ import {
   TextInput,
   View,
 } from "react-native";
-import type { NativeSyntheticEvent, TextInputSelectionChangeEventData } from "react-native";
-import type { ColumnInfo, DatabaseType, QueryResult, TableInfo } from "../../lib/types";
-import { useConnectionStore } from "../../stores/connection";
-import { useSettingsStore } from "../../stores/settings";
+import { RunButton } from "../../components/run-button";
+import { Dialog } from "../../components/ui/Dialog";
 import { useTheme } from "../../hooks/useTheme";
-import type { Theme } from "../../lib/theme";
+import { useHaptic } from "../../lib/haptics";
 import { normalizeAutoRollbackSeconds } from "../../lib/settings";
 import {
   addToQueryHistory,
@@ -25,12 +24,13 @@ import {
 import {
   deleteSnippet,
   getSnippets,
-  saveSnippet,
   type QuerySnippet,
+  saveSnippet,
 } from "../../lib/storage/snippets";
-import { useHaptic } from "../../lib/haptics";
-import { Dialog } from "../../components/ui/Dialog";
-import { RunButton } from "../../components/run-button";
+import type { Theme } from "../../lib/theme";
+import type { ColumnInfo, DatabaseType, QueryResult, TableInfo } from "../../lib/types";
+import { useConnectionStore } from "../../stores/connection";
+import { useSettingsStore } from "../../stores/settings";
 
 const SQL_KEYWORDS = [
   "SELECT",
@@ -195,7 +195,7 @@ const stripSql = (sql: string): string =>
     .replace(/\/\*[\s\S]*?\*\//g, " ")
     .replace(/--.*$/gm, " ")
     .replace(/'(?:[^'\\]|\\.)*'/g, "''")
-    .replace(/\"(?:[^\"\\]|\\.)*\"/g, '""')
+    .replace(/"(?:[^"\\]|\\.)*"/g, '""')
     .replace(/\s+/g, " ");
 
 const findDangerousKeyword = (sql: string): string | null => {

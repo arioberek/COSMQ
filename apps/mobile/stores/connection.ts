@@ -1,5 +1,10 @@
-import { create } from "zustand";
 import Constants, { ExecutionEnvironment } from "expo-constants";
+import { create } from "zustand";
+import { formatConnectionError, formatQueryError } from "../lib/errors";
+import { MongoDBConnection } from "../lib/protocols/mongodb/connection";
+import { MySQLConnection } from "../lib/protocols/mysql/connection";
+import { PostgresConnection } from "../lib/protocols/postgres/connection";
+import { SQLiteConnection } from "../lib/protocols/sqlite/connection";
 import type {
   ConnectionConfig,
   ConnectionState,
@@ -7,11 +12,6 @@ import type {
   DatabaseType,
   QueryResult,
 } from "../lib/types";
-import { PostgresConnection } from "../lib/protocols/postgres/connection";
-import { MySQLConnection } from "../lib/protocols/mysql/connection";
-import { SQLiteConnection } from "../lib/protocols/sqlite/connection";
-import { MongoDBConnection } from "../lib/protocols/mongodb/connection";
-import { formatConnectionError, formatQueryError } from "../lib/errors";
 
 const isExpoGo = Constants.executionEnvironment === ExecutionEnvironment.StoreClient;
 

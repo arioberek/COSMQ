@@ -1,6 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
 import { memo, type ReactNode, useEffect, useRef } from "react";
-import { useHaptic } from "../lib/haptics";
 import {
   Animated,
   type GestureResponderEvent,
@@ -11,6 +10,7 @@ import {
   View,
 } from "react-native";
 import { useTheme, XStack } from "tamagui";
+import { useHaptic } from "../lib/haptics";
 
 const ACTION_BUTTON_SIZE = 44;
 const ACTION_GAP = 8;

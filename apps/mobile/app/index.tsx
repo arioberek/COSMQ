@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Link, Stack, router } from "expo-router";
+import { Link, router, Stack } from "expo-router";
 import { memo, useCallback, useEffect, useState } from "react";
 import { FlatList, Pressable, View } from "react-native";
 import Animated, {
@@ -17,13 +17,13 @@ import Animated, {
   withTiming,
 } from "react-native-reanimated";
 import { Text, useTheme, XStack, YStack } from "tamagui";
+import AlienLogo from "../assets/logos/alien.svg";
 import { DatabaseIcon } from "../components/database-icon";
 import { SwipeableRow } from "../components/swipeable-row";
 import { Dialog } from "../components/ui/Dialog";
 import { deleteConnection, getConnections } from "../lib/storage/connections";
 import { CONNECTION_COLORS, type ConnectionConfig } from "../lib/types";
 import { useConnectionStore } from "../stores/connection";
-import AlienLogo from "../assets/logos/alien.svg";
 
 type ConnectionItemProps = {
   connection: ConnectionConfig;

@@ -4,11 +4,11 @@ import { router, useLocalSearchParams } from "expo-router";
 import { useState } from "react";
 import { ActivityIndicator } from "react-native";
 import { ScrollView, Text, useTheme, XStack, YStack } from "tamagui";
-import { deleteConnection, getConnectionWithPassword } from "../../lib/storage/connections";
-import { useConnectionStore } from "../../stores/connection";
 import { DatabaseIcon } from "../../components/database-icon";
 import { Button, Dialog } from "../../components/ui";
 import { useHaptic } from "../../lib/haptics";
+import { deleteConnection, getConnectionWithPassword } from "../../lib/storage/connections";
+import { useConnectionStore } from "../../stores/connection";
 
 const InfoRow = ({ label, value }: { label: string; value: string }) => (
   <XStack
