@@ -71,7 +71,7 @@ Branch off `main` and follow this naming convention:
 
 We use [Conventional Commits](https://www.conventionalcommits.org/) with a scope:
 
-```
+```text
 feat(mobile): add MongoDB authentication support
 fix(landing): correct logo alignment on mobile breakpoints
 refactor(mobile): extract query history into its own store
@@ -121,7 +121,7 @@ Squash-and-merge is the default. Your commit messages don't need to be polished 
 
 ## Project structure
 
-```
+```text
 apps/
   mobile/      Expo + React Native app (Tamagui, Zustand, expo-router)
   landing/     Astro marketing site (React + Tailwind)
