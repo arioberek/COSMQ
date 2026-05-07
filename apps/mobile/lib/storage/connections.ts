@@ -1,5 +1,5 @@
-import * as SecureStore from "expo-secure-store";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import * as SecureStore from "expo-secure-store";
 import type { ConnectionConfig } from "../types";
 
 const CONNECTIONS_KEY = "cosmq_connections";
@@ -11,16 +11,11 @@ const PASSWORD_PREFIX = "cosmq_pwd_";
  * - Passwords → SecureStore (encrypted, one key per password)
  */
 
-export async function saveConnection(
-  connection: ConnectionConfig
-): Promise<void> {
+export async function saveConnection(connection: ConnectionConfig): Promise<void> {
   const connections = await getConnections();
   const existingIndex = connections.findIndex((c) => c.id === connection.id);
 
-  await SecureStore.setItemAsync(
-    `${PASSWORD_PREFIX}${connection.id}`,
-    connection.password
-  );
+  await SecureStore.setItemAsync(`${PASSWORD_PREFIX}${connection.id}`, connection.password);
 
   const configWithoutPassword = { ...connection, password: "" };
 
@@ -44,9 +39,7 @@ export async function getConnections(): Promise<ConnectionConfig[]> {
   }
 }
 
-export async function getConnectionWithPassword(
-  id: string
-): Promise<ConnectionConfig | null> {
+export async function getConnectionWithPassword(id: string): Promise<ConnectionConfig | null> {
   const connections = await getConnections();
   const connection = connections.find((c) => c.id === id);
 

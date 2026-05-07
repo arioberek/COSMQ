@@ -4,37 +4,24 @@ import * as LegacyFileSystem from "expo-file-system/legacy";
 import { router, useLocalSearchParams } from "expo-router";
 import type { FC } from "react";
 import { useEffect, useState } from "react";
-import {
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  TextInput,
-} from "react-native";
+import { KeyboardAvoidingView, Platform, Pressable, TextInput } from "react-native";
 import type { SvgProps } from "react-native-svg";
-import {
-  ScrollView,
-  Switch,
-  Text,
-  useTheme,
-  View,
-  XStack,
-  YStack,
-} from "tamagui";
+import { ScrollView, Switch, Text, useTheme, View, XStack, YStack } from "tamagui";
+import CockroachdbIcon from "../../assets/icons/cockroachdb.svg";
+import MariadbIcon from "../../assets/icons/mariadb.svg";
+import MongodbIcon from "../../assets/icons/mongodb.svg";
+import MysqlIcon from "../../assets/icons/mysql.svg";
+import PostgresqlIcon from "../../assets/icons/postgresql.svg";
+import SqliteIcon from "../../assets/icons/sqlite.svg";
+import { Button, Dialog } from "../../components/ui";
 import {
   generateConnectionId,
   getConnectionWithPassword,
   saveConnection,
 } from "../../lib/storage/connections";
-import type { ConnectionConfig, ConnectionColor, DatabaseType } from "../../lib/types";
+import type { ConnectionColor, ConnectionConfig, DatabaseType } from "../../lib/types";
 import { CONNECTION_COLORS } from "../../lib/types";
 import { useConnectionStore } from "../../stores/connection";
-import PostgresqlIcon from "../../assets/icons/postgresql.svg";
-import MysqlIcon from "../../assets/icons/mysql.svg";
-import MariadbIcon from "../../assets/icons/mariadb.svg";
-import SqliteIcon from "../../assets/icons/sqlite.svg";
-import CockroachdbIcon from "../../assets/icons/cockroachdb.svg";
-import MongodbIcon from "../../assets/icons/mongodb.svg";
-import { Button, Dialog } from "../../components/ui";
 
 const DEFAULT_PORTS: Record<DatabaseType, number> = {
   postgres: 5432,
@@ -92,7 +79,7 @@ const parseSslValue = (value: string | null): boolean | undefined => {
 
 const parseConnectionUrl = (
   rawValue: string,
-  fallbackType: DatabaseType
+  fallbackType: DatabaseType,
 ): ParsedConnectionUrl | null => {
   const trimmed = rawValue.trim();
   if (!trimmed) return null;
@@ -120,14 +107,11 @@ const parseConnectionUrl = (
 
   const host = url.hostname || undefined;
   const port = url.port ? Number(url.port) : undefined;
-  const database = url.pathname
-    ? url.pathname.replace(/^\/+/, "") || undefined
-    : undefined;
+  const database = url.pathname ? url.pathname.replace(/^\/+/, "") || undefined : undefined;
   const username = url.username || undefined;
   const password = url.password || undefined;
   const ssl =
-    parseSslValue(url.searchParams.get("sslmode")) ??
-    parseSslValue(url.searchParams.get("ssl"));
+    parseSslValue(url.searchParams.get("sslmode")) ?? parseSslValue(url.searchParams.get("ssl"));
 
   return {
     type,
@@ -213,12 +197,7 @@ const FormInput = ({
 };
 
 const FieldLabel = ({ children }: { children: React.ReactNode }) => (
-  <Text
-    color="$textSubtle"
-    fontSize={12}
-    fontWeight="500"
-    marginLeft={2}
-  >
+  <Text color="$textSubtle" fontSize={12} fontWeight="500" marginLeft={2}>
     {children}
   </Text>
 );
@@ -228,7 +207,7 @@ export default function NewConnectionScreen() {
   const queryClient = useQueryClient();
   const { edit: editId } = useLocalSearchParams<{ edit?: string }>();
   const isEditMode = Boolean(editId);
-  
+
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);
   const [alert, setAlert] = useState<AlertState>({ open: false, title: "", message: "" });
@@ -288,7 +267,7 @@ export default function NewConnectionScreen() {
       if (!isValid) {
         showAlert(
           "Invalid File",
-          "The selected file is not a valid SQLite database. Please select a .db, .sqlite, or .sqlite3 file."
+          "The selected file is not a valid SQLite database. Please select a .db, .sqlite, or .sqlite3 file.",
         );
         return null;
       }
@@ -344,9 +323,7 @@ export default function NewConnectionScreen() {
     if (!database.trim()) {
       showAlert(
         "Error",
-        isSqlite(type)
-          ? "Database file path is required"
-          : "Database name is required"
+        isSqlite(type) ? "Database file path is required" : "Database name is required",
       );
       return;
     }
@@ -373,15 +350,11 @@ export default function NewConnectionScreen() {
       await connect(testConfig);
       showAlert("Success", "Connection successful!");
     } catch (error) {
-      showAlert(
-        "Connection Failed",
-        error instanceof Error ? error.message : "Failed to connect"
-      );
+      showAlert("Connection Failed", error instanceof Error ? error.message : "Failed to connect");
     } finally {
       try {
         await disconnect(testId);
-      } catch {
-      }
+      } catch {}
       setTesting(false);
     }
   };
@@ -406,9 +379,7 @@ export default function NewConnectionScreen() {
     if (!database.trim()) {
       showAlert(
         "Error",
-        isSqlite(type)
-          ? "Database file path is required"
-          : "Database name is required"
+        isSqlite(type) ? "Database file path is required" : "Database name is required",
       );
       return;
     }
@@ -439,10 +410,7 @@ export default function NewConnectionScreen() {
 
       router.back();
     } catch (error) {
-      showAlert(
-        "Error",
-        error instanceof Error ? error.message : "Failed to save connection"
-      );
+      showAlert("Error", error instanceof Error ? error.message : "Failed to save connection");
     } finally {
       setSaving(false);
     }
@@ -460,7 +428,7 @@ export default function NewConnectionScreen() {
           onPress: () => setAlert((prev) => ({ ...prev, open: false })),
         }}
       />
-      
+
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         style={{ flex: 1 }}
@@ -473,11 +441,7 @@ export default function NewConnectionScreen() {
         >
           <YStack gap="$sm">
             <FieldLabel>Name</FieldLabel>
-            <FormInput
-              value={name}
-              onChangeText={setName}
-              placeholder="My database"
-            />
+            <FormInput value={name} onChangeText={setName} placeholder="My database" />
           </YStack>
 
           <YStack gap="$sm">
@@ -550,7 +514,11 @@ export default function NewConnectionScreen() {
                     onPress={() => handleTypeChange(option.type)}
                   >
                     <View marginBottom="$xs">
-                      <option.Icon width={22} height={22} fill={isActive ? theme.primary.val : theme.color.val} />
+                      <option.Icon
+                        width={22}
+                        height={22}
+                        fill={isActive ? theme.primary.val : theme.color.val}
+                      />
                     </View>
                     <Text
                       color={isActive ? "$primary" : "$textSubtle"}
@@ -668,29 +636,18 @@ export default function NewConnectionScreen() {
                   onCheckedChange={setSsl}
                   backgroundColor={ssl ? "$primary" : "$surfaceAlt"}
                 >
-                  <Switch.Thumb
-                    animation="quick"
-                    backgroundColor="white"
-                  />
+                  <Switch.Thumb animation="quick" backgroundColor="white" />
                 </Switch>
               </XStack>
             </>
           )}
 
           <YStack gap="$sm" marginTop="$sm">
-            <Button
-              variant="outlined"
-              onPress={handleTestConnection}
-              disabled={testing || saving}
-            >
+            <Button variant="outlined" onPress={handleTestConnection} disabled={testing || saving}>
               {testing ? "Testing…" : "Test connection"}
             </Button>
 
-            <Button
-              variant="primary"
-              onPress={handleSave}
-              disabled={saving}
-            >
+            <Button variant="primary" onPress={handleSave} disabled={saving}>
               {saving ? "Saving…" : isEditMode ? "Update connection" : "Save connection"}
             </Button>
           </YStack>

@@ -1,11 +1,11 @@
 import type {
+  ColumnInfo,
   ConnectionConfig,
   ConnectionState,
   DatabaseConnection,
-  QueryResult,
   DatabaseInfo,
+  QueryResult,
   TableInfo,
-  ColumnInfo,
 } from "../../types";
 
 const MOCK_TABLES: TableInfo[] = [
@@ -45,23 +45,77 @@ const MOCK_COLUMNS: Record<string, ColumnInfo[]> = {
 
 const MOCK_DATA: Record<string, Record<string, unknown>[]> = {
   users: [
-    { id: "a1b2c3d4", email: "john@example.com", name: "John Doe", created_at: "2025-01-01 10:00:00", is_active: true },
-    { id: "e5f6g7h8", email: "jane@example.com", name: "Jane Smith", created_at: "2025-01-02 14:30:00", is_active: true },
-    { id: "i9j0k1l2", email: "bob@example.com", name: "Bob Wilson", created_at: "2025-01-03 09:15:00", is_active: false },
-    { id: "m3n4o5p6", email: "alice@example.com", name: "Alice Brown", created_at: "2025-01-04 16:45:00", is_active: true },
-    { id: "q7r8s9t0", email: "charlie@example.com", name: "Charlie Davis", created_at: "2025-01-05 11:20:00", is_active: true },
+    {
+      id: "a1b2c3d4",
+      email: "john@example.com",
+      name: "John Doe",
+      created_at: "2025-01-01 10:00:00",
+      is_active: true,
+    },
+    {
+      id: "e5f6g7h8",
+      email: "jane@example.com",
+      name: "Jane Smith",
+      created_at: "2025-01-02 14:30:00",
+      is_active: true,
+    },
+    {
+      id: "i9j0k1l2",
+      email: "bob@example.com",
+      name: "Bob Wilson",
+      created_at: "2025-01-03 09:15:00",
+      is_active: false,
+    },
+    {
+      id: "m3n4o5p6",
+      email: "alice@example.com",
+      name: "Alice Brown",
+      created_at: "2025-01-04 16:45:00",
+      is_active: true,
+    },
+    {
+      id: "q7r8s9t0",
+      email: "charlie@example.com",
+      name: "Charlie Davis",
+      created_at: "2025-01-05 11:20:00",
+      is_active: true,
+    },
   ],
   orders: [
-    { id: "ord-001", user_id: "a1b2c3d4", total: 150.00, status: "completed", created_at: "2025-01-10 12:00:00" },
-    { id: "ord-002", user_id: "e5f6g7h8", total: 89.99, status: "pending", created_at: "2025-01-11 09:30:00" },
-    { id: "ord-003", user_id: "a1b2c3d4", total: 245.50, status: "shipped", created_at: "2025-01-12 15:45:00" },
-    { id: "ord-004", user_id: "m3n4o5p6", total: 32.00, status: "completed", created_at: "2025-01-13 08:00:00" },
+    {
+      id: "ord-001",
+      user_id: "a1b2c3d4",
+      total: 150.0,
+      status: "completed",
+      created_at: "2025-01-10 12:00:00",
+    },
+    {
+      id: "ord-002",
+      user_id: "e5f6g7h8",
+      total: 89.99,
+      status: "pending",
+      created_at: "2025-01-11 09:30:00",
+    },
+    {
+      id: "ord-003",
+      user_id: "a1b2c3d4",
+      total: 245.5,
+      status: "shipped",
+      created_at: "2025-01-12 15:45:00",
+    },
+    {
+      id: "ord-004",
+      user_id: "m3n4o5p6",
+      total: 32.0,
+      status: "completed",
+      created_at: "2025-01-13 08:00:00",
+    },
   ],
   products: [
     { id: "prod-001", name: "Wireless Mouse", price: 29.99, category_id: 1, stock: 150 },
     { id: "prod-002", name: "Mechanical Keyboard", price: 89.99, category_id: 1, stock: 75 },
-    { id: "prod-003", name: "USB-C Hub", price: 45.00, category_id: 2, stock: 200 },
-    { id: "prod-004", name: "Monitor Stand", price: 65.00, category_id: 3, stock: 50 },
+    { id: "prod-003", name: "USB-C Hub", price: 45.0, category_id: 2, stock: 200 },
+    { id: "prod-004", name: "Monitor Stand", price: 65.0, category_id: 3, stock: 50 },
   ],
 };
 

@@ -1,5 +1,5 @@
 import * as SecureStore from "expo-secure-store";
-import { DEFAULT_SETTINGS, type AppSettings } from "../settings";
+import { type AppSettings, DEFAULT_SETTINGS } from "../settings";
 
 const SETTINGS_KEY = "cosmq_settings";
 

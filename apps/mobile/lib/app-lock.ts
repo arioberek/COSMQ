@@ -17,7 +17,7 @@ const AUTH_TYPE_MAP: Record<LocalAuthentication.AuthenticationType, BiometricTyp
 
 export async function checkBiometricCapability(): Promise<BiometricCapability> {
   const isSupported = await LocalAuthentication.hasHardwareAsync();
-  
+
   if (!isSupported) {
     return {
       isSupported: false,
@@ -60,7 +60,8 @@ export async function authenticate(promptMessage?: string): Promise<AuthResult> 
   if (!capability.isEnrolled) {
     return {
       success: false,
-      error: "No biometric credentials enrolled. Please set up Face ID, Touch ID, or fingerprint in device settings.",
+      error:
+        "No biometric credentials enrolled. Please set up Face ID, Touch ID, or fingerprint in device settings.",
     };
   }
 

@@ -1,3 +1,4 @@
+import { sslConfigToTlsOptions, TcpClient } from "../../tcp/socket";
 import type {
   ColumnInfo,
   ConnectionConfig,
@@ -7,7 +8,6 @@ import type {
   QueryResult,
   TableInfo,
 } from "../../types";
-import { TcpClient, sslConfigToTlsOptions } from "../../tcp/socket";
 import {
   AuthType,
   createMd5PasswordMessage,
@@ -27,9 +27,9 @@ import {
 } from "./messages";
 import {
   buildScramClientFinal,
+  type ScramSession,
   startScramSession,
   verifyScramServerFinal,
-  type ScramSession,
 } from "./scram";
 
 export class PostgresConnection implements DatabaseConnection {
@@ -66,10 +66,7 @@ export class PostgresConnection implements DatabaseConnection {
   }
 
   private async authenticate(): Promise<void> {
-    const startupMessage = createStartupMessage(
-      this.config.username,
-      this.config.database
-    );
+    const startupMessage = createStartupMessage(this.config.username, this.config.database);
 
     await this.client.send(startupMessage);
 
@@ -103,7 +100,7 @@ export class PostgresConnection implements DatabaseConnection {
               const md5Password = createMd5PasswordMessage(
                 this.config.password,
                 this.config.username,
-                auth.data
+                auth.data,
               );
               await this.client.send(md5Password);
               continue;
@@ -112,8 +109,7 @@ export class PostgresConnection implements DatabaseConnection {
             case AuthType.SASL: {
               if (!auth.data) throw new Error("SASL mechanisms not provided");
               const mechanisms = parseSaslMechanisms(auth.data);
-              const selected =
-                mechanisms.find((m) => m === "SCRAM-SHA-256") || null;
+              const selected = mechanisms.find((m) => m === "SCRAM-SHA-256") || null;
               if (!selected) {
                 throw new Error("No supported SASL mechanism available");
               }
@@ -121,7 +117,7 @@ export class PostgresConnection implements DatabaseConnection {
               scramSession = startScramSession(this.config.username);
               const saslInitial = createSaslInitialResponseMessage(
                 selected,
-                scramSession.clientFirstMessage
+                scramSession.clientFirstMessage,
               );
               await this.client.send(saslInitial);
               continue;
@@ -134,15 +130,12 @@ export class PostgresConnection implements DatabaseConnection {
               if (!auth.data) {
                 throw new Error("SASL continuation payload missing");
               }
-              const serverFirst = auth.data
-                .toString("utf8")
-                .replace(/\u0000+$/g, "");
-              const { clientFinalMessage, serverSignature } =
-                buildScramClientFinal(
-                  scramSession,
-                  this.config.password,
-                  serverFirst
-                );
+              const serverFirst = auth.data.toString("utf8").replace(/\u0000+$/g, "");
+              const { clientFinalMessage, serverSignature } = buildScramClientFinal(
+                scramSession,
+                this.config.password,
+                serverFirst,
+              );
               scramSession.expectedServerSignature = serverSignature;
               const saslResponse = createSaslResponseMessage(clientFinalMessage);
               await this.client.send(saslResponse);
@@ -156,9 +149,7 @@ export class PostgresConnection implements DatabaseConnection {
               if (!auth.data) {
                 throw new Error("SASL final payload missing");
               }
-              const serverFinal = auth.data
-                .toString("utf8")
-                .replace(/\u0000+$/g, "");
+              const serverFinal = auth.data.toString("utf8").replace(/\u0000+$/g, "");
               verifyScramServerFinal(scramSession, serverFinal);
               continue;
             }
@@ -170,7 +161,7 @@ export class PostgresConnection implements DatabaseConnection {
 
         if (message.type === "E") {
           const error = parseErrorResponse(message.payload);
-          throw new Error(error["M"] || "Authentication failed");
+          throw new Error(error.M || "Authentication failed");
         }
 
         if (message.type === "Z") {
@@ -221,7 +212,7 @@ export class PostgresConnection implements DatabaseConnection {
                 name: f.name,
                 type: this.getTypeName(f.typeOid),
                 tableId: f.tableOid,
-              }))
+              })),
             );
             break;
           }
@@ -243,7 +234,7 @@ export class PostgresConnection implements DatabaseConnection {
 
           case "E": {
             const error = parseErrorResponse(message.payload);
-            throw new Error(error["M"] || "Query failed");
+            throw new Error(error.M || "Query failed");
           }
 
           case "I": {
@@ -266,7 +257,7 @@ export class PostgresConnection implements DatabaseConnection {
 
   async listDatabases(): Promise<DatabaseInfo[]> {
     const result = await this.query(
-      "SELECT datname as name, pg_catalog.pg_get_userbyid(datdba) as owner, pg_encoding_to_char(encoding) as encoding FROM pg_database WHERE datistemplate = false ORDER BY datname"
+      "SELECT datname as name, pg_catalog.pg_get_userbyid(datdba) as owner, pg_encoding_to_char(encoding) as encoding FROM pg_database WHERE datistemplate = false ORDER BY datname",
     );
 
     return result.rows.map((row) => ({

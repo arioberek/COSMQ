@@ -1,11 +1,5 @@
 import { memo } from "react";
-import {
-  Input as TamaguiInput,
-  styled,
-  Text,
-  YStack,
-  type GetProps,
-} from "tamagui";
+import { type GetProps, styled, Input as TamaguiInput, Text, YStack } from "tamagui";
 
 const StyledInput = styled(TamaguiInput, {
   backgroundColor: "$surface",

@@ -55,7 +55,7 @@ export class ConnectionPool {
 
   async acquire(
     config: ConnectionConfig,
-    factory: (config: ConnectionConfig) => DatabaseConnection
+    factory: (config: ConnectionConfig) => DatabaseConnection,
   ): Promise<DatabaseConnection> {
     const poolKey = this.getPoolKey(config);
     let pool = this.pools.get(poolKey);

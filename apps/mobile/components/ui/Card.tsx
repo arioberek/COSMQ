@@ -1,5 +1,5 @@
 import { memo } from "react";
-import { YStack, styled, type GetProps } from "tamagui";
+import { type GetProps, styled, YStack } from "tamagui";
 
 const StyledCard = styled(YStack, {
   backgroundColor: "$surface",

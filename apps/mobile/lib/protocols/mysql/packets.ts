@@ -173,15 +173,11 @@ export function parseHandshakeV10(payload: Buffer): HandshakeV10 {
   offset += 10;
 
   const authPluginDataPart2Length = Math.max(13, authPluginDataLength - 8);
-  const authPluginDataPart2 = payload.subarray(
-    offset,
-    offset + authPluginDataPart2Length - 1
-  );
+  const authPluginDataPart2 = payload.subarray(offset, offset + authPluginDataPart2Length - 1);
   offset += authPluginDataPart2Length;
 
   let authPluginName = "";
-  const capabilityFlags =
-    capabilityFlagsLower | (capabilityFlagsUpper << 16);
+  const capabilityFlags = capabilityFlagsLower | (capabilityFlagsUpper << 16);
   if (capabilityFlags & CapabilityFlags.CLIENT_PLUGIN_AUTH) {
     const authPluginNameEnd = payload.indexOf(0, offset);
     if (authPluginNameEnd !== -1) {
@@ -209,7 +205,7 @@ export function createHandshakeResponse41(
   username: string,
   authResponse: Buffer,
   database: string,
-  authPluginName: string
+  authPluginName: string,
 ): Buffer {
   const capabilities =
     CapabilityFlags.CLIENT_PROTOCOL_41 |
@@ -306,9 +302,7 @@ export function wrapPacket(payload: Buffer, sequenceId: number): Buffer {
   return buffer;
 }
 
-export function parsePacketHeader(
-  buffer: Buffer
-): { length: number; sequenceId: number } | null {
+export function parsePacketHeader(buffer: Buffer): { length: number; sequenceId: number } | null {
   if (buffer.length < 4) {
     return null;
   }
@@ -322,12 +316,16 @@ export function parsePacketHeader(
 export function parseOkPacket(payload: Buffer): OkPacket {
   let offset = 1;
 
-  const { value: affectedRows, bytesRead: affectedRowsBytes } =
-    readLengthEncodedInteger(payload, offset);
+  const { value: affectedRows, bytesRead: affectedRowsBytes } = readLengthEncodedInteger(
+    payload,
+    offset,
+  );
   offset += affectedRowsBytes;
 
-  const { value: lastInsertId, bytesRead: lastInsertIdBytes } =
-    readLengthEncodedInteger(payload, offset);
+  const { value: lastInsertId, bytesRead: lastInsertIdBytes } = readLengthEncodedInteger(
+    payload,
+    offset,
+  );
   offset += lastInsertIdBytes;
 
   const statusFlags = payload.readUInt16LE(offset);
@@ -336,8 +334,7 @@ export function parseOkPacket(payload: Buffer): OkPacket {
   const warningCount = payload.readUInt16LE(offset);
   offset += 2;
 
-  const info =
-    offset < payload.length ? payload.toString("utf8", offset) : "";
+  const info = offset < payload.length ? payload.toString("utf8", offset) : "";
 
   return {
     affectedRows,
@@ -373,28 +370,22 @@ export function parseErrPacket(payload: Buffer): ErrPacket {
 export function parseColumnDefinition(payload: Buffer): ColumnDefinition {
   let offset = 0;
 
-  const { value: catalog, bytesRead: catalogBytes } =
-    readLengthEncodedString(payload, offset);
+  const { value: catalog, bytesRead: catalogBytes } = readLengthEncodedString(payload, offset);
   offset += catalogBytes;
 
-  const { value: schema, bytesRead: schemaBytes } =
-    readLengthEncodedString(payload, offset);
+  const { value: schema, bytesRead: schemaBytes } = readLengthEncodedString(payload, offset);
   offset += schemaBytes;
 
-  const { value: table, bytesRead: tableBytes } =
-    readLengthEncodedString(payload, offset);
+  const { value: table, bytesRead: tableBytes } = readLengthEncodedString(payload, offset);
   offset += tableBytes;
 
-  const { value: orgTable, bytesRead: orgTableBytes } =
-    readLengthEncodedString(payload, offset);
+  const { value: orgTable, bytesRead: orgTableBytes } = readLengthEncodedString(payload, offset);
   offset += orgTableBytes;
 
-  const { value: name, bytesRead: nameBytes } =
-    readLengthEncodedString(payload, offset);
+  const { value: name, bytesRead: nameBytes } = readLengthEncodedString(payload, offset);
   offset += nameBytes;
 
-  const { value: orgName, bytesRead: orgNameBytes } =
-    readLengthEncodedString(payload, offset);
+  const { value: orgName, bytesRead: orgNameBytes } = readLengthEncodedString(payload, offset);
   offset += orgNameBytes;
 
   offset += 1;
@@ -428,10 +419,7 @@ export function parseColumnDefinition(payload: Buffer): ColumnDefinition {
   };
 }
 
-export function parseResultSetRow(
-  payload: Buffer,
-  columnCount: number
-): Array<string | null> {
+export function parseResultSetRow(payload: Buffer, columnCount: number): Array<string | null> {
   const values: Array<string | null> = [];
   let offset = 0;
 
@@ -451,7 +439,7 @@ export function parseResultSetRow(
 
 function readLengthEncodedInteger(
   buffer: Buffer,
-  offset: number
+  offset: number,
 ): { value: number; bytesRead: number } {
   const firstByte = buffer.readUInt8(offset);
 
@@ -478,12 +466,9 @@ function readLengthEncodedInteger(
 
 function readLengthEncodedString(
   buffer: Buffer,
-  offset: number
+  offset: number,
 ): { value: string; bytesRead: number } {
-  const { value: length, bytesRead: lengthBytes } = readLengthEncodedInteger(
-    buffer,
-    offset
-  );
+  const { value: length, bytesRead: lengthBytes } = readLengthEncodedInteger(buffer, offset);
 
   const value = buffer.toString("utf8", offset + lengthBytes, offset + lengthBytes + length);
   return { value, bytesRead: lengthBytes + length };

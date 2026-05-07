@@ -38,10 +38,7 @@ export const normalizeAutoRollbackSeconds = (value: number): number => {
     return DEFAULT_AUTO_ROLLBACK_SECONDS;
   }
   const rounded = Math.round(value);
-  return Math.min(
-    AUTO_ROLLBACK_RANGE.max,
-    Math.max(AUTO_ROLLBACK_RANGE.min, rounded)
-  );
+  return Math.min(AUTO_ROLLBACK_RANGE.max, Math.max(AUTO_ROLLBACK_RANGE.min, rounded));
 };
 
 export const APP_LOCK_TIMEOUT_MS: Record<AppLockTimeout, number> = {

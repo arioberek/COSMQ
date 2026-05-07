@@ -22,10 +22,7 @@ export function PhoneMockup() {
 				}}
 			>
 				{/* Raw image from public/ — bypasses Astro's image optimization pipeline */}
-				<Iphone
-					src="/screenshots/1.jpeg"
-					className="dark"
-				/>
+				<Iphone src="/screenshots/1.jpeg" className="dark" />
 			</motion.div>
 
 			{/* Shadow + glow — outside any transform stack for perf */}

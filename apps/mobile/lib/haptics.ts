@@ -3,10 +3,7 @@ import { useSettingsStore } from "../stores/settings";
 
 type HapticType = "success" | "warning" | "error" | "light" | "medium" | "heavy";
 
-export const triggerHaptic = async (
-  type: HapticType,
-  enabled: boolean
-): Promise<void> => {
+export const triggerHaptic = async (type: HapticType, enabled: boolean): Promise<void> => {
   if (!enabled) return;
 
   switch (type) {
@@ -32,9 +29,7 @@ export const triggerHaptic = async (
 };
 
 export const useHaptic = () => {
-  const enabled = useSettingsStore(
-    (state) => state.settings.hapticFeedbackEnabled
-  );
+  const enabled = useSettingsStore((state) => state.settings.hapticFeedbackEnabled);
 
   return {
     success: () => triggerHaptic("success", enabled),

@@ -3,21 +3,21 @@ import Constants from "expo-constants";
 import * as Linking from "expo-linking";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Pressable, TextInput } from "react-native";
-import { ScrollView, Text, XStack, YStack, useTheme } from "tamagui";
-import { useSettingsStore } from "../stores/settings";
+import { ScrollView, Text, useTheme, XStack, YStack } from "tamagui";
+import { Dialog, Switch } from "../components/ui";
 import {
-  checkBiometricCapability,
-  getBiometricDisplayName,
   authenticate,
   type BiometricCapability,
+  checkBiometricCapability,
+  getBiometricDisplayName,
 } from "../lib/app-lock";
 import {
   APP_LOCK_TIMEOUT_LABELS,
-  AUTO_ROLLBACK_RANGE,
   type AppLockTimeout,
+  AUTO_ROLLBACK_RANGE,
   normalizeAutoRollbackSeconds,
 } from "../lib/settings";
-import { Switch, Dialog } from "../components/ui";
+import { useSettingsStore } from "../stores/settings";
 
 const TIMEOUT_OPTIONS: AppLockTimeout[] = ["immediate", "15s", "1m", "5m"];
 
@@ -28,7 +28,7 @@ export default function SettingsScreen() {
   const versionTapCount = useRef(0);
   const versionTapTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [autoRollbackInput, setAutoRollbackInput] = useState(
-    settings.autoRollbackSeconds.toString()
+    settings.autoRollbackSeconds.toString(),
   );
   const [isAutoRollbackEditing, setIsAutoRollbackEditing] = useState(false);
 
@@ -65,31 +65,34 @@ export default function SettingsScreen() {
 
   const canEnableAppLock = biometricCapability?.isSupported && biometricCapability?.isEnrolled;
 
-  const handleAppLockToggle = useCallback(async (enable: boolean) => {
-    if (!enable) {
-      await updateSettings({ appLockEnabled: false });
-      return;
-    }
+  const handleAppLockToggle = useCallback(
+    async (enable: boolean) => {
+      if (!enable) {
+        await updateSettings({ appLockEnabled: false });
+        return;
+      }
 
-    if (!canEnableAppLock) {
-      setAlertContent({
-        title: "Cannot Enable App Lock",
-        message: biometricCapability?.isSupported
-          ? "No biometric credentials are enrolled. Please set up Face ID, Touch ID, or fingerprint in your device settings first."
-          : "Biometric authentication is not supported on this device.",
-      });
-      setShowAlertDialog(true);
-      return;
-    }
+      if (!canEnableAppLock) {
+        setAlertContent({
+          title: "Cannot Enable App Lock",
+          message: biometricCapability?.isSupported
+            ? "No biometric credentials are enrolled. Please set up Face ID, Touch ID, or fingerprint in your device settings first."
+            : "Biometric authentication is not supported on this device.",
+        });
+        setShowAlertDialog(true);
+        return;
+      }
 
-    const result = await authenticate("Authenticate to enable App Lock");
-    if (result.success) {
-      await updateSettings({ appLockEnabled: true });
-    } else if (result.error) {
-      setAlertContent({ title: "Authentication Failed", message: result.error });
-      setShowAlertDialog(true);
-    }
-  }, [canEnableAppLock, biometricCapability, updateSettings]);
+      const result = await authenticate("Authenticate to enable App Lock");
+      if (result.success) {
+        await updateSettings({ appLockEnabled: true });
+      } else if (result.error) {
+        setAlertContent({ title: "Authentication Failed", message: result.error });
+        setShowAlertDialog(true);
+      }
+    },
+    [canEnableAppLock, biometricCapability, updateSettings],
+  );
 
   const handleAutoRollbackToggle = useCallback(
     async (enable: boolean) => {
@@ -100,7 +103,7 @@ export default function SettingsScreen() {
 
       const parsed = Number.parseInt(autoRollbackInput, 10);
       const normalized = normalizeAutoRollbackSeconds(
-        Number.isNaN(parsed) ? settings.autoRollbackSeconds : parsed
+        Number.isNaN(parsed) ? settings.autoRollbackSeconds : parsed,
       );
       setAutoRollbackInput(normalized.toString());
       await updateSettings({
@@ -108,7 +111,7 @@ export default function SettingsScreen() {
         autoRollbackSeconds: normalized,
       });
     },
-    [autoRollbackInput, settings.autoRollbackSeconds, updateSettings]
+    [autoRollbackInput, settings.autoRollbackSeconds, updateSettings],
   );
 
   const commitAutoRollbackSeconds = useCallback(async () => {
@@ -131,7 +134,10 @@ export default function SettingsScreen() {
     versionTapCount.current += 1;
     if (versionTapCount.current >= 5) {
       versionTapCount.current = 0;
-      setAlertContent({ title: "Nice find.", message: "Thanks for poking around. Build something." });
+      setAlertContent({
+        title: "Nice find.",
+        message: "Thanks for poking around. Build something.",
+      });
       setShowAlertDialog(true);
       return;
     }
@@ -252,11 +258,7 @@ export default function SettingsScreen() {
           <YStack height={1} backgroundColor="$borderColor" marginVertical="$sm" />
           <InfoRow label="Author" value="Arielton Oberek" />
           <YStack height={1} backgroundColor="$borderColor" marginVertical="$sm" />
-          <LinkRow
-            label="Website"
-            value="cosmq.arielton.com"
-            url="https://cosmq.arielton.com"
-          />
+          <LinkRow label="Website" value="cosmq.arielton.com" url="https://cosmq.arielton.com" />
           <YStack height={1} backgroundColor="$borderColor" marginVertical="$sm" />
           <LinkRow
             label="GitHub"
@@ -285,13 +287,7 @@ export default function SettingsScreen() {
   );
 }
 
-const Section = ({
-  title,
-  children,
-}: {
-  title: string;
-  children: React.ReactNode;
-}) => (
+const Section = ({ title, children }: { title: string; children: React.ReactNode }) => (
   <YStack marginBottom="$lg">
     <Text
       color="$textSubtle"
@@ -460,15 +456,7 @@ const InfoRow = ({
     </XStack>
   );
 
-const LinkRow = ({
-  label,
-  value,
-  url,
-}: {
-  label: string;
-  value: string;
-  url: string;
-}) => {
+const LinkRow = ({ label, value, url }: { label: string; value: string; url: string }) => {
   const theme = useTheme();
 
   return (

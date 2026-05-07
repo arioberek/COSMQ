@@ -11,13 +11,17 @@
     "dev": "turbo run dev",
     "dev:mobile": "bun run --cwd apps/mobile dev",
     "typecheck": "turbo run typecheck",
-    "lint": "turbo run lint",
+    "lint": "biome check .",
+    "lint:fix": "biome check --write .",
+    "format": "biome format --write .",
+    "format:check": "biome format .",
     "clean": "turbo run clean && rm -rf node_modules",
     "changeset": "changeset",
     "version-packages": "changeset version",
     "release": "changeset publish"
   },
   "devDependencies": {
+    "@biomejs/biome": "^2.0.0",
     "@changesets/cli": "^2.27.0",
     "turbo": "^2.3.0"
   },

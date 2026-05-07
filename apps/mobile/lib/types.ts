@@ -1,10 +1,4 @@
-export type DatabaseType =
-  | "postgres"
-  | "mysql"
-  | "mariadb"
-  | "sqlite"
-  | "cockroachdb"
-  | "mongodb";
+export type DatabaseType = "postgres" | "mysql" | "mariadb" | "sqlite" | "cockroachdb" | "mongodb";
 
 export interface SslConfig {
   enabled: boolean;

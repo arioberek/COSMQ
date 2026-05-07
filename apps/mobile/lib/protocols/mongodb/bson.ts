@@ -82,7 +82,7 @@ export function encodeBson(doc: BsonDocument): Buffer {
 }
 
 function encodeElement(key: string, value: BsonValue): Buffer {
-  const keyBuffer = Buffer.from(key + "\0", "utf8");
+  const keyBuffer = Buffer.from(`${key}\0`, "utf8");
 
   if (value === null) {
     const buffer = Buffer.alloc(1 + keyBuffer.length);
@@ -116,7 +116,7 @@ function encodeElement(key: string, value: BsonValue): Buffer {
   }
 
   if (typeof value === "string") {
-    const strBuffer = Buffer.from(value + "\0", "utf8");
+    const strBuffer = Buffer.from(`${value}\0`, "utf8");
     const buffer = Buffer.alloc(1 + keyBuffer.length + 4 + strBuffer.length);
     buffer[0] = BsonType.STRING;
     keyBuffer.copy(buffer, 1);
@@ -202,7 +202,7 @@ export function decodeBson(buffer: Buffer, offset = 0): BsonDocument {
 function decodeValue(
   buffer: Buffer,
   pos: number,
-  type: number
+  type: number,
 ): { value: BsonValue; newPos: number } {
   switch (type) {
     case BsonType.DOUBLE: {

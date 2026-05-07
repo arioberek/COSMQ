@@ -1,6 +1,6 @@
 import { motion, useMotionValue, useSpring, useTransform } from "motion/react";
+import { useCallback, useEffect, useRef } from "react";
 import { PhoneMockup } from "./phone-mockup";
-import { useCallback, useRef, useEffect } from "react";
 
 // ── Full alien SVG paths (from apps/mobile/assets/logos/alien.svg) ──
 // These are compound paths designed for FILL rendering — stroke-only
@@ -242,9 +242,8 @@ export const HeroSection = () => {
 						transition={{ duration: 0.6, delay: 0.46, ease: [0.22, 1, 0.36, 1] }}
 						className="text-[clamp(1rem,2.2vw,1.25rem)] text-[#64748b] max-w-[500px] mx-auto lg:mx-0 mb-12 leading-[1.7] font-normal"
 					>
-						Connect directly to PostgreSQL, MySQL, MongoDB & more.
-						Execute queries and visualize results with native performance
-						— all from your phone.
+						Connect directly to PostgreSQL, MySQL, MongoDB & more. Execute queries and visualize
+						results with native performance — all from your phone.
 					</motion.p>
 
 					{/* CTAs — delay 0.58 */}
@@ -254,10 +253,7 @@ export const HeroSection = () => {
 						transition={{ duration: 0.5, delay: 0.58, ease: [0.22, 1, 0.36, 1] }}
 						className="flex flex-wrap gap-4 justify-center lg:justify-start"
 					>
-						<MagneticButton
-							href="https://github.com/arioberek/COSMQ"
-							variant="primary"
-						>
+						<MagneticButton href="https://github.com/arioberek/COSMQ" variant="primary">
 							View on GitHub
 						</MagneticButton>
 						<MagneticButton href="#features" variant="secondary">

@@ -1,3 +1,4 @@
+import { sslConfigToTlsOptions, TcpClient } from "../../tcp/socket";
 import type {
   ColumnInfo,
   ConnectionConfig,
@@ -7,7 +8,7 @@ import type {
   QueryResult,
   TableInfo,
 } from "../../types";
-import { TcpClient, sslConfigToTlsOptions } from "../../tcp/socket";
+import { createAuthResponse } from "./auth";
 import {
   type ColumnDefinition,
   createHandshakeResponse41,
@@ -22,7 +23,6 @@ import {
   parseResultSetRow,
   wrapPacket,
 } from "./packets";
-import { createAuthResponse } from "./auth";
 
 export class MySQLConnection implements DatabaseConnection {
   config: ConnectionConfig;
@@ -62,25 +62,17 @@ export class MySQLConnection implements DatabaseConnection {
     const handshakeData = await this.receivePacket();
     const handshake = parseHandshakeV10(handshakeData.payload);
 
-    const scramble = Buffer.concat([
-      handshake.authPluginDataPart1,
-      handshake.authPluginDataPart2,
-    ]);
+    const scramble = Buffer.concat([handshake.authPluginDataPart1, handshake.authPluginDataPart2]);
 
-    const authPluginName =
-      handshake.authPluginName || "mysql_native_password";
-    const authResponse = createAuthResponse(
-      this.config.password,
-      scramble,
-      authPluginName
-    );
+    const authPluginName = handshake.authPluginName || "mysql_native_password";
+    const authResponse = createAuthResponse(this.config.password, scramble, authPluginName);
 
     const responsePayload = createHandshakeResponse41(
       handshake,
       this.config.username,
       authResponse,
       this.config.database,
-      authPluginName
+      authPluginName,
     );
 
     this.sequenceId = 1;
@@ -111,21 +103,14 @@ export class MySQLConnection implements DatabaseConnection {
     throw new Error("Unexpected authentication response");
   }
 
-  private async handleAuthSwitch(
-    payload: Buffer,
-    _scramble: Buffer
-  ): Promise<void> {
+  private async handleAuthSwitch(payload: Buffer, _scramble: Buffer): Promise<void> {
     let offset = 1;
     const pluginNameEnd = payload.indexOf(0, offset);
     const pluginName = payload.toString("utf8", offset, pluginNameEnd);
     offset = pluginNameEnd + 1;
     const newScramble = payload.subarray(offset, offset + 20);
 
-    const authResponse = createAuthResponse(
-      this.config.password,
-      newScramble,
-      pluginName
-    );
+    const authResponse = createAuthResponse(this.config.password, newScramble, pluginName);
 
     this.sequenceId++;
     await this.sendPacket(authResponse);
@@ -159,13 +144,11 @@ export class MySQLConnection implements DatabaseConnection {
 
     if (payload.length > 1 && payload[1] === 0x04) {
       if (this.config.ssl) {
-        const passwordBuffer = Buffer.from(this.config.password + "\0", "utf8");
+        const passwordBuffer = Buffer.from(`${this.config.password}\0`, "utf8");
         this.sequenceId++;
         await this.sendPacket(passwordBuffer);
       } else {
-        throw new Error(
-          "caching_sha2_password requires SSL for full authentication"
-        );
+        throw new Error("caching_sha2_password requires SSL for full authentication");
       }
 
       const finalResult = await this.receivePacket();
@@ -291,7 +274,7 @@ export class MySQLConnection implements DatabaseConnection {
 
   private readLengthEncodedInt(
     buffer: Buffer,
-    offset: number
+    offset: number,
   ): { value: number; bytesRead: number } {
     const firstByte = buffer.readUInt8(offset);
 
@@ -324,7 +307,7 @@ export class MySQLConnection implements DatabaseConnection {
     const db = schema || this.config.database;
 
     const tablesResult = await this.query(
-      `SELECT TABLE_NAME, TABLE_TYPE FROM information_schema.TABLES WHERE TABLE_SCHEMA = '${db}'`
+      `SELECT TABLE_NAME, TABLE_TYPE FROM information_schema.TABLES WHERE TABLE_SCHEMA = '${db}'`,
     );
 
     return tablesResult.rows.map((row) => ({
@@ -336,7 +319,7 @@ export class MySQLConnection implements DatabaseConnection {
 
   async describeTable(schema: string, table: string): Promise<ColumnInfo[]> {
     const result = await this.query(
-      `SELECT COLUMN_NAME, DATA_TYPE FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = '${schema}' AND TABLE_NAME = '${table}' ORDER BY ORDINAL_POSITION`
+      `SELECT COLUMN_NAME, DATA_TYPE FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = '${schema}' AND TABLE_NAME = '${table}' ORDER BY ORDINAL_POSITION`,
     );
 
     return result.rows.map((row) => ({

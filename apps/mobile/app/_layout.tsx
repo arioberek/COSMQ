@@ -9,11 +9,11 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { AppState, type AppStateStatus } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { useTheme } from "tamagui";
-import { useSettingsStore } from "../stores/settings";
 import { LockScreen } from "../components/lock-screen";
-import { APP_LOCK_TIMEOUT_MS } from "../lib/settings";
 import { Provider } from "../components/Provider";
+import { APP_LOCK_TIMEOUT_MS } from "../lib/settings";
 import { migrateFromSecureStore } from "../lib/storage/connections";
+import { useSettingsStore } from "../stores/settings";
 
 const isExpoGo = Constants.appOwnership === "expo";
 
@@ -62,29 +62,32 @@ function RootLayoutContent() {
     }
   }, [settings.appLockEnabled, settingsLoaded]);
 
-  const handleAppStateChange = useCallback((nextAppState: AppStateStatus) => {
-    if (!settings.appLockEnabled) return;
+  const handleAppStateChange = useCallback(
+    (nextAppState: AppStateStatus) => {
+      if (!settings.appLockEnabled) return;
 
-    if (nextAppState === "background" || nextAppState === "inactive") {
-      backgroundTimestamp.current = Date.now();
-    } else if (nextAppState === "active" && backgroundTimestamp.current !== null) {
-      const timeSinceUnlock = Date.now() - lastUnlockTime.current;
-      if (timeSinceUnlock < 2000) {
+      if (nextAppState === "background" || nextAppState === "inactive") {
+        backgroundTimestamp.current = Date.now();
+      } else if (nextAppState === "active" && backgroundTimestamp.current !== null) {
+        const timeSinceUnlock = Date.now() - lastUnlockTime.current;
+        if (timeSinceUnlock < 2000) {
+          backgroundTimestamp.current = null;
+          return;
+        }
+
+        const timeInBackground = Date.now() - backgroundTimestamp.current;
+        const timeout = APP_LOCK_TIMEOUT_MS[settings.appLockTimeout];
+
+        if (timeInBackground >= timeout) {
+          hasAuthenticatedRef.current = false;
+          setIsLocked(true);
+        }
+
         backgroundTimestamp.current = null;
-        return;
       }
-
-      const timeInBackground = Date.now() - backgroundTimestamp.current;
-      const timeout = APP_LOCK_TIMEOUT_MS[settings.appLockTimeout];
-
-      if (timeInBackground >= timeout) {
-        hasAuthenticatedRef.current = false;
-        setIsLocked(true);
-      }
-
-      backgroundTimestamp.current = null;
-    }
-  }, [settings.appLockEnabled, settings.appLockTimeout]);
+    },
+    [settings.appLockEnabled, settings.appLockTimeout],
+  );
 
   useEffect(() => {
     const subscription = AppState.addEventListener("change", handleAppStateChange);
@@ -116,26 +119,14 @@ function RootLayoutContent() {
           },
         }}
       >
-        <Stack.Screen
-          name="index"
-          options={{ title: "COSMQ" }}
-        />
+        <Stack.Screen name="index" options={{ title: "COSMQ" }} />
         <Stack.Screen
           name="connection/new"
           options={{ title: "New Connection", presentation: "modal" }}
         />
-        <Stack.Screen
-          name="connection/[id]"
-          options={{ title: "Connection" }}
-        />
-        <Stack.Screen
-          name="query/[connectionId]"
-          options={{ title: "Query" }}
-        />
-        <Stack.Screen
-          name="settings"
-          options={{ title: "Settings" }}
-        />
+        <Stack.Screen name="connection/[id]" options={{ title: "Connection" }} />
+        <Stack.Screen name="query/[connectionId]" options={{ title: "Query" }} />
+        <Stack.Screen name="settings" options={{ title: "Settings" }} />
       </Stack>
       {showLockScreen ? <LockScreen onUnlock={handleUnlock} /> : null}
     </>
