@@ -1,10 +1,4 @@
-import {
-	Cable,
-	type LucideIcon,
-	ShieldCheck,
-	Smartphone,
-	SquareTerminal,
-} from "lucide-react";
+import { Cable, type LucideIcon, ShieldCheck, Smartphone, SquareTerminal } from "lucide-react";
 import { motion, useScroll, useTransform } from "motion/react";
 import { useRef } from "react";
 
@@ -51,10 +45,7 @@ const features: Feature[] = [
 	},
 ];
 
-function FeatureCard({
-	feature,
-	index,
-}: { feature: Feature; index: number }) {
+function FeatureCard({ feature, index }: { feature: Feature; index: number }) {
 	const { Icon, title, description, accent } = feature;
 	const num = String(index + 1).padStart(2, "0");
 	const ref = useRef<HTMLDivElement>(null);
@@ -69,11 +60,7 @@ function FeatureCard({
 	const scale = useTransform(scrollYProgress, [0, 1], [0.96, 1]);
 
 	return (
-		<motion.div
-			ref={ref}
-			style={{ y, opacity, scale }}
-			className="group relative"
-		>
+		<motion.div ref={ref} style={{ y, opacity, scale }} className="group relative">
 			<div className="relative rounded-2xl border border-white/[0.05] bg-white/[0.02] p-8 md:p-10 overflow-hidden backdrop-blur-sm hover:border-white/[0.1] transition-colors duration-500">
 				{/* Gradient glow on hover */}
 				<div
@@ -102,12 +89,8 @@ function FeatureCard({
 						</motion.div>
 					</div>
 
-					<h3 className="text-2xl md:text-3xl font-bold text-white tracking-tight mb-3">
-						{title}
-					</h3>
-					<p className="text-[15px] text-[#666] leading-[1.7] m-0 max-w-[400px]">
-						{description}
-					</p>
+					<h3 className="text-2xl md:text-3xl font-bold text-white tracking-tight mb-3">{title}</h3>
+					<p className="text-[15px] text-[#666] leading-[1.7] m-0 max-w-[400px]">{description}</p>
 				</div>
 			</div>
 		</motion.div>

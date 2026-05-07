@@ -1,5 +1,5 @@
 import { memo } from "react";
-import { Dialog as TamaguiDialog, Adapt, Sheet, XStack, YStack, Text, Button } from "tamagui";
+import { Adapt, Button, Sheet, Dialog as TamaguiDialog, Text, XStack, YStack } from "tamagui";
 
 type DialogVariant = "default" | "danger";
 
@@ -129,11 +129,7 @@ export const Dialog = memo(function Dialog({
       );
     }
     return (
-      <XStack
-        gap="$md"
-        justifyContent="flex-end"
-        marginTop="$md"
-      >
+      <XStack gap="$md" justifyContent="flex-end" marginTop="$md">
         {showCancelButton && (
           <Button
             unstyled
@@ -212,7 +208,12 @@ export const Dialog = memo(function Dialog({
           backgroundColor="$surfaceElevated"
         >
           <YStack gap="$md">
-            <TamaguiDialog.Title fontSize={18} fontWeight="600" color="$dialogText" letterSpacing={-0.2}>
+            <TamaguiDialog.Title
+              fontSize={18}
+              fontWeight="600"
+              color="$dialogText"
+              letterSpacing={-0.2}
+            >
               {title}
             </TamaguiDialog.Title>
 
@@ -230,13 +231,7 @@ export const Dialog = memo(function Dialog({
       </TamaguiDialog.Portal>
 
       <Adapt when="sm" platform="touch">
-        <Sheet
-          animation="quick"
-          zIndex={200000}
-          modal
-          dismissOnSnapToBottom
-          snapPointsMode="fit"
-        >
+        <Sheet animation="quick" zIndex={200000} modal dismissOnSnapToBottom snapPointsMode="fit">
           <Sheet.Overlay
             animation="medium"
             opacity={1}

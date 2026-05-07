@@ -1,15 +1,10 @@
 {
-  "mcp": {
-    "agentation": {
-      "type": "local",
-      "command": [
-        "npx",
-        "-y",
-        "agentation-mcp",
-        "server"
-      ],
-      "enabled": true,
-      "environment": {}
-    }
-  }
+	"mcp": {
+		"agentation": {
+			"type": "local",
+			"command": ["npx", "-y", "agentation-mcp", "server"],
+			"enabled": true,
+			"environment": {}
+		}
+	}
 }

@@ -283,5 +283,4 @@ const light: Theme = {
   },
 };
 
-export const getTheme = (darkMode: boolean): Theme =>
-  darkMode ? dark : light;
+export const getTheme = (darkMode: boolean): Theme => (darkMode ? dark : light);

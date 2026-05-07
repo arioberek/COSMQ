@@ -1,6 +1,6 @@
 import type { DatabaseType } from "./types";
 
-const enum ErrorCode {
+enum ErrorCode {
   CONNECTION_REFUSED = "CONNECTION_REFUSED",
   CONNECTION_TIMEOUT = "CONNECTION_TIMEOUT",
   HOST_UNREACHABLE = "HOST_UNREACHABLE",
@@ -25,7 +25,8 @@ const POSTGRES_ERROR_PATTERNS: ErrorPattern[] = [
   {
     patterns: ["ECONNREFUSED", "connection refused"],
     code: ErrorCode.CONNECTION_REFUSED,
-    userMessage: "Cannot connect to PostgreSQL server. Check if the server is running and the port is correct.",
+    userMessage:
+      "Cannot connect to PostgreSQL server. Check if the server is running and the port is correct.",
   },
   {
     patterns: ["ETIMEDOUT", "timeout", "Connection timeout"],
@@ -68,7 +69,8 @@ const MYSQL_ERROR_PATTERNS: ErrorPattern[] = [
   {
     patterns: ["ECONNREFUSED", "connection refused"],
     code: ErrorCode.CONNECTION_REFUSED,
-    userMessage: "Cannot connect to MySQL server. Check if the server is running and the port is correct.",
+    userMessage:
+      "Cannot connect to MySQL server. Check if the server is running and the port is correct.",
   },
   {
     patterns: ["ETIMEDOUT", "timeout"],
@@ -93,7 +95,8 @@ const MYSQL_ERROR_PATTERNS: ErrorPattern[] = [
   {
     patterns: ["caching_sha2_password requires SSL"],
     code: ErrorCode.SSL_REQUIRED,
-    userMessage: "Server requires SSL for this authentication method. Enable SSL or use mysql_native_password.",
+    userMessage:
+      "Server requires SSL for this authentication method. Enable SSL or use mysql_native_password.",
   },
 ];
 
@@ -101,7 +104,8 @@ const MONGODB_ERROR_PATTERNS: ErrorPattern[] = [
   {
     patterns: ["ECONNREFUSED", "connection refused"],
     code: ErrorCode.CONNECTION_REFUSED,
-    userMessage: "Cannot connect to MongoDB server. Check if the server is running and the port is correct.",
+    userMessage:
+      "Cannot connect to MongoDB server. Check if the server is running and the port is correct.",
   },
   {
     patterns: ["ETIMEDOUT", "timeout"],

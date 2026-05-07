@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security vulnerability
+    url: https://github.com/arioberek/COSMQ/security/advisories/new
+    about: Report security issues privately.
+  - name: Security policy
+    url: https://github.com/arioberek/COSMQ/blob/main/SECURITY.md
+    about: Read the disclosure policy before reporting sensitive issues.

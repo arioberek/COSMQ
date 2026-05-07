@@ -53,10 +53,11 @@ export class SQLiteConnection implements DatabaseConnection {
     const trimmedSql = sql.trim();
     const command = trimmedSql.split(/\s+/)[0].toUpperCase();
 
+    const isCteRead =
+      command === "WITH" &&
+      /^WITH(?:\s+RECURSIVE)?\s+[\s\S]+\)\s*(?:SELECT|VALUES)\b/i.test(trimmedSql);
     const isSelect =
-      command === "SELECT" ||
-      command === "PRAGMA" ||
-      command === "EXPLAIN";
+      command === "SELECT" || command === "PRAGMA" || command === "EXPLAIN" || isCteRead;
 
     if (isSelect) {
       const rows = await this.db.getAllAsync(trimmedSql);
@@ -82,9 +83,7 @@ export class SQLiteConnection implements DatabaseConnection {
     };
   }
 
-  private extractColumnsFromRows(
-    rows: unknown[]
-  ): ColumnInfo[] {
+  private extractColumnsFromRows(rows: unknown[]): ColumnInfo[] {
     if (rows.length === 0) {
       return [];
     }
@@ -118,7 +117,7 @@ export class SQLiteConnection implements DatabaseConnection {
 
   async listTables(_schema?: string): Promise<TableInfo[]> {
     const result = await this.query(
-      "SELECT name, type FROM sqlite_master WHERE type IN ('table', 'view') AND name NOT LIKE 'sqlite_%' ORDER BY name"
+      "SELECT name, type FROM sqlite_master WHERE type IN ('table', 'view') AND name NOT LIKE 'sqlite_%' ORDER BY name",
     );
 
     return result.rows.map((row) => ({

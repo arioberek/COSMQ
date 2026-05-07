@@ -2,13 +2,13 @@ import { Ionicons } from "@expo/vector-icons";
 import { memo, useCallback, useEffect, useRef, useState } from "react";
 import { ActivityIndicator } from "react-native";
 import { Button, Text, useTheme, YStack } from "tamagui";
+import AlienLogo from "../assets/logos/alien.svg";
 import {
   authenticate,
+  type BiometricCapability,
   checkBiometricCapability,
   getBiometricDisplayName,
-  type BiometricCapability,
 } from "../lib/app-lock";
-import AlienLogo from "../assets/logos/alien.svg";
 
 type LockScreenProps = {
   onUnlock: () => void;
@@ -31,7 +31,9 @@ export const LockScreen = memo(function LockScreen({ onUnlock }: LockScreenProps
     checkBiometricCapability().then((cap) => {
       if (mounted) setCapability(cap);
     });
-    return () => { mounted = false; };
+    return () => {
+      mounted = false;
+    };
   }, []);
 
   const handleUnlock = useCallback(async () => {
@@ -133,11 +135,7 @@ export const LockScreen = memo(function LockScreen({ onUnlock }: LockScreenProps
         ) : null}
 
         {!capability ? (
-          <ActivityIndicator
-            size="large"
-            color={theme.primary.val}
-            style={{ marginBottom: 24 }}
-          />
+          <ActivityIndicator size="large" color={theme.primary.val} style={{ marginBottom: 24 }} />
         ) : canAuthenticate ? (
           <Button
             backgroundColor="$primary"

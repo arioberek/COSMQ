@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { DEFAULT_SETTINGS, type AppSettings } from "../lib/settings";
+import { type AppSettings, DEFAULT_SETTINGS } from "../lib/settings";
 import { getSettings, saveSettings } from "../lib/storage/settings";
 
 interface SettingsStore {

@@ -1,6 +1,6 @@
 import { createAnimations } from "@tamagui/animations-react-native";
-import { shorthands } from "@tamagui/shorthands";
 import { tokens as defaultTokens } from "@tamagui/config/v3";
+import { shorthands } from "@tamagui/shorthands";
 import { createFont, createTamagui, createTokens } from "tamagui";
 
 const animations = createAnimations({
@@ -62,7 +62,7 @@ const lineHeightFor = (size: number) =>
 
 const buildLineHeight = () =>
   Object.fromEntries(
-    Object.entries(TYPE_SCALE).map(([key, size]) => [key, lineHeightFor(size)])
+    Object.entries(TYPE_SCALE).map(([key, size]) => [key, lineHeightFor(size)]),
   ) as Record<keyof typeof TYPE_SCALE, number>;
 
 const SYSTEM_STACK = "System";

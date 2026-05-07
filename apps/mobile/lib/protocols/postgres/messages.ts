@@ -49,7 +49,7 @@ export const TransactionStatus = {
 export function createStartupMessage(
   user: string,
   database: string,
-  options: Record<string, string> = {}
+  options: Record<string, string> = {},
 ): Buffer {
   const protocolVersion = 196608;
 
@@ -110,12 +110,11 @@ export function createPasswordMessage(password: string): Buffer {
 
 export function createSaslInitialResponseMessage(
   mechanism: string,
-  initialResponse: string
+  initialResponse: string,
 ): Buffer {
   const mechanismBytes = Buffer.from(mechanism, "utf8");
   const responseBytes = Buffer.from(initialResponse, "utf8");
-  const messageLength =
-    1 + 4 + mechanismBytes.length + 1 + 4 + responseBytes.length;
+  const messageLength = 1 + 4 + mechanismBytes.length + 1 + 4 + responseBytes.length;
   const buffer = Buffer.alloc(messageLength);
   let offset = 0;
 
@@ -184,62 +183,23 @@ function rol(num: number, count: number): number {
   return (num << count) | (num >>> (32 - count));
 }
 
-function cmn(
-  q: number,
-  a: number,
-  b: number,
-  x: number,
-  s: number,
-  t: number
-): number {
+function cmn(q: number, a: number, b: number, x: number, s: number, t: number): number {
   return add32(rol(add32(add32(a, q), add32(x, t)), s), b);
 }
 
-function ff(
-  a: number,
-  b: number,
-  c: number,
-  d: number,
-  x: number,
-  s: number,
-  t: number
-): number {
+function ff(a: number, b: number, c: number, d: number, x: number, s: number, t: number): number {
   return cmn((b & c) | (~b & d), a, b, x, s, t);
 }
 
-function gg(
-  a: number,
-  b: number,
-  c: number,
-  d: number,
-  x: number,
-  s: number,
-  t: number
-): number {
+function gg(a: number, b: number, c: number, d: number, x: number, s: number, t: number): number {
   return cmn((b & d) | (c & ~d), a, b, x, s, t);
 }
 
-function hh(
-  a: number,
-  b: number,
-  c: number,
-  d: number,
-  x: number,
-  s: number,
-  t: number
-): number {
+function hh(a: number, b: number, c: number, d: number, x: number, s: number, t: number): number {
   return cmn(b ^ c ^ d, a, b, x, s, t);
 }
 
-function ii(
-  a: number,
-  b: number,
-  c: number,
-  d: number,
-  x: number,
-  s: number,
-  t: number
-): number {
+function ii(a: number, b: number, c: number, d: number, x: number, s: number, t: number): number {
   return cmn(c ^ (b | ~d), a, b, x, s, t);
 }
 
@@ -336,7 +296,7 @@ function md5Bytes(bytes: Uint8Array): string {
   const state = [1732584193, -271733879, -1732584194, 271733878];
   const len = bytes.length;
   const bitLen = len * 8;
-  const totalLen = ((len + 8) >>> 6 << 6) + 64;
+  const totalLen = (((len + 8) >>> 6) << 6) + 64;
   const padded = new Uint8Array(totalLen);
   padded.set(bytes);
   padded[len] = 0x80;
@@ -358,23 +318,14 @@ function md5Bytes(bytes: Uint8Array): string {
     md5Cycle(state, block);
   }
 
-  return (
-    wordToHex(state[0]) +
-    wordToHex(state[1]) +
-    wordToHex(state[2]) +
-    wordToHex(state[3])
-  );
+  return wordToHex(state[0]) + wordToHex(state[1]) + wordToHex(state[2]) + wordToHex(state[3]);
 }
 
 function md5Utf8(input: string): string {
   return md5Bytes(utf8ToBytes(input));
 }
 
-export function createMd5PasswordMessage(
-  password: string,
-  username: string,
-  salt: Buffer
-): Buffer {
+export function createMd5PasswordMessage(password: string, username: string, salt: Buffer): Buffer {
   // MD5(MD5(password + username) + salt)
   const inner = md5Utf8(password + username);
   const innerBytes = asciiToBytes(inner);
@@ -383,7 +334,7 @@ export function createMd5PasswordMessage(
   combined.set(salt, innerBytes.length);
   const outer = md5Bytes(combined);
 
-  const md5Password = "md5" + outer;
+  const md5Password = `md5${outer}`;
 
   return createPasswordMessage(md5Password);
 }
@@ -460,7 +411,7 @@ export function parseSaslMechanisms(payload: Buffer): string[] {
 }
 
 export function parseRowDescription(
-  payload: Buffer
+  payload: Buffer,
 ): Array<{ name: string; tableOid: number; columnId: number; typeOid: number }> {
   const fieldCount = payload.readInt16BE(0);
   const fields: Array<{
@@ -520,9 +471,7 @@ export function parseCommandComplete(payload: Buffer): string {
   return payload.toString("utf8", 0, payload.length - 1);
 }
 
-export function parseErrorResponse(
-  payload: Buffer
-): Record<string, string> {
+export function parseErrorResponse(payload: Buffer): Record<string, string> {
   const fields: Record<string, string> = {};
   let offset = 0;
 

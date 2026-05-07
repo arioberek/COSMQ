@@ -17,9 +17,7 @@
       "backgroundColor": "#1a1a2e"
     },
     "newArchEnabled": true,
-    "assetBundlePatterns": [
-      "**/*"
-    ],
+    "assetBundlePatterns": ["**/*"],
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.cosmq.app",

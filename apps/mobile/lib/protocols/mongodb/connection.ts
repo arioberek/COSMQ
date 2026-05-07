@@ -1,3 +1,4 @@
+import { sslConfigToTlsOptions, TcpClient } from "../../tcp/socket";
 import type {
   ColumnInfo,
   ConnectionConfig,
@@ -7,13 +8,7 @@ import type {
   QueryResult,
   TableInfo,
 } from "../../types";
-import { TcpClient, sslConfigToTlsOptions } from "../../tcp/socket";
-import {
-  type BsonDocument,
-  ObjectId,
-  decodeBson,
-  encodeBson,
-} from "./bson";
+import { type BsonDocument, decodeBson, encodeBson, ObjectId } from "./bson";
 
 const OP_MSG = 2013;
 
@@ -60,9 +55,7 @@ export class MongoDBConnection implements DatabaseConnection {
     const helloResponse = await this.sendCommand(helloCommand);
 
     if (!helloResponse.ok) {
-      throw new Error(
-        (helloResponse.errmsg as string) || "Hello command failed"
-      );
+      throw new Error((helloResponse.errmsg as string) || "Hello command failed");
     }
 
     if (!this.config.password) {
@@ -87,15 +80,13 @@ export class MongoDBConnection implements DatabaseConnection {
       throw new Error("SASL start failed");
     }
 
-    const serverFirstMessage = (saslStartResponse.payload as Buffer).toString(
-      "utf8"
-    );
+    const serverFirstMessage = (saslStartResponse.payload as Buffer).toString("utf8");
     const conversationId = saslStartResponse.conversationId;
 
     const { clientFinal, serverSignature } = this.buildScramClientFinal(
       this.config.password,
       nonce,
-      serverFirstMessage
+      serverFirstMessage,
     );
 
     const saslContinueCommand: BsonDocument = {
@@ -108,14 +99,10 @@ export class MongoDBConnection implements DatabaseConnection {
     const saslContinueResponse = await this.sendCommand(saslContinueCommand);
 
     if (!saslContinueResponse.ok) {
-      throw new Error(
-        (saslContinueResponse.errmsg as string) || "Authentication failed"
-      );
+      throw new Error((saslContinueResponse.errmsg as string) || "Authentication failed");
     }
 
-    const serverFinalMessage = (
-      saslContinueResponse.payload as Buffer
-    ).toString("utf8");
+    const serverFinalMessage = (saslContinueResponse.payload as Buffer).toString("utf8");
     const parsedServerFinal = this.parseScramAttributes(serverFinalMessage);
 
     if (parsedServerFinal.v !== serverSignature) {
@@ -160,39 +147,26 @@ export class MongoDBConnection implements DatabaseConnection {
   private buildScramClientFinal(
     password: string,
     clientNonce: string,
-    serverFirstMessage: string
+    serverFirstMessage: string,
   ): { clientFinal: string; serverSignature: string } {
     const attrs = this.parseScramAttributes(serverFirstMessage);
     const serverNonce = attrs.r;
     const salt = Buffer.from(attrs.s, "base64");
     const iterations = parseInt(attrs.i, 10);
 
-    const saltedPassword = this.pbkdf2Sha1(
-      Buffer.from(password, "utf8"),
-      salt,
-      iterations,
-      20
-    );
+    const saltedPassword = this.pbkdf2Sha1(Buffer.from(password, "utf8"), salt, iterations, 20);
 
     const clientKey = this.hmacSha1(saltedPassword, Buffer.from("Client Key"));
     const storedKey = this.sha1(clientKey);
     const channelBinding = Buffer.from("n,,").toString("base64");
     const clientFinalWithoutProof = `c=${channelBinding},r=${serverNonce}`;
     const authMessage = `n=${this.config.username},r=${clientNonce},${serverFirstMessage},${clientFinalWithoutProof}`;
-    const clientSignature = this.hmacSha1(
-      storedKey,
-      Buffer.from(authMessage, "utf8")
-    );
+    const clientSignature = this.hmacSha1(storedKey, Buffer.from(authMessage, "utf8"));
     const clientProof = this.xorBuffers(clientKey, clientSignature);
     const serverKey = this.hmacSha1(saltedPassword, Buffer.from("Server Key"));
-    const serverSignature = this.hmacSha1(
-      serverKey,
-      Buffer.from(authMessage, "utf8")
-    );
+    const serverSignature = this.hmacSha1(serverKey, Buffer.from(authMessage, "utf8"));
 
-    const clientFinal = `${clientFinalWithoutProof},p=${clientProof.toString(
-      "base64"
-    )}`;
+    const clientFinal = `${clientFinalWithoutProof},p=${clientProof.toString("base64")}`;
 
     return {
       clientFinal,
@@ -299,12 +273,7 @@ export class MongoDBConnection implements DatabaseConnection {
     return this.sha1(Buffer.concat([oKeyPad, inner]));
   }
 
-  private pbkdf2Sha1(
-    password: Buffer,
-    salt: Buffer,
-    iterations: number,
-    keyLen: number
-  ): Buffer {
+  private pbkdf2Sha1(password: Buffer, salt: Buffer, iterations: number, keyLen: number): Buffer {
     const blocksNeeded = Math.ceil(keyLen / 20);
     const output = Buffer.alloc(blocksNeeded * 20);
 
@@ -451,9 +420,7 @@ export class MongoDBConnection implements DatabaseConnection {
     return [result];
   }
 
-  private extractColumnsFromDocuments(
-    documents: Record<string, unknown>[]
-  ): ColumnInfo[] {
+  private extractColumnsFromDocuments(documents: Record<string, unknown>[]): ColumnInfo[] {
     if (documents.length === 0) {
       return [];
     }

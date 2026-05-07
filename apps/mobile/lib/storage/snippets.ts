@@ -50,9 +50,7 @@ export const getSnippets = async (): Promise<QuerySnippet[]> => {
   }
 };
 
-export const saveSnippet = async (
-  item: Omit<QuerySnippet, "id" | "createdAt">
-): Promise<void> => {
+export const saveSnippet = async (item: Omit<QuerySnippet, "id" | "createdAt">): Promise<void> => {
   await snippetsMutex.acquire();
   try {
     const snippets = await getSnippets();
@@ -66,7 +64,7 @@ export const saveSnippet = async (
   } catch (err) {
     console.error("[saveSnippet] Failed to save snippet:", err);
     throw new Error(
-      `Failed to save snippet: ${err instanceof Error ? err.message : "Unknown error"}`
+      `Failed to save snippet: ${err instanceof Error ? err.message : "Unknown error"}`,
     );
   } finally {
     snippetsMutex.release();
@@ -82,7 +80,7 @@ export const deleteSnippet = async (id: string): Promise<void> => {
   } catch (err) {
     console.error("[deleteSnippet] Failed to delete snippet:", err);
     throw new Error(
-      `Failed to delete snippet: ${err instanceof Error ? err.message : "Unknown error"}`
+      `Failed to delete snippet: ${err instanceof Error ? err.message : "Unknown error"}`,
     );
   } finally {
     snippetsMutex.release();

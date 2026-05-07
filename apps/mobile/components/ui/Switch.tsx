@@ -1,5 +1,5 @@
 import { memo } from "react";
-import { Switch as TamaguiSwitch, styled, type GetProps } from "tamagui";
+import { type GetProps, styled, Switch as TamaguiSwitch } from "tamagui";
 
 const StyledSwitch = styled(TamaguiSwitch, {
   backgroundColor: "$surfaceMuted",
@@ -59,7 +59,12 @@ type SwitchProps = Omit<GetProps<typeof StyledSwitch>, "switchSize"> & {
   thumbSize?: SwitchSize;
 };
 
-export const Switch = memo(function Switch({ size = "medium", thumbSize, checked, ...props }: SwitchProps) {
+export const Switch = memo(function Switch({
+  size = "medium",
+  thumbSize,
+  checked,
+  ...props
+}: SwitchProps) {
   return (
     <StyledSwitch
       switchSize={size}

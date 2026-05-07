@@ -1,0 +1,81 @@
+name: Bug report
+description: Report a reproducible COSMQ bug.
+title: "bug: "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting a bug. Security issues should not be reported here; use SECURITY.md instead.
+  - type: input
+    id: version
+    attributes:
+      label: COSMQ version
+      description: App version, commit SHA, or branch name.
+      placeholder: "0.0.0, main@abc123, or feat/my-branch"
+    validations:
+      required: true
+  - type: dropdown
+    id: surface
+    attributes:
+      label: Area
+      options:
+        - Mobile app
+        - Landing site
+        - Build / CI
+        - Documentation
+        - Other
+    validations:
+      required: true
+  - type: input
+    id: device_os
+    attributes:
+      label: Device and OS
+      placeholder: "iPhone 15 / iOS 18, Pixel 8 / Android 15, macOS 15"
+    validations:
+      required: true
+  - type: dropdown
+    id: database
+    attributes:
+      label: Database type
+      options:
+        - PostgreSQL
+        - MySQL
+        - MongoDB
+        - SQLite
+        - Mock / sample data
+        - Not database-related
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction steps
+      description: Include enough detail for someone else to reproduce the bug.
+      placeholder: |
+        1. Open ...
+        2. Connect to ...
+        3. Run ...
+        4. See ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs, screenshots, or recordings
+      description: Remove credentials, connection strings, tokens, and private data before pasting logs.
+      render: shell

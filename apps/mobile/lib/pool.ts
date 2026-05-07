@@ -1,9 +1,10 @@
 import type { ConnectionConfig, DatabaseConnection } from "./types";
 
 type PooledConnection = {
-  connection: DatabaseConnection;
+  connection: DatabaseConnection | null;
   lastUsed: number;
   inUse: boolean;
+  pending: boolean;
 };
 
 type PoolConfig = {
@@ -38,9 +39,9 @@ export class ConnectionPool {
     const now = Date.now();
     for (const [configId, pool] of this.pools) {
       const activeConnections = pool.filter((pc) => {
-        if (pc.inUse) return true;
+        if (pc.inUse || pc.pending) return true;
         if (now - pc.lastUsed > this.config.idleTimeoutMs) {
-          pc.connection.disconnect().catch(() => {});
+          pc.connection?.disconnect().catch(() => {});
           return false;
         }
         return true;
@@ -55,7 +56,7 @@ export class ConnectionPool {
 
   async acquire(
     config: ConnectionConfig,
-    factory: (config: ConnectionConfig) => DatabaseConnection
+    factory: (config: ConnectionConfig) => DatabaseConnection,
   ): Promise<DatabaseConnection> {
     const poolKey = this.getPoolKey(config);
     let pool = this.pools.get(poolKey);
@@ -65,23 +66,58 @@ export class ConnectionPool {
       this.pools.set(poolKey, pool);
     }
 
-    const available = pool.find((pc) => !pc.inUse);
-    if (available) {
+    const available = pool.find((pc) => !pc.inUse && !pc.pending && pc.connection);
+    if (available && available.connection) {
       available.inUse = true;
       available.lastUsed = Date.now();
       return available.connection;
     }
 
     if (pool.length < this.config.maxSize) {
-      const connection = factory(config);
-      await connection.connect();
-      const pooled: PooledConnection = {
-        connection,
+      const placeholder: PooledConnection = {
+        connection: null,
         lastUsed: Date.now(),
         inUse: true,
+        pending: true,
       };
-      pool.push(pooled);
-      return connection;
+      pool.push(placeholder);
+
+      let connection: DatabaseConnection | null = null;
+      let timedOut = false;
+      try {
+        connection = factory(config);
+        let timeoutHandle: ReturnType<typeof setTimeout> | null = null;
+        try {
+          await Promise.race([
+            connection.connect(),
+            new Promise<never>((_, reject) => {
+              timeoutHandle = setTimeout(() => {
+                timedOut = true;
+                reject(new Error("Connection acquire timeout"));
+              }, this.config.acquireTimeoutMs);
+            }),
+          ]);
+        } finally {
+          if (timeoutHandle !== null) clearTimeout(timeoutHandle);
+        }
+        placeholder.connection = connection;
+        placeholder.pending = false;
+        placeholder.lastUsed = Date.now();
+        return connection;
+      } catch (err) {
+        const idx = pool.indexOf(placeholder);
+        if (idx !== -1) pool.splice(idx, 1);
+        if (connection) {
+          if (timedOut) {
+            void Promise.resolve(connection)
+              .then((c) => c.disconnect())
+              .catch(() => {});
+          } else {
+            connection.disconnect().catch(() => {});
+          }
+        }
+        throw err;
+      }
     }
 
     return this.waitForAvailable(pool);
@@ -92,8 +128,8 @@ export class ConnectionPool {
 
     return new Promise((resolve, reject) => {
       const checkInterval = setInterval(() => {
-        const available = pool.find((pc) => !pc.inUse);
-        if (available) {
+        const available = pool.find((pc) => !pc.inUse && !pc.pending && pc.connection);
+        if (available && available.connection) {
           clearInterval(checkInterval);
           available.inUse = true;
           available.lastUsed = Date.now();
@@ -126,7 +162,9 @@ export class ConnectionPool {
     const pool = this.pools.get(poolKey);
     if (!pool) return;
 
-    await Promise.all(pool.map((pc) => pc.connection.disconnect().catch(() => {})));
+    await Promise.all(
+      pool.map((pc) => pc.connection?.disconnect().catch(() => {}) ?? Promise.resolve()),
+    );
     this.pools.delete(poolKey);
   }
 
@@ -139,7 +177,9 @@ export class ConnectionPool {
     const destroyPromises: Promise<void>[] = [];
     for (const pool of this.pools.values()) {
       for (const pc of pool) {
-        destroyPromises.push(pc.connection.disconnect().catch(() => {}));
+        if (pc.connection) {
+          destroyPromises.push(pc.connection.disconnect().catch(() => {}));
+        }
       }
     }
     await Promise.all(destroyPromises);

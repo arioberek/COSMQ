@@ -30,11 +30,7 @@ export const sslConfigToTlsOptions = (ssl: boolean | SslConfig): boolean | TlsOp
 };
 
 type TcpSocketInstance = {
-  write: (
-    data: Buffer,
-    encoding?: string,
-    cb?: (err?: Error) => void
-  ) => void;
+  write: (data: Buffer, encoding?: string, cb?: (err?: Error) => void) => void;
   on: (event: string, cb: (...args: unknown[]) => void) => void;
   destroy: () => void;
 };
@@ -93,9 +89,8 @@ class BufferList {
     }
 
     if (n === undefined || n >= this.totalLength) {
-      const result = this.chunks.length === 1 
-        ? this.chunks[0] 
-        : Buffer.concat(this.chunks, this.totalLength);
+      const result =
+        this.chunks.length === 1 ? this.chunks[0] : Buffer.concat(this.chunks, this.totalLength);
       this.chunks = [];
       this.totalLength = 0;
       return result;
@@ -107,7 +102,7 @@ class BufferList {
 
     while (remaining > 0 && this.chunks.length > 0) {
       const chunk = this.chunks[0];
-      
+
       if (chunk.length <= remaining) {
         chunk.copy(result, offset);
         offset += chunk.length;

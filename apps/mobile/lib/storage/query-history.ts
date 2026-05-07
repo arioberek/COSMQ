@@ -49,7 +49,7 @@ export const getQueryHistory = async (): Promise<QueryHistoryItem[]> => {
 };
 
 export const addToQueryHistory = async (
-  item: Omit<QueryHistoryItem, "id" | "timestamp">
+  item: Omit<QueryHistoryItem, "id" | "timestamp">,
 ): Promise<void> => {
   await historyMutex.acquire();
   try {
@@ -61,31 +61,19 @@ export const addToQueryHistory = async (
     };
 
     const isDuplicate = history.some(
-      (h) =>
-        h.query.trim() === item.query.trim() &&
-        h.connectionId === item.connectionId
+      (h) => h.query.trim() === item.query.trim() && h.connectionId === item.connectionId,
     );
     if (isDuplicate) {
       const filtered = history.filter(
-        (h) =>
-          !(
-            h.query.trim() === item.query.trim() &&
-            h.connectionId === item.connectionId
-          )
+        (h) => !(h.query.trim() === item.query.trim() && h.connectionId === item.connectionId),
       );
       filtered.unshift(newItem);
-      await SecureStore.setItemAsync(
-        HISTORY_KEY,
-        JSON.stringify(filtered.slice(0, MAX_HISTORY))
-      );
+      await SecureStore.setItemAsync(HISTORY_KEY, JSON.stringify(filtered.slice(0, MAX_HISTORY)));
       return;
     }
 
     history.unshift(newItem);
-    await SecureStore.setItemAsync(
-      HISTORY_KEY,
-      JSON.stringify(history.slice(0, MAX_HISTORY))
-    );
+    await SecureStore.setItemAsync(HISTORY_KEY, JSON.stringify(history.slice(0, MAX_HISTORY)));
   } catch (err) {
     console.error("[addToQueryHistory] Failed to add query to history:", err);
   } finally {

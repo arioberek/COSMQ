@@ -1,11 +1,5 @@
 import { memo } from "react";
-import {
-  Input as TamaguiInput,
-  styled,
-  Text,
-  YStack,
-  type GetProps,
-} from "tamagui";
+import { type GetProps, styled, Input as TamaguiInput, Text, YStack } from "tamagui";
 
 const StyledInput = styled(TamaguiInput, {
   backgroundColor: "$surface",
@@ -64,7 +58,13 @@ type InputProps = Omit<StyledInputProps, "size" | "inputSize"> & {
   error?: string;
 };
 
-export const Input = memo(function Input({ label, error, hasError, size = "md", ...props }: InputProps) {
+export const Input = memo(function Input({
+  label,
+  error,
+  hasError,
+  size = "md",
+  ...props
+}: InputProps) {
   const showError = Boolean(error) || hasError;
 
   return (
