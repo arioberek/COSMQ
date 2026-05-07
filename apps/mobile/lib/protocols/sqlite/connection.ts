@@ -54,7 +54,8 @@ export class SQLiteConnection implements DatabaseConnection {
     const command = trimmedSql.split(/\s+/)[0].toUpperCase();
 
     const isCteRead =
-      command === "WITH" && /^WITH(\s+RECURSIVE)?\s+[\s\S]+?\s+(SELECT|VALUES)\b/i.test(trimmedSql);
+      command === "WITH" &&
+      /^WITH(?:\s+RECURSIVE)?\s+[\s\S]+\)\s*(?:SELECT|VALUES)\b/i.test(trimmedSql);
     const isSelect =
       command === "SELECT" || command === "PRAGMA" || command === "EXPLAIN" || isCteRead;
 
