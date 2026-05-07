@@ -1103,7 +1103,11 @@ export default function QueryScreen() {
                 style={styles.tableContainer}
                 showsHorizontalScrollIndicator={false}
               >
-                <View>
+                <ScrollView
+                  nestedScrollEnabled
+                  showsVerticalScrollIndicator={false}
+                  style={styles.tableRows}
+                >
                   {/* Header row */}
                   <View style={styles.tableHeader}>
                     {result.columns.map((col, ci) => (
@@ -1162,7 +1166,7 @@ export default function QueryScreen() {
                       </View>
                     ))
                   )}
-                </View>
+                </ScrollView>
               </ScrollView>
             )}
 
@@ -1768,6 +1772,9 @@ const createStyles = (theme: Theme) => StyleSheet.create({
     flex: 1,
     borderRadius: 8,
     overflow: "hidden",
+  },
+  tableRows: {
+    flex: 1,
   },
   tableHeader: {
     flexDirection: "row",
