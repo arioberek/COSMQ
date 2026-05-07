@@ -1,4 +1,3 @@
-import { FlashList } from "@shopify/flash-list";
 import * as Clipboard from "expo-clipboard";
 import { useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -253,7 +252,8 @@ const getColumnWidths = (
       Math.max(col.name.length, (col.type ?? "").length) * COL_CHAR_PX + COL_PAD;
     const maxContent = rows.slice(0, 40).reduce((mx, row) => {
       const val = row[col.name];
-      return Math.max(mx, val === null ? 4 : Math.min(String(val).length, 36));
+      const str = val === null ? "" : typeof val === "object" ? JSON.stringify(val) : String(val);
+      return Math.max(mx, Math.min(str.length, 36));
     }, 0);
     const contentPx = maxContent * COL_CHAR_PX + COL_PAD;
     return Math.min(Math.max(Math.max(headerPx, contentPx), COL_MIN), COL_MAX);
@@ -582,7 +582,7 @@ export default function QueryScreen() {
 
   const copyCellValue = useCallback(
     async (value: unknown) => {
-      const str = value === null ? "NULL" : String(value);
+      const str = value === null ? "null" : typeof value === "object" ? JSON.stringify(value) : String(value);
       await Clipboard.setStringAsync(str);
       haptic.light();
     },
@@ -595,7 +595,7 @@ export default function QueryScreen() {
     const rows = result.rows.map(row =>
       result.columns.map(c => {
         const val = row[c.name];
-        return val === null ? "NULL" : String(val);
+        return val === null ? "null" : typeof val === "object" ? JSON.stringify(val) : String(val);
       }).join("\t")
     ).join("\n");
     await Clipboard.setStringAsync(`${header}\n${rows}`);
@@ -1066,32 +1066,35 @@ export default function QueryScreen() {
         {result && (
           <>
             {/* ── Meta bar ── */}
-            <View style={styles.resultsMeta}>
-              <View style={styles.metaStats}>
-                <Text style={styles.metaCount}>
-                  {result.rowCount.toLocaleString()}
-                </Text>
-                <Text style={styles.metaLabel}>
-                  {result.command.startsWith("SELECT") || result.command.startsWith("select")
-                    ? " rows"
-                    : " affected"}
-                </Text>
-                <Text style={styles.metaSep}>·</Text>
-                <Text style={styles.metaTime}>{result.executionTime}ms</Text>
-              </View>
-              <View style={styles.metaActions}>
-                {result.columns.length > 0 && (
-                  <Pressable style={styles.copyAllButton} onPress={copyAllResults}>
-                    <Text style={styles.copyAllText}>Copy all</Text>
-                  </Pressable>
-                )}
-                <View style={styles.commandBadge}>
-                  <Text style={styles.commandBadgeText}>
-                    {result.command.split(" ")[0].toUpperCase()}
-                  </Text>
+            {(() => {
+              const cmd = result.command.trim().toUpperCase();
+              return (
+                <View style={styles.resultsMeta}>
+                  <View style={styles.metaStats}>
+                    <Text style={styles.metaCount}>
+                      {result.rowCount.toLocaleString()}
+                    </Text>
+                    <Text style={styles.metaLabel}>
+                      {cmd.startsWith("SELECT") ? " rows" : " affected"}
+                    </Text>
+                    <Text style={styles.metaSep}>·</Text>
+                    <Text style={styles.metaTime}>{result.executionTime}ms</Text>
+                  </View>
+                  <View style={styles.metaActions}>
+                    {result.columns.length > 0 && (
+                      <Pressable style={styles.copyAllButton} onPress={copyAllResults}>
+                        <Text style={styles.copyAllText}>Copy all</Text>
+                      </Pressable>
+                    )}
+                    <View style={styles.commandBadge}>
+                      <Text style={styles.commandBadgeText}>
+                        {cmd.split(" ")[0]}
+                      </Text>
+                    </View>
+                  </View>
                 </View>
-              </View>
-            </View>
+              );
+            })()}
 
             {/* ── Table ── */}
             {result.columns.length > 0 && (
@@ -1126,41 +1129,38 @@ export default function QueryScreen() {
                       <Text style={styles.emptyResultText}>No rows returned</Text>
                     </View>
                   ) : (
-                    <FlashList
-                      data={result.rows}
-                      keyExtractor={(_item, index) => `row-${index}`}
-                      renderItem={({ item, index }) => (
-                        <View
-                          style={[
-                            styles.tableRow,
-                            index % 2 === 1 && styles.tableRowAlt,
-                          ]}
-                        >
-                          {result.columns.map((col, ci) => {
-                            const val = item[col.name];
-                            return (
-                              <Pressable
-                                key={`cell-${col.name}`}
-                                style={({ pressed }) => [
-                                  styles.cell,
-                                  { width: columnWidths[ci] },
-                                  pressed && styles.cellPressed,
-                                ]}
-                                onPress={() => copyCellValue(val)}
-                              >
-                                {val === null ? (
-                                  <Text style={styles.nullText}>null</Text>
-                                ) : (
-                                  <Text style={styles.cellText} numberOfLines={3}>
-                                    {String(val)}
-                                  </Text>
-                                )}
-                              </Pressable>
-                            );
-                          })}
-                        </View>
-                      )}
-                    />
+                    result.rows.map((item, index) => (
+                      <View
+                        key={`row-${index}`}
+                        style={[
+                          styles.tableRow,
+                          index % 2 === 1 && styles.tableRowAlt,
+                        ]}
+                      >
+                        {result.columns.map((col, ci) => {
+                          const val = item[col.name];
+                          return (
+                            <Pressable
+                              key={`cell-${col.name}`}
+                              style={({ pressed }) => [
+                                styles.cell,
+                                { width: columnWidths[ci] },
+                                pressed && styles.cellPressed,
+                              ]}
+                              onPress={() => copyCellValue(val)}
+                            >
+                              {val === null ? (
+                                <Text style={styles.nullText}>null</Text>
+                              ) : (
+                                <Text style={styles.cellText} numberOfLines={3}>
+                                  {typeof val === "object" ? JSON.stringify(val) : String(val)}
+                                </Text>
+                              )}
+                            </Pressable>
+                          );
+                        })}
+                      </View>
+                    ))
                   )}
                 </View>
               </ScrollView>
