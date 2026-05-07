@@ -82,9 +82,24 @@ export class ConnectionPool {
       };
       pool.push(placeholder);
 
+      let connection: DatabaseConnection | null = null;
+      let timedOut = false;
       try {
-        const connection = factory(config);
-        await connection.connect();
+        connection = factory(config);
+        let timeoutHandle: ReturnType<typeof setTimeout> | null = null;
+        try {
+          await Promise.race([
+            connection.connect(),
+            new Promise<never>((_, reject) => {
+              timeoutHandle = setTimeout(() => {
+                timedOut = true;
+                reject(new Error("Connection acquire timeout"));
+              }, this.config.acquireTimeoutMs);
+            }),
+          ]);
+        } finally {
+          if (timeoutHandle !== null) clearTimeout(timeoutHandle);
+        }
         placeholder.connection = connection;
         placeholder.pending = false;
         placeholder.lastUsed = Date.now();
@@ -92,6 +107,15 @@ export class ConnectionPool {
       } catch (err) {
         const idx = pool.indexOf(placeholder);
         if (idx !== -1) pool.splice(idx, 1);
+        if (connection) {
+          if (timedOut) {
+            void Promise.resolve(connection)
+              .then((c) => c.disconnect())
+              .catch(() => {});
+          } else {
+            connection.disconnect().catch(() => {});
+          }
+        }
         throw err;
       }
     }
