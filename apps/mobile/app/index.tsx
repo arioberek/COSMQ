@@ -213,6 +213,7 @@ export default function HomeScreen() {
   const queryClient = useQueryClient();
   const reducedMotion = useReducedMotion();
   const [connectionToDelete, setConnectionToDelete] = useState<ConnectionConfig | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const { data: connections = [] } = useQuery({
     queryKey: ["connections"],
@@ -233,10 +234,11 @@ export default function HomeScreen() {
     try {
       await deleteConnection(connectionToDelete.id);
       await queryClient.invalidateQueries({ queryKey: ["connections"] });
+      setConnectionToDelete(null);
     } catch (error) {
       console.error("Failed to delete connection:", error);
-    } finally {
-      setConnectionToDelete(null);
+      const message = error instanceof Error ? error.message : "Unknown error";
+      setDeleteError(`Could not delete "${connectionToDelete.name}": ${message}`);
     }
   }, [connectionToDelete, queryClient]);
 
@@ -334,7 +336,7 @@ export default function HomeScreen() {
       ) : (
         <>
           <Animated.View
-            entering={FadeIn.duration(120)}
+            entering={reducedMotion ? undefined : FadeIn.duration(120)}
             style={{
               paddingHorizontal: 20,
               paddingTop: 110,
@@ -394,6 +396,16 @@ export default function HomeScreen() {
         cancelText="Cancel"
         variant="danger"
         onConfirm={handleDeleteConfirm}
+      />
+
+      <Dialog
+        open={deleteError !== null}
+        onOpenChange={(open) => {
+          if (!open) setDeleteError(null);
+        }}
+        title="Delete failed"
+        description={deleteError ?? ""}
+        primaryAction={{ label: "OK", onPress: () => setDeleteError(null) }}
       />
     </YStack>
   );
