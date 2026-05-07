@@ -47,11 +47,13 @@ Once the Expo dev server is up, press `i` to open iOS, `a` for Android, or scan 
 
 ### Test databases
 
-`docker-compose.yml` at the repo root brings up local PostgreSQL, MySQL, and MongoDB instances you can connect to from the app:
+The mobile app talks to whatever PostgreSQL, MySQL, MongoDB, or SQLite instance you point it at. For local development, any of these work:
 
-```sh
-docker compose up -d
-```
+- A managed dev database (Neon, Supabase, PlanetScale, MongoDB Atlas free tier).
+- A locally installed database (`brew install postgresql mysql mongodb-community` on macOS, or your distro's package manager on Linux).
+- A SQLite file the app creates on-device.
+
+There is no bundled `docker-compose.yml`; if you'd like to add one, that's a welcome contribution.
 
 ## Workflow
 
