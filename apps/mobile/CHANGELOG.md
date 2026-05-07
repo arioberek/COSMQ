@@ -1,5 +1,11 @@
 # @cosmq/mobile
 
+## 0.1.4
+
+### Patch Changes
+
+- 3be829a: Declare the mobile dependencies required by the current source tree so fresh installs can typecheck reliably.
+
 ## 0.1.3
 
 ### Patch Changes
