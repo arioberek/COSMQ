@@ -67,7 +67,7 @@ export const useConnectionStore = create<ConnectionStore>((set, get) => ({
 
     if (isExpoGo && TCP_PROTOCOLS.has(config.type)) {
       throw new Error(
-        `${config.type} connections require a development build. Expo Go cannot load native TCP sockets — run \`npx expo run:ios\` (or \`npx expo run:android\`) and open that build instead.`
+        `${config.type} connections require a development build. Expo Go cannot load native TCP sockets — run \`npx expo run:ios\` (or \`npx expo run:android\`) and open that build instead.`,
       );
     }
 
@@ -84,10 +84,7 @@ export const useConnectionStore = create<ConnectionStore>((set, get) => ({
     };
 
     set((state) => ({
-      activeConnections: new Map(state.activeConnections).set(
-        config.id,
-        activeConnection
-      ),
+      activeConnections: new Map(state.activeConnections).set(config.id, activeConnection),
     }));
 
     try {
@@ -134,8 +131,7 @@ export const useConnectionStore = create<ConnectionStore>((set, get) => ({
       connections.delete(id);
       return {
         activeConnections: connections,
-        currentConnectionId:
-          state.currentConnectionId === id ? null : state.currentConnectionId,
+        currentConnectionId: state.currentConnectionId === id ? null : state.currentConnectionId,
       };
     });
   },

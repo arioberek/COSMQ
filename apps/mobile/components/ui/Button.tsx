@@ -1,12 +1,6 @@
 import { memo } from "react";
 import { ActivityIndicator } from "react-native";
-import {
-  Button as TamaguiButton,
-  styled,
-  Text,
-  useTheme,
-  type GetProps,
-} from "tamagui";
+import { Button as TamaguiButton, styled, Text, useTheme, type GetProps } from "tamagui";
 
 const StyledButton = styled(TamaguiButton, {
   flexDirection: "row",
@@ -95,7 +89,14 @@ type ButtonProps = Omit<StyledButtonProps, "children" | "size" | "buttonSize"> &
   children: React.ReactNode;
 };
 
-export const Button = memo(function Button({ loading, disabled, children, variant = "primary", size = "md", ...props }: ButtonProps) {
+export const Button = memo(function Button({
+  loading,
+  disabled,
+  children,
+  variant = "primary",
+  size = "md",
+  ...props
+}: ButtonProps) {
   const theme = useTheme();
   const isDisabled = disabled || loading;
 

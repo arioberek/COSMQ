@@ -58,7 +58,13 @@ type InputProps = Omit<StyledInputProps, "size" | "inputSize"> & {
   error?: string;
 };
 
-export const Input = memo(function Input({ label, error, hasError, size = "md", ...props }: InputProps) {
+export const Input = memo(function Input({
+  label,
+  error,
+  hasError,
+  size = "md",
+  ...props
+}: InputProps) {
   const showError = Boolean(error) || hasError;
 
   return (

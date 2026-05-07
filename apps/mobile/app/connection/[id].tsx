@@ -4,10 +4,7 @@ import { router, useLocalSearchParams } from "expo-router";
 import { useState } from "react";
 import { ActivityIndicator } from "react-native";
 import { ScrollView, Text, useTheme, XStack, YStack } from "tamagui";
-import {
-  deleteConnection,
-  getConnectionWithPassword,
-} from "../../lib/storage/connections";
+import { deleteConnection, getConnectionWithPassword } from "../../lib/storage/connections";
 import { useConnectionStore } from "../../stores/connection";
 import { DatabaseIcon } from "../../components/database-icon";
 import { Button, Dialog } from "../../components/ui";
@@ -174,11 +171,7 @@ export default function ConnectionDetailScreen() {
             </XStack>
           </Button>
 
-          <Button
-            variant="ghost"
-            onPress={() => setShowDeleteDialog(true)}
-            marginTop="$md"
-          >
+          <Button variant="ghost" onPress={() => setShowDeleteDialog(true)} marginTop="$md">
             <Text color="$danger" fontWeight="500">
               Delete Connection
             </Text>
