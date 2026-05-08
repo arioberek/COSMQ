@@ -22,7 +22,7 @@ const stableRowKey = (
   primary: ColumnInfo | null,
   index: number,
 ): string => {
-  if (primary) {
+    if (v !== null && v !== undefined && v !== "") return `pk:${String(v)}-${index}`;
     const v = row[primary.name];
     if (v !== null && v !== undefined && v !== "") return `pk:${String(v)}`;
   }
