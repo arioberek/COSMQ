@@ -230,6 +230,13 @@ const buildMongoFilterClause = (filter: MongoFilter): unknown | null => {
   }
   if (filter.operator === "$regex") {
     if (trimmed === "") return null;
+    // Validate the pattern client-side so the user gets immediate feedback
+    // instead of a server-side parse error.
+    try {
+      new RegExp(filter.value);
+    } catch {
+      return null;
+    }
     return { $regex: filter.value };
   }
   if (filter.operator === "$in" || filter.operator === "$nin") {
