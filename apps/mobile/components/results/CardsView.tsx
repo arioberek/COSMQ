@@ -22,9 +22,14 @@ const stableRowKey = (
   primary: ColumnInfo | null,
   index: number,
 ): string => {
-    if (v !== null && v !== undefined && v !== "") return `pk:${String(v)}-${index}`;
+  if (primary) {
     const v = row[primary.name];
-    if (v !== null && v !== undefined && v !== "") return `pk:${String(v)}`;
+    if (v !== null && v !== undefined && v !== "") {
+      // Suffix the index so two rows with the same PK value (rare but
+      // possible from joins or hand-crafted SELECTs) don't collide as
+      // React keys.
+      return `pk:${String(v)}-${index}`;
+    }
   }
   // Fall back to index only when the result has no detectable PK. CardItem
   // expanded state will follow the position in that case, but there's no
