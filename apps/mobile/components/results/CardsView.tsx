@@ -15,7 +15,22 @@ type CardsViewProps = {
   onOpenDetail: (row: Record<string, unknown>) => void;
 };
 
-type RowItem = { row: Record<string, unknown>; index: number };
+type RowItem = { row: Record<string, unknown>; index: number; key: string };
+
+const stableRowKey = (
+  row: Record<string, unknown>,
+  primary: ColumnInfo | null,
+  index: number,
+): string => {
+  if (primary) {
+    const v = row[primary.name];
+    if (v !== null && v !== undefined && v !== "") return `pk:${String(v)}`;
+  }
+  // Fall back to index only when the result has no detectable PK. CardItem
+  // expanded state will follow the position in that case, but there's no
+  // stabler identity available.
+  return `idx:${index}`;
+};
 
 const titleFromRow = (
   row: Record<string, unknown>,
@@ -200,8 +215,15 @@ export const CardsView = memo(function CardsView({
   onOpenDetail,
 }: CardsViewProps) {
   const data = useMemo(
-    () => rows.map((row, index): RowItem => ({ row, index })),
-    [rows],
+    () =>
+      rows.map(
+        (row, index): RowItem => ({
+          row,
+          index,
+          key: stableRowKey(row, resolved.primary, index),
+        }),
+      ),
+    [rows, resolved.primary],
   );
 
   if (rows.length === 0) {
@@ -218,7 +240,7 @@ export const CardsView = memo(function CardsView({
   return (
     <FlatList
       data={data}
-      keyExtractor={(item) => `row-${item.index}`}
+      keyExtractor={(item) => item.key}
       contentContainerStyle={{ gap: 10, paddingBottom: 24 }}
       renderItem={({ item }) => (
         <CardItem item={item} resolved={resolved} onOpenDetail={onOpenDetail} />
