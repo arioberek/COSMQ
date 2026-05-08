@@ -1,5 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
-import { memo, useMemo, useState } from "react";
+import { memo, useEffect, useMemo, useState } from "react";
 import { Pressable, ScrollView, TextInput } from "react-native";
 import { Sheet, Text, useTheme as useTamaguiTheme, XStack, YStack } from "tamagui";
 import { useHaptic } from "../../lib/haptics";
@@ -36,6 +36,13 @@ export const PickerSheet = memo(function PickerSheet({
   const tamagui = useTamaguiTheme();
   const haptic = useHaptic();
   const [search, setSearch] = useState("");
+
+  // Reset the search needle whenever the sheet is dismissed so the next time
+  // it opens (potentially for a different field) the user sees the full list,
+  // not the previously typed filter still applied.
+  useEffect(() => {
+    if (!open) setSearch("");
+  }, [open]);
 
   const filtered = useMemo(() => {
     if (!search.trim()) return options;
