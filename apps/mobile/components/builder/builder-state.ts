@@ -113,16 +113,15 @@ export const sqlBuilderToString = (state: SqlBuilderState, type: DatabaseType): 
 
   if (state.conditions.length > 0) {
     const parts: string[] = [];
-    state.conditions.forEach((cond, idx) => {
+    for (const cond of state.conditions) {
       const rendered = renderSqlCondition(cond, type);
-      if (!rendered) return;
+      if (!rendered) continue;
       if (parts.length === 0) {
         parts.push(rendered);
       } else {
         parts.push(`${cond.combinator} ${rendered}`);
       }
-      void idx;
-    });
+    }
     if (parts.length > 0) {
       sql += `\nWHERE ${parts.join("\n  ")}`;
     }
