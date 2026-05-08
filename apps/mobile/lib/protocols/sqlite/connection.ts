@@ -128,7 +128,11 @@ export class SQLiteConnection implements DatabaseConnection {
   }
 
   async describeTable(_schema: string | undefined, table: string): Promise<ColumnInfo[]> {
-    const result = await this.query(`PRAGMA table_info('${table}')`);
+    // PRAGMA table_info accepts a string literal; escape `'` to prevent
+    // injection from a hostile sqlite_master entry or any future caller
+    // passing user input.
+    const safeTable = table.replace(/'/g, "''");
+    const result = await this.query(`PRAGMA table_info('${safeTable}')`);
 
     return result.rows.map((row) => ({
       name: row.name as string,
