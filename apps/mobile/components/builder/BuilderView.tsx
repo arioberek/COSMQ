@@ -91,7 +91,7 @@ export const BuilderView = memo(function BuilderView({
     async (schema: string | undefined, table: string) => {
       setLoadingColumns(true);
       try {
-        const cols = await instance.describeTable(schema ?? "public", table);
+        const cols = await instance.describeTable(schema, table);
         setColumns(cols);
       } catch (err) {
         setError(formatQueryError(err, type));

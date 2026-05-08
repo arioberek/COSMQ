@@ -127,7 +127,7 @@ export class SQLiteConnection implements DatabaseConnection {
     }));
   }
 
-  async describeTable(_schema: string, table: string): Promise<ColumnInfo[]> {
+  async describeTable(_schema: string | undefined, table: string): Promise<ColumnInfo[]> {
     const result = await this.query(`PRAGMA table_info('${table}')`);
 
     return result.rows.map((row) => ({

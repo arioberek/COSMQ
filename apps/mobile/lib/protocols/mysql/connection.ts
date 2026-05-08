@@ -333,8 +333,8 @@ export class MySQLConnection implements DatabaseConnection {
     }));
   }
 
-  async describeTable(schema: string, table: string): Promise<ColumnInfo[]> {
-    const safeSchema = escapeMySQLStringLiteral(schema);
+  async describeTable(schema: string | undefined, table: string): Promise<ColumnInfo[]> {
+    const safeSchema = escapeMySQLStringLiteral(schema ?? this.config.database);
     const safeTable = escapeMySQLStringLiteral(table);
 
     const result = await this.query(

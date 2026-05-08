@@ -493,7 +493,7 @@ export class MongoDBConnection implements DatabaseConnection {
     }));
   }
 
-  async describeTable(_schema: string, table: string): Promise<ColumnInfo[]> {
+  async describeTable(_schema: string | undefined, table: string): Promise<ColumnInfo[]> {
     const command: BsonDocument = {
       find: table,
       limit: 1,

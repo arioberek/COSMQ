@@ -78,5 +78,5 @@ export interface DatabaseConnection {
   query(sql: string): Promise<QueryResult>;
   listDatabases(): Promise<DatabaseInfo[]>;
   listTables(schema?: string): Promise<TableInfo[]>;
-  describeTable(schema: string, table: string): Promise<ColumnInfo[]>;
+  describeTable(schema: string | undefined, table: string): Promise<ColumnInfo[]>;
 }
