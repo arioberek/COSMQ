@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import * as Clipboard from "expo-clipboard";
-import { memo, useCallback, useMemo, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   type NativeScrollEvent,
   type NativeSyntheticEvent,
@@ -230,6 +230,18 @@ export const TableView = memo(function TableView({
     () => resolved.visible.filter((c) => c.name !== stickyCol?.name),
     [resolved.visible, stickyCol],
   );
+
+  // Reset user-resized widths when the column set changes — e.g. when the
+  // user runs a new query whose columns happen to overlap with the previous
+  // result. Without this, the prior widths leak across unrelated queries.
+  const columnsSignature = useMemo(
+    () => resolved.visible.map((c) => c.name).join("|"),
+    [resolved.visible],
+  );
+  useEffect(() => {
+    setWidthOverrides({});
+    setResizingCol(null);
+  }, [columnsSignature]);
 
   const widths = useMemo(() => {
     const map: Record<string, number> = {};
