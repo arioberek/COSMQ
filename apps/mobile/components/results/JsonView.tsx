@@ -37,8 +37,14 @@ const JsonNode = memo(function JsonNode({
   const [open, setOpen] = useState(defaultOpen);
 
   const copy = useCallback(async () => {
-    await Clipboard.setStringAsync(stringifyJson(data));
-    haptic.light();
+    try {
+      await Clipboard.setStringAsync(stringifyJson(data));
+      haptic.light();
+    } catch {
+      // Clipboard write can throw on Android (permission denied) or when
+      // the native module isn't available; swallow so the long-press
+      // doesn't surface as an unhandled rejection.
+    }
   }, [data, haptic]);
 
   if (PRIMITIVE(data)) {
