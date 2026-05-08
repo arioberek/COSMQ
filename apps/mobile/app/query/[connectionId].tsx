@@ -609,6 +609,9 @@ export default function QueryScreen() {
   const [query, setQuery] = useState("");
   const [editorMode, setEditorModeState] = useState<EditorMode>("editor");
   const [result, setResult] = useState<QueryResult | null>(null);
+  // Tracks the SQL string that produced the rendered `result` so ResultsView's
+  // prefs key stays stable while the editor buffer mutates after a run.
+  const [executedQuery, setExecutedQuery] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [executing, setExecuting] = useState(false);
   const [transactionState, setTransactionState] = useState<{
@@ -849,6 +852,7 @@ export default function QueryScreen() {
       await executeQuery(connectionId, transaction.begin);
       const queryResult = await executeQuery(connectionId, sql);
       setResult(queryResult);
+      setExecutedQuery(sql);
       setTransactionState({ active: true, statements: transaction });
       if (autoRollbackSeconds) {
         setTransactionDeadline(Date.now() + autoRollbackSeconds * 1000);
@@ -960,6 +964,7 @@ export default function QueryScreen() {
     try {
       const queryResult = await executeQuery(connectionId, trimmed);
       setResult(queryResult);
+      setExecutedQuery(trimmed);
       haptic.success();
       addToQueryHistory({
         query: trimmed,
@@ -1165,7 +1170,7 @@ export default function QueryScreen() {
           <ResultsView
             result={result}
             connectionId={connectionId}
-            query={query}
+            query={executedQuery}
             onCopyAll={copyAllResults}
           />
         )}
