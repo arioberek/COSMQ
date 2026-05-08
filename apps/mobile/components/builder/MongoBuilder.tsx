@@ -100,8 +100,14 @@ export const MongoBuilder = memo(function MongoBuilder({
 
   const updateLimit = useCallback(
     (text: string) => {
+      // Empty input clears the limit. `0` is meaningful in MongoDB (no
+      // server-side cap) so accept any non-negative integer.
+      if (text.trim() === "") {
+        onChange({ ...state, limit: null });
+        return;
+      }
       const n = parseInt(text, 10);
-      onChange({ ...state, limit: Number.isFinite(n) && n > 0 ? n : null });
+      onChange({ ...state, limit: Number.isFinite(n) && n >= 0 ? n : null });
     },
     [state, onChange],
   );

@@ -141,7 +141,8 @@ export const sqlBuilderToString = (
     if (ord) sql += `\nORDER BY ${ord}`;
   }
 
-  if (state.limit && state.limit > 0) {
+  // `LIMIT 0` is valid SQL — emit it verbatim. Only `null` means "no clause".
+  if (state.limit !== null && state.limit >= 0) {
     sql += `\nLIMIT ${Math.floor(state.limit)}`;
   }
 
@@ -266,7 +267,7 @@ export const mongoBuilderToString = (state: MongoBuilderState): string => {
   };
   if (Object.keys(filterDoc).length > 0) command.filter = filterDoc;
   if (Object.keys(sortDoc).length > 0) command.sort = sortDoc;
-  if (state.limit && state.limit > 0) command.limit = Math.floor(state.limit);
+  if (state.limit !== null && state.limit >= 0) command.limit = Math.floor(state.limit);
   if (Object.keys(projectionDoc).length > 0) command.projection = projectionDoc;
 
   return JSON.stringify(command, null, 2);

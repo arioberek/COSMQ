@@ -121,8 +121,15 @@ export const SqlBuilder = memo(function SqlBuilder({
 
   const updateLimit = useCallback(
     (text: string) => {
+      // Empty input clears the LIMIT clause (no cap). Any non-negative integer
+      // — including `0`, which is valid SQL meaning "return no rows" — is
+      // kept verbatim. Negative values fall back to null.
+      if (text.trim() === "") {
+        onChange({ ...state, limit: null });
+        return;
+      }
       const n = parseInt(text, 10);
-      onChange({ ...state, limit: Number.isFinite(n) && n > 0 ? n : null });
+      onChange({ ...state, limit: Number.isFinite(n) && n >= 0 ? n : null });
     },
     [state, onChange],
   );
