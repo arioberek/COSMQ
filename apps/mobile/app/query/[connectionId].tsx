@@ -11,9 +11,12 @@ import {
   TextInput,
   View,
 } from "react-native";
+import { BuilderView } from "../../components/builder/BuilderView";
+import { ResultsView } from "../../components/results/ResultsView";
 import { RunButton } from "../../components/run-button";
 import { Dialog } from "../../components/ui/Dialog";
 import { useTheme } from "../../hooks/useTheme";
+import { formatQueryError } from "../../lib/errors";
 import { useHaptic } from "../../lib/haptics";
 import { normalizeAutoRollbackSeconds } from "../../lib/settings";
 import {
@@ -21,6 +24,7 @@ import {
   getQueryHistory,
   type QueryHistoryItem,
 } from "../../lib/storage/query-history";
+import { type EditorMode, getEditorMode, setEditorMode } from "../../lib/storage/results-prefs";
 import {
   deleteSnippet,
   getSnippets,
@@ -599,7 +603,11 @@ export default function QueryScreen() {
   const haptic = useHaptic();
   const { connectionId } = useLocalSearchParams<{ connectionId: string }>();
   const [query, setQuery] = useState("");
+  const [editorMode, setEditorModeState] = useState<EditorMode>("editor");
   const [result, setResult] = useState<QueryResult | null>(null);
+  // Tracks the SQL string that produced the rendered `result` so ResultsView's
+  // prefs key stays stable while the editor buffer mutates after a run.
+  const [executedQuery, setExecutedQuery] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [executing, setExecuting] = useState(false);
   const [transactionState, setTransactionState] = useState<{
@@ -647,21 +655,6 @@ export default function QueryScreen() {
     ? `Txn ${formatCountdown(transactionTimeLeft)}`
     : "Txn Manual";
 
-  const columnWidths = useMemo(
-    () => (result ? getColumnWidths(result.columns, result.rows) : []),
-    [result],
-  );
-
-  const copyCellValue = useCallback(
-    async (value: unknown) => {
-      const str =
-        value === null ? "null" : typeof value === "object" ? JSON.stringify(value) : String(value);
-      await Clipboard.setStringAsync(str);
-      haptic.light();
-    },
-    [haptic],
-  );
-
   const copyAllResults = async () => {
     if (!result) return;
     const header = result.columns.map((c) => c.name).join("\t");
@@ -685,18 +678,13 @@ export default function QueryScreen() {
   };
 
   const loadTables = async () => {
-    if (!connection?.instance) {
-      console.warn("[loadTables] No connection instance");
-      return;
-    }
+    if (!connection?.instance) return;
     setLoadingTables(true);
     try {
       const tableList = await connection.instance.listTables();
-      console.log("[loadTables] Loaded tables:", tableList.length);
       setTables(tableList);
     } catch (err) {
-      console.error("[loadTables] Error:", err);
-      showAlert("Couldn't load tables", err instanceof Error ? err.message : "Unknown error");
+      showAlert("Couldn't load tables", formatQueryError(err, connection.config.type));
     } finally {
       setLoadingTables(false);
     }
@@ -721,8 +709,8 @@ export default function QueryScreen() {
       const columns = await connection.instance.describeTable(schema, tableName);
       setTableColumns((prev) => ({ ...prev, [tableName]: columns }));
       setExpandedTable(tableName);
-    } catch {
-      showAlert("Couldn't load columns", `Failed to load columns for ${tableName}.`);
+    } catch (err) {
+      showAlert("Couldn't load columns", formatQueryError(err, connection.config.type));
     }
   };
 
@@ -860,6 +848,7 @@ export default function QueryScreen() {
       await executeQuery(connectionId, transaction.begin);
       const queryResult = await executeQuery(connectionId, sql);
       setResult(queryResult);
+      setExecutedQuery(sql);
       setTransactionState({ active: true, statements: transaction });
       if (autoRollbackSeconds) {
         setTransactionDeadline(Date.now() + autoRollbackSeconds * 1000);
@@ -925,6 +914,27 @@ export default function QueryScreen() {
     autoRollbackTriggered.current = false;
   }, [transactionState.active, settings.autoRollbackEnabled, settings.autoRollbackSeconds]);
 
+  useEffect(() => {
+    if (!connectionId) return;
+    let cancelled = false;
+    getEditorMode(connectionId).then((mode) => {
+      if (!cancelled && mode) setEditorModeState(mode);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [connectionId]);
+
+  const handleEditorModeChange = useCallback(
+    (next: EditorMode) => {
+      if (!connectionId) return;
+      setEditorModeState(next);
+      haptic.light();
+      setEditorMode(connectionId, next).catch(() => {});
+    },
+    [connectionId, haptic],
+  );
+
   const handleExecute = async () => {
     const trimmed = query.trim();
     if (!connectionId || !trimmed) return;
@@ -950,6 +960,7 @@ export default function QueryScreen() {
     try {
       const queryResult = await executeQuery(connectionId, trimmed);
       setResult(queryResult);
+      setExecutedQuery(trimmed);
       haptic.success();
       addToQueryHistory({
         query: trimmed,
@@ -975,16 +986,45 @@ export default function QueryScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.editorContainer}>
-        <SqlEditor
-          value={query}
-          onChangeText={setQuery}
-          placeholder="Type SQL or tap a template..."
-          enableAutocomplete={settings.enableAutocomplete}
-          showTemplates={settings.showSqlTemplates}
-          showQuickActions={settings.showQuickActions}
-          styles={styles}
-          theme={theme}
-        />
+        <View style={styles.modeToggleRow}>
+          {(["editor", "builder"] as const).map((m) => {
+            const active = editorMode === m;
+            return (
+              <Pressable
+                key={m}
+                style={[styles.modeToggleChip, active && styles.modeToggleChipActive]}
+                onPress={() => handleEditorModeChange(m)}
+              >
+                <Text style={[styles.modeToggleText, active && styles.modeToggleTextActive]}>
+                  {m === "editor" ? "Editor" : "Builder"}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </View>
+
+        {editorMode === "editor" ? (
+          <SqlEditor
+            value={query}
+            onChangeText={setQuery}
+            placeholder="Type SQL or tap a template..."
+            enableAutocomplete={settings.enableAutocomplete}
+            showTemplates={settings.showSqlTemplates}
+            showQuickActions={settings.showQuickActions}
+            styles={styles}
+            theme={theme}
+          />
+        ) : connectionId && connection?.instance ? (
+          <View style={styles.builderContainer}>
+            <BuilderView
+              connectionId={connectionId}
+              type={connection.config.type}
+              instance={connection.instance}
+              onQueryChange={setQuery}
+            />
+          </View>
+        ) : null}
+
         <View style={styles.runRow}>
           <View style={styles.runRowLeft}>
             <Pressable
@@ -1034,8 +1074,8 @@ export default function QueryScreen() {
               {tables.length === 0 && !loadingTables && (
                 <Text style={styles.tablesEmpty}>No tables found</Text>
               )}
-              {tables.map((table) => (
-                <View key={`${table.schema}-${table.name}`}>
+              {tables.map((table, index) => (
+                <View key={`${table.schema ?? "_"}-${table.name}-${table.type ?? "_"}-${index}`}>
                   <Pressable
                     style={styles.tableItem}
                     onPress={() => loadTableColumns(table.name)}
@@ -1120,118 +1160,13 @@ export default function QueryScreen() {
           </View>
         )}
 
-        {result && (
-          <>
-            {/* ── Meta bar ── */}
-            {(() => {
-              const cmd = result.command.trim().toUpperCase();
-              return (
-                <View style={styles.resultsMeta}>
-                  <View style={styles.metaStats}>
-                    <Text style={styles.metaCount}>{result.rowCount.toLocaleString()}</Text>
-                    <Text style={styles.metaLabel}>
-                      {cmd.startsWith("SELECT") ? " rows" : " affected"}
-                    </Text>
-                    <Text style={styles.metaSep}>·</Text>
-                    <Text style={styles.metaTime}>{result.executionTime}ms</Text>
-                  </View>
-                  <View style={styles.metaActions}>
-                    {result.columns.length > 0 && (
-                      <Pressable style={styles.copyAllButton} onPress={copyAllResults}>
-                        <Text style={styles.copyAllText}>Copy all</Text>
-                      </Pressable>
-                    )}
-                    <View style={styles.commandBadge}>
-                      <Text style={styles.commandBadgeText}>{cmd.split(" ")[0]}</Text>
-                    </View>
-                  </View>
-                </View>
-              );
-            })()}
-
-            {/* ── Table ── */}
-            {result.columns.length > 0 && (
-              <ScrollView
-                horizontal
-                style={styles.tableContainer}
-                showsHorizontalScrollIndicator={false}
-              >
-                <ScrollView
-                  nestedScrollEnabled
-                  showsVerticalScrollIndicator={false}
-                  style={styles.tableRows}
-                >
-                  {/* Header row */}
-                  <View style={styles.tableHeader}>
-                    {result.columns.map((col, ci) => (
-                      <View
-                        key={`header-${col.name}`}
-                        style={[styles.headerCell, { width: columnWidths[ci] }]}
-                      >
-                        <Text style={styles.headerText} numberOfLines={1}>
-                          {col.name}
-                        </Text>
-                        {col.type ? (
-                          <Text style={styles.typeText} numberOfLines={1}>
-                            {col.type.toLowerCase()}
-                          </Text>
-                        ) : null}
-                      </View>
-                    ))}
-                  </View>
-
-                  {/* Data rows or empty */}
-                  {result.rows.length === 0 ? (
-                    <View style={styles.emptyResult}>
-                      <Text style={styles.emptyResultText}>No rows returned</Text>
-                    </View>
-                  ) : (
-                    result.rows.map((item, index) => (
-                      <View
-                        key={`row-${index}`}
-                        style={[styles.tableRow, index % 2 === 1 && styles.tableRowAlt]}
-                      >
-                        {result.columns.map((col, ci) => {
-                          const val = item[col.name];
-                          return (
-                            <Pressable
-                              key={`cell-${col.name}`}
-                              style={({ pressed }) => [
-                                styles.cell,
-                                { width: columnWidths[ci] },
-                                pressed && styles.cellPressed,
-                              ]}
-                              onPress={() => copyCellValue(val)}
-                            >
-                              {val === null ? (
-                                <Text style={styles.nullText}>null</Text>
-                              ) : (
-                                <Text style={styles.cellText} numberOfLines={3}>
-                                  {typeof val === "object" ? JSON.stringify(val) : String(val)}
-                                </Text>
-                              )}
-                            </Pressable>
-                          );
-                        })}
-                      </View>
-                    ))
-                  )}
-                </ScrollView>
-              </ScrollView>
-            )}
-
-            {/* ── Non-SELECT success state (DDL / DML) ── */}
-            {result.columns.length === 0 && (
-              <View style={styles.commandResult}>
-                <Text style={styles.commandResultCheck}>✓</Text>
-                <Text style={styles.commandResultText}>
-                  {result.rowCount > 0
-                    ? `${result.rowCount.toLocaleString()} row${result.rowCount === 1 ? "" : "s"} affected`
-                    : "Query executed successfully"}
-                </Text>
-              </View>
-            )}
-          </>
+        {result && connectionId && (
+          <ResultsView
+            result={result}
+            connectionId={connectionId}
+            query={executedQuery}
+            onCopyAll={copyAllResults}
+          />
         )}
 
         {!result && !error && !executing && (
@@ -1461,6 +1396,39 @@ const createStyles = (theme: Theme) =>
       padding: 16,
       borderBottomWidth: 1,
       borderBottomColor: theme.colors.border,
+    },
+    modeToggleRow: {
+      flexDirection: "row",
+      gap: 4,
+      backgroundColor: theme.colors.surfaceMuted,
+      padding: 3,
+      borderRadius: 10,
+      alignSelf: "flex-start",
+      marginBottom: 10,
+    },
+    modeToggleChip: {
+      paddingHorizontal: 14,
+      paddingVertical: 6,
+      borderRadius: 8,
+    },
+    modeToggleChipActive: {
+      backgroundColor: theme.colors.surface,
+    },
+    modeToggleText: {
+      color: theme.colors.textSubtle,
+      fontSize: 12,
+      fontWeight: "600",
+    },
+    modeToggleTextActive: {
+      color: theme.colors.text,
+    },
+    builderContainer: {
+      height: 380,
+      borderRadius: 10,
+      borderWidth: 1,
+      borderColor: theme.colors.border,
+      padding: 12,
+      backgroundColor: theme.colors.surface,
     },
     sqlEditorContainer: {
       position: "relative",

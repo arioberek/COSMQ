@@ -244,7 +244,7 @@ export class MockConnection implements DatabaseConnection {
     return MOCK_TABLES;
   }
 
-  async describeTable(_schema: string, table: string): Promise<ColumnInfo[]> {
+  async describeTable(_schema: string | undefined, table: string): Promise<ColumnInfo[]> {
     await delay(100);
     return MOCK_COLUMNS[table] ?? [];
   }

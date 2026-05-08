@@ -295,8 +295,8 @@ export class PostgresConnection implements DatabaseConnection {
     }));
   }
 
-  async describeTable(schema: string, table: string): Promise<ColumnInfo[]> {
-    const safeSchema = escapePostgresStringLiteral(schema);
+  async describeTable(schema: string | undefined, table: string): Promise<ColumnInfo[]> {
+    const safeSchema = escapePostgresStringLiteral(schema ?? "public");
     const safeTable = escapePostgresStringLiteral(table);
     const result = await this.query(`
       SELECT
