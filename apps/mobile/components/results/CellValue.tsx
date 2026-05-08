@@ -1,5 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
-import { memo, useState } from "react";
+import { memo, useEffect, useState } from "react";
 import { Pressable } from "react-native";
 import { Text, useTheme as useTamaguiTheme, XStack } from "tamagui";
 import { useHaptic } from "../../lib/haptics";
@@ -30,6 +30,15 @@ export const CellValue = memo(function CellValue({
   const haptic = useHaptic();
   const [showExact, setShowExact] = useState(false);
   const kind = cellKind(column, value);
+
+  // Auto-revert the long-press "exact value" reveal after a short window. An
+  // effect-driven timer cancels itself if the cell is virtualized away or the
+  // user long-presses again before it fires, avoiding stale-state writes.
+  useEffect(() => {
+    if (!showExact) return;
+    const id = setTimeout(() => setShowExact(false), 2500);
+    return () => clearTimeout(id);
+  }, [showExact]);
 
   if (kind === "null") {
     return (
@@ -67,7 +76,6 @@ export const CellValue = memo(function CellValue({
           if (isCompact) {
             haptic.light();
             setShowExact(true);
-            setTimeout(() => setShowExact(false), 2500);
           }
         }}
         delayLongPress={300}
