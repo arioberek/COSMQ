@@ -1,19 +1,15 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, router, Stack } from "expo-router";
-import { memo, useCallback, useEffect, useState } from "react";
+import { memo, useCallback, useState } from "react";
 import { FlatList, Pressable, View } from "react-native";
 import Animated, {
   FadeIn,
-  FadeInDown,
   FadeOutLeft,
   LinearTransition,
   useAnimatedStyle,
   useReducedMotion,
   useSharedValue,
-  withRepeat,
-  withSequence,
-  withSpring,
   withTiming,
 } from "react-native-reanimated";
 import { Text, useTheme, XStack, YStack } from "tamagui";
@@ -31,54 +27,16 @@ type ConnectionItemProps = {
   onDelete: (connection: ConnectionConfig) => void;
 };
 
-// Animated status indicator with soft pulse ring when connected
+// Static status indicator. The previous infinite-pulse halo (1.0 → 2.4 scale
+// looping forever) drew the eye on every connected card and looked busy when
+// multiple connections were active; a calm dot communicates state without
+// the visual noise.
 const StatusPulse = memo(function StatusPulse({ isConnected }: { isConnected: boolean }) {
   const theme = useTheme();
-  const reducedMotion = useReducedMotion();
-  const haloScale = useSharedValue(1);
-  const haloOpacity = useSharedValue(0);
-
-  useEffect(() => {
-    if (isConnected && !reducedMotion) {
-      haloScale.value = withRepeat(
-        withSequence(withTiming(2.4, { duration: 1200 }), withTiming(1, { duration: 0 })),
-        -1,
-        false,
-      );
-      haloOpacity.value = withRepeat(
-        withSequence(withTiming(0.45, { duration: 300 }), withTiming(0, { duration: 900 })),
-        -1,
-        false,
-      );
-    } else {
-      haloScale.value = withTiming(1, { duration: 200 });
-      haloOpacity.value = withTiming(0, { duration: 200 });
-    }
-  }, [isConnected, reducedMotion, haloScale, haloOpacity]);
-
-  const haloStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: haloScale.value }],
-    opacity: haloOpacity.value,
-  }));
-
   const dotColor = isConnected ? theme.success.val : theme.disabled.val;
 
   return (
     <View style={{ width: 14, height: 14, alignItems: "center", justifyContent: "center" }}>
-      {isConnected && (
-        <Animated.View
-          style={[
-            {
-              position: "absolute",
-              width: 6,
-              height: 6,
-              borderRadius: 3,
-              backgroundColor: dotColor,
-            },
-            haloStyle,
-          ]}
-        />
-      )}
       <View
         style={{
           width: 6,
@@ -141,12 +99,12 @@ const ConnectionItem = memo(function ConnectionItem({
         <Pressable
           onPressIn={() => {
             if (!reducedMotion) {
-              scale.value = withSpring(0.97, { damping: 15, stiffness: 220 });
+              scale.value = withTiming(0.98, { duration: 90 });
             }
           }}
           onPressOut={() => {
             if (!reducedMotion) {
-              scale.value = withSpring(1, { damping: 12, stiffness: 160 });
+              scale.value = withTiming(1, { duration: 140 });
             }
           }}
           onPress={handlePress}
@@ -243,18 +201,11 @@ export default function HomeScreen() {
   }, [connectionToDelete, queryClient]);
 
   const renderItem = useCallback(
-    ({ item, index }: { item: ConnectionConfig; index: number }) => (
+    ({ item }: { item: ConnectionConfig; index: number }) => (
       <Animated.View
-        entering={
-          reducedMotion
-            ? undefined
-            : FadeInDown.delay(Math.min(index, 6) * 45)
-                .springify()
-                .damping(18)
-                .stiffness(160)
-        }
-        exiting={reducedMotion ? undefined : FadeOutLeft.duration(180)}
-        layout={reducedMotion ? undefined : LinearTransition.springify().damping(18)}
+        entering={reducedMotion ? undefined : FadeIn.duration(180)}
+        exiting={reducedMotion ? undefined : FadeOutLeft.duration(140)}
+        layout={reducedMotion ? undefined : LinearTransition.duration(200)}
       >
         <ConnectionItem connection={item} onEdit={handleEdit} onDelete={handleDeleteRequest} />
       </Animated.View>

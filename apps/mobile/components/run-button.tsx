@@ -5,7 +5,6 @@ import Animated, {
   useAnimatedStyle,
   useReducedMotion,
   useSharedValue,
-  withSpring,
   withTiming,
 } from "react-native-reanimated";
 
@@ -36,11 +35,7 @@ export const RunButton = memo(function RunButton({
 
   useEffect(() => {
     const target = executing ? 1 : 0;
-    if (reducedMotion) {
-      progress.value = withTiming(target, { duration: 120 });
-    } else {
-      progress.value = withSpring(target, { damping: 18, stiffness: 200 });
-    }
+    progress.value = withTiming(target, { duration: reducedMotion ? 120 : 220 });
   }, [executing, reducedMotion, progress]);
 
   const containerStyle = useAnimatedStyle(() => {

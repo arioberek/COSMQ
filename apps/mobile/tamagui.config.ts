@@ -3,38 +3,47 @@ import { tokens as defaultTokens } from "@tamagui/config/v3";
 import { shorthands } from "@tamagui/shorthands";
 import { createFont, createTamagui, createTokens } from "tamagui";
 
+// All UI motion uses critically-damped springs so animations settle without
+// overshoot. The previous values were under-damped (damping 10-20 vs the ~30
+// needed for no oscillation) which made dialogs, sheets, switches, and any
+// `pressStyle` visibly wiggle on settle. `bouncy` and `tooltip` keep their
+// names but no longer bounce — call sites stay legal without code edits.
 const animations = createAnimations({
   bouncy: {
     type: "spring",
-    damping: 10,
-    mass: 0.9,
-    stiffness: 100,
+    damping: 30,
+    mass: 1,
+    stiffness: 280,
   },
   lazy: {
     type: "spring",
-    damping: 20,
-    stiffness: 60,
+    damping: 28,
+    mass: 1,
+    stiffness: 130,
   },
   quick: {
     type: "spring",
-    damping: 20,
-    stiffness: 250,
+    damping: 30,
+    mass: 1,
+    stiffness: 280,
   },
   medium: {
     type: "spring",
-    damping: 15,
-    stiffness: 120,
+    damping: 30,
+    mass: 1,
+    stiffness: 200,
   },
   slow: {
     type: "spring",
-    damping: 20,
-    stiffness: 60,
+    damping: 28,
+    mass: 1,
+    stiffness: 130,
   },
   tooltip: {
     type: "spring",
-    damping: 10,
-    mass: 0.9,
-    stiffness: 100,
+    damping: 30,
+    mass: 1,
+    stiffness: 280,
   },
 });
 

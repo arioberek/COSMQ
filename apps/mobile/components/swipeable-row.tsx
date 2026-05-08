@@ -69,9 +69,9 @@ export const SwipeableRow = memo(function SwipeableRow({
     Animated.spring(translateX, {
       toValue,
       useNativeDriver: true,
-      // Springier config — slight overshoot feel without being bouncy
-      damping: 14,
-      stiffness: 150,
+      // Critically damped — snaps cleanly into place without the prior wiggle.
+      damping: 26,
+      stiffness: 220,
       mass: 1,
     }).start();
   };
@@ -83,8 +83,9 @@ export const SwipeableRow = memo(function SwipeableRow({
     Animated.spring(translateX, {
       toValue: 0,
       useNativeDriver: true,
-      damping: 16,
-      stiffness: 180,
+      damping: 26,
+      stiffness: 220,
+      mass: 1,
     }).start();
   };
 
@@ -174,8 +175,9 @@ export const SwipeableRow = memo(function SwipeableRow({
     Animated.spring(translateX, {
       toValue: 0,
       useNativeDriver: true,
-      damping: 16,
-      stiffness: 180,
+      damping: 26,
+      stiffness: 220,
+      mass: 1,
     }).start();
   };
 
