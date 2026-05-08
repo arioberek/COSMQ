@@ -33,7 +33,10 @@ export type LiteralKind = "string" | "number" | "boolean" | "null";
 
 export const inferLiteralKind = (raw: string): LiteralKind => {
   const trimmed = raw.trim();
-  if (trimmed === "" || trimmed.toLowerCase() === "null") return "null";
+  // Only the literal "null" (case-insensitive) maps to NULL. An empty input
+  // falls through to "string" so users can express `col = ''` via the builder
+  // (the dedicated IS NULL / IS NOT NULL operators cover null intent).
+  if (trimmed.toLowerCase() === "null") return "null";
   if (trimmed.toLowerCase() === "true" || trimmed.toLowerCase() === "false") return "boolean";
   if (/^-?\d+(\.\d+)?$/.test(trimmed)) return "number";
   return "string";
