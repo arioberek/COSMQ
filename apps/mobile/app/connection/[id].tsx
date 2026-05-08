@@ -7,20 +7,32 @@ import { ScrollView, Text, useTheme, XStack, YStack } from "tamagui";
 import { DatabaseIcon } from "../../components/database-icon";
 import { Button, Dialog } from "../../components/ui";
 import { useHaptic } from "../../lib/haptics";
+import { safeBack } from "../../lib/navigation";
 import { deleteConnection, getConnectionWithPassword } from "../../lib/storage/connections";
 import { useConnectionStore } from "../../stores/connection";
 
 const InfoRow = ({ label, value }: { label: string; value: string }) => (
   <XStack
     justifyContent="space-between"
+    alignItems="center"
     paddingVertical="$sm"
+    gap="$md"
     borderBottomWidth={1}
     borderBottomColor="$borderColor"
   >
-    <Text color="$textSubtle" fontSize={14}>
+    <Text color="$textSubtle" fontSize={14} flexShrink={0}>
       {label}
     </Text>
-    <Text color="$color" fontSize={14} fontWeight="500">
+    <Text
+      color="$color"
+      fontSize={14}
+      fontWeight="500"
+      numberOfLines={1}
+      ellipsizeMode="middle"
+      flex={1}
+      textAlign="right"
+      selectable
+    >
       {value}
     </Text>
   </XStack>
@@ -82,7 +94,7 @@ export default function ConnectionDetailScreen() {
       await disconnect(id);
       await deleteConnection(id);
       await queryClient.invalidateQueries({ queryKey: ["connections"] });
-      router.back();
+      safeBack();
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : "Failed to delete connection");
       setShowErrorDialog(true);

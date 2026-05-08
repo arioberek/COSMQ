@@ -187,25 +187,86 @@ export const formatConnectionError = (error: unknown, dbType: DatabaseType): str
   return rawMessage;
 };
 
-export const formatQueryError = (error: unknown, _dbType: DatabaseType): string => {
-  const rawMessage = error instanceof Error ? error.message : String(error);
+// Strip implementation-detail wrappers that the underlying drivers add. These
+// are noise to a user reading an error: the cause sits after the wrapper and
+// is what they actually need to see.
+const cleanRawMessage = (raw: string): string => {
+  let m = raw;
 
-  const syntaxPatterns = [
-    { pattern: /syntax error/i, message: "SQL syntax error" },
-    { pattern: /column.*does not exist/i, message: "Column not found" },
-    { pattern: /table.*does not exist/i, message: "Table not found" },
-    { pattern: /relation.*does not exist/i, message: "Table or view not found" },
-    { pattern: /permission denied/i, message: "Permission denied" },
-    { pattern: /duplicate key/i, message: "Duplicate key violation" },
-    { pattern: /foreign key/i, message: "Foreign key constraint violation" },
-    { pattern: /null value/i, message: "NULL value not allowed" },
-  ];
+  // expo-sqlite: "Calling the 'prepareAsync' function has failed → Caused by: Error code 1: <real>"
+  const causedByIdx = m.search(/(?:→\s*)?Caused by:\s*/i);
+  if (causedByIdx !== -1) {
+    m = m.slice(causedByIdx).replace(/^(?:→\s*)?Caused by:\s*/i, "");
+  }
+  // expo-sqlite/SQLite: "Error code N: <real>"
+  m = m.replace(/^Error code \d+:\s*/i, "");
+  // node-postgres / generic: "error: <real>"
+  m = m.replace(/^error:\s*/i, "");
+  return m.trim();
+};
 
-  for (const { pattern, message } of syntaxPatterns) {
-    if (pattern.test(rawMessage)) {
-      return `${message}: ${rawMessage}`;
-    }
+const quote = (s: string): string => `"${s}"`;
+
+const buildQueryErrorMessage = (raw: string): string => {
+  const cleaned = cleanRawMessage(raw);
+
+  // SQLite — "no such table: name" / "no such column: name"
+  let match = cleaned.match(/^no such table:\s*(.+)$/i);
+  if (match) return `Table ${quote(match[1].trim())} doesn't exist.`;
+
+  match = cleaned.match(/^no such column:\s*(.+)$/i);
+  if (match) return `Column ${quote(match[1].trim())} doesn't exist.`;
+
+  // Postgres — "relation \"name\" does not exist" / "column \"name\" does not exist"
+  match = cleaned.match(/relation "?([^"\s]+)"? does not exist/i);
+  if (match) return `Table ${quote(match[1])} doesn't exist.`;
+
+  match = cleaned.match(/column "?([^"\s]+)"? does not exist/i);
+  if (match) return `Column ${quote(match[1])} doesn't exist.`;
+
+  // MySQL — "Table 'db.name' doesn't exist" / "Unknown column 'name' in ..."
+  match = cleaned.match(/table '([^']+)' doesn't exist/i);
+  if (match) {
+    const name = match[1].split(".").pop() ?? match[1];
+    return `Table ${quote(name)} doesn't exist.`;
   }
 
-  return rawMessage;
+  match = cleaned.match(/unknown column '([^']+)'/i);
+  if (match) return `Column ${quote(match[1])} doesn't exist.`;
+
+  // Constraint violations
+  if (/duplicate key|UNIQUE constraint failed|Duplicate entry/i.test(cleaned)) {
+    return `Duplicate value violates a unique constraint.`;
+  }
+  if (/foreign key|FOREIGN KEY constraint failed/i.test(cleaned)) {
+    return `Foreign key constraint failed.`;
+  }
+  if (/NOT NULL constraint failed|null value in column/i.test(cleaned)) {
+    return `A required column can't be NULL.`;
+  }
+  if (/CHECK constraint failed/i.test(cleaned)) {
+    return `A CHECK constraint failed.`;
+  }
+
+  // Permission
+  if (/permission denied|access denied/i.test(cleaned)) {
+    return `Permission denied for this query.`;
+  }
+
+  // Syntax
+  if (/syntax error/i.test(cleaned)) {
+    return `SQL syntax error: ${cleaned.replace(/^syntax error[:,]?\s*/i, "")}`.trim();
+  }
+
+  // MongoDB — "Invalid JSON query"
+  if (/invalid json query/i.test(cleaned)) {
+    return cleaned;
+  }
+
+  return cleaned || raw;
+};
+
+export const formatQueryError = (error: unknown, _dbType: DatabaseType): string => {
+  const rawMessage = error instanceof Error ? error.message : String(error);
+  return buildQueryErrorMessage(rawMessage);
 };

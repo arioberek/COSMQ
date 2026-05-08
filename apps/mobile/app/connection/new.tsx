@@ -1,7 +1,7 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import * as DocumentPicker from "expo-document-picker";
 import * as LegacyFileSystem from "expo-file-system/legacy";
-import { router, useLocalSearchParams } from "expo-router";
+import { useLocalSearchParams } from "expo-router";
 import type { FC } from "react";
 import { useEffect, useState } from "react";
 import { KeyboardAvoidingView, Platform, Pressable, TextInput } from "react-native";
@@ -14,6 +14,7 @@ import MysqlIcon from "../../assets/icons/mysql.svg";
 import PostgresqlIcon from "../../assets/icons/postgresql.svg";
 import SqliteIcon from "../../assets/icons/sqlite.svg";
 import { Button, Dialog } from "../../components/ui";
+import { safeBack } from "../../lib/navigation";
 import {
   generateConnectionId,
   getConnectionWithPassword,
@@ -408,7 +409,7 @@ export default function NewConnectionScreen() {
         await queryClient.invalidateQueries({ queryKey: ["connection", editId] });
       }
 
-      router.back();
+      safeBack();
     } catch (error) {
       showAlert("Error", error instanceof Error ? error.message : "Failed to save connection");
     } finally {
