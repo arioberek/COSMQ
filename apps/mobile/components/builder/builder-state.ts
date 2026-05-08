@@ -82,6 +82,13 @@ const renderSqlCondition = (cond: SqlCondition, type: DatabaseType): string | nu
     return `${col} ${cond.operator}`;
   }
 
+  // Live-sync: skip the clause until the user has actually typed a value.
+  // Mirrors the same intent on the Mongo path so blank operands don't
+  // silently shrink the result set with `= ''` / `LIKE ''`.
+  if (cond.value.trim() === "") {
+    return null;
+  }
+
   if (cond.operator === "IN" || cond.operator === "NOT IN") {
     const items = splitListLiteral(cond.value);
     if (items.length === 0) return null;
@@ -220,7 +227,11 @@ const coerceLiteral = (raw: string): unknown => {
 const buildMongoFilterClause = (filter: MongoFilter): unknown | null => {
   const trimmed = filter.value.trim();
   if (filter.operator === "$exists") {
-    return { $exists: trimmed.toLowerCase() !== "false" };
+    // Don't default an unset $exists to true — adding the operator should
+    // not change results until the user types `true` or `false` explicitly.
+    const lower = trimmed.toLowerCase();
+    if (lower !== "true" && lower !== "false") return null;
+    return { $exists: lower === "true" };
   }
   if (filter.operator === "$regex") {
     if (trimmed === "") return null;
