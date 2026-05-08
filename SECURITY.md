@@ -13,7 +13,7 @@ Use GitHub private vulnerability reporting:
 
 https://github.com/arioberek/COSMQ/security/advisories/new
 
-If that is not available, email the maintainer at contato@arielton.com with:
+If that is not available, email the maintainer at contact@arielton.com with:
 
 - A short description of the issue
 - Steps to reproduce, if known
