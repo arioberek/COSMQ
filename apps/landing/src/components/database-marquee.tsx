@@ -1,5 +1,4 @@
 import { motion } from "motion/react";
-import { useCallback, useRef } from "react";
 import { Icons } from "./icons";
 
 const databases = [
@@ -11,164 +10,113 @@ const databases = [
 	{ icon: Icons.mariadb, name: "MariaDB" },
 ];
 
-function SpotlightGrid() {
-	const gridRef = useRef<HTMLDivElement>(null);
-
-	const handleMouseMove = useCallback((e: React.MouseEvent) => {
-		const grid = gridRef.current;
-		if (!grid) return;
-		const rect = grid.getBoundingClientRect();
-		grid.style.setProperty("--spot-x", `${e.clientX - rect.left}px`);
-		grid.style.setProperty("--spot-y", `${e.clientY - rect.top}px`);
-	}, []);
-
-	const handleMouseLeave = useCallback(() => {
-		const grid = gridRef.current;
-		if (!grid) return;
-		grid.style.setProperty("--spot-x", `-1000px`);
-		grid.style.setProperty("--spot-y", `-1000px`);
-	}, []);
-
-	return (
-		<div
-			ref={gridRef}
-			className="grid grid-cols-2 md:grid-cols-3 gap-[1px] relative db-spotlight-grid"
-			onMouseMove={handleMouseMove}
-			onMouseLeave={handleMouseLeave}
-			style={
-				{
-					"--spot-x": "-1000px",
-					"--spot-y": "-1000px",
-				} as React.CSSProperties
-			}
-		>
-			{databases.map((db, i) => (
-				<motion.div
-					key={db.name}
-					className="relative overflow-hidden db-spot-card"
-					initial={{ opacity: 0, y: 28, filter: "blur(6px)" }}
-					whileInView={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-					viewport={{ once: true }}
-					transition={{
-						duration: 0.5,
-						delay: 0.08 + i * 0.07,
-						ease: [0.22, 1, 0.36, 1],
-					}}
-				>
-					{/* Spotlight border glow — positioned via CSS custom props */}
-					<div className="db-spot-glow" />
-
-					{/* Card content */}
-					<div className="relative z-10 flex flex-col items-center gap-4 py-10 md:py-14 px-4 bg-[#08080d] m-[1px] rounded-[inherit]">
-						<div className="w-14 h-14 md:w-16 md:h-16 rounded-xl border border-white/[0.05] bg-white/[0.02] flex items-center justify-center">
-							<db.icon
-								className="w-7 h-7 md:w-8 md:h-8 brightness-0 invert opacity-50"
-								aria-hidden="true"
-							/>
-						</div>
-						<span className="text-[11px] font-medium text-[#555] tracking-[0.14em] uppercase">
-							{db.name}
-						</span>
-					</div>
-				</motion.div>
-			))}
-		</div>
-	);
-}
+// Duplicated track for seamless infinite loop.
+const track = [...databases, ...databases];
 
 export function DatabaseMarquee() {
 	return (
-		<section className="relative py-32 overflow-hidden">
-			<div className="absolute top-0 left-1/2 -translate-x-1/2 w-[200px] h-px bg-gradient-to-r from-transparent via-white/[0.08] to-transparent" />
+		<section className="relative py-24 md:py-32 overflow-hidden">
+			<div className="absolute top-0 left-1/2 -translate-x-1/2 w-[200px] h-px bg-gradient-to-r from-transparent via-border to-transparent" />
 
 			<motion.div
-				className="text-center mb-16 px-6"
-				initial={{ opacity: 0, y: 20 }}
+				className="text-center mb-14 md:mb-16 px-6"
+				initial={{ opacity: 0, y: 16 }}
 				whileInView={{ opacity: 1, y: 0 }}
 				viewport={{ once: true }}
 				transition={{ duration: 0.6 }}
 			>
-				<span className="inline-block text-[11px] font-mono uppercase tracking-[0.3em] text-[#555] mb-5">
-					Integrations
+				<span className="eyebrow mb-6 justify-center">
+					<span className="eyebrow-num">03</span>
+					<span className="eyebrow-rule" />
+					<span>Databases</span>
 				</span>
-				<h2 className="text-[clamp(2rem,5vw,3.5rem)] font-bold tracking-[-0.03em] leading-[1.1] text-white mb-4">
-					Every database you need
+				<h2 className="text-[clamp(2rem,5vw,3.25rem)] font-bold tracking-[-0.03em] leading-[1.1] text-foreground mb-4">
+					Talks to <span className="font-display font-normal">your stack.</span>
 				</h2>
-				<p className="text-[#555] text-base max-w-[460px] mx-auto leading-relaxed">
-					First-class support for the databases that power your stack.
+				<p className="text-muted-foreground text-base max-w-[460px] mx-auto leading-relaxed">
+					First-class support for the databases that already run your app.
 				</p>
 			</motion.div>
 
-			<div className="max-w-[820px] mx-auto px-6">
-				<SpotlightGrid />
+			<div className="db-marquee-mask">
+				<div className="db-marquee-track" aria-hidden="false" role="list">
+					{track.map((db, i) => (
+						<div key={`${db.name}-${i}`} role="listitem" className="db-marquee-item">
+							<div className="db-marquee-icon">
+								<db.icon
+									className="w-7 h-7 md:w-8 md:h-8 brightness-0 invert opacity-70"
+									width={32}
+									height={32}
+									alt=""
+								/>
+							</div>
+							<span className="font-mono text-[12px] md:text-[13px] tracking-[0.16em] uppercase text-muted-foreground whitespace-nowrap">
+								{db.name}
+							</span>
+						</div>
+					))}
+				</div>
 			</div>
 
 			<style>{`
-				.db-spot-card {
-					border-radius: 16px;
-					background: transparent;
+				.db-marquee-mask {
+					position: relative;
+					overflow: hidden;
+					-webkit-mask-image: linear-gradient(to right, transparent 0, black 80px, black calc(100% - 80px), transparent 100%);
+					        mask-image: linear-gradient(to right, transparent 0, black 80px, black calc(100% - 80px), transparent 100%);
 				}
 
-				/* The glow layer — a radial gradient positioned at the cursor */
-				.db-spot-glow {
-					position: absolute;
-					inset: 0;
-					border-radius: inherit;
-					opacity: 0;
-					background: radial-gradient(
-						300px circle at var(--spot-x) var(--spot-y),
-						rgba(56, 189, 248, 0.12),
-						transparent 70%
-					);
-					z-index: 0;
-					transition: opacity 0.4s ease;
-					pointer-events: none;
+				.db-marquee-track {
+					display: flex;
+					gap: 3rem;
+					width: max-content;
+					padding: 0.5rem 0;
+					animation: db-marquee 32s linear infinite;
+					will-change: transform;
+				}
+				.db-marquee-mask:hover .db-marquee-track {
+					animation-play-state: paused;
 				}
 
-				/* Border glow via the card itself as a gradient background */
-				.db-spot-card::before {
-					content: "";
-					position: absolute;
-					inset: 0;
-					border-radius: inherit;
-					background: radial-gradient(
-						400px circle at var(--spot-x) var(--spot-y),
-						rgba(56, 189, 248, 0.25),
-						transparent 60%
-					);
-					opacity: 0;
-					transition: opacity 0.4s ease;
-					z-index: 1;
-					pointer-events: none;
+				@keyframes db-marquee {
+					from { transform: translateX(0); }
+					to   { transform: translateX(-50%); }
 				}
 
-				.db-spotlight-grid:hover .db-spot-glow,
-				.db-spotlight-grid:hover .db-spot-card::before {
-					opacity: 1;
+				.db-marquee-item {
+					display: inline-flex;
+					align-items: center;
+					gap: 0.875rem;
+					padding: 0.5rem 1rem;
+					flex-shrink: 0;
 				}
 
-				/* Mobile: subtle shimmer border instead of cursor tracking */
-				@media (hover: none) {
-					.db-spot-card::before {
-						opacity: 0 !important;
+				.db-marquee-icon {
+					display: inline-flex;
+					align-items: center;
+					justify-content: center;
+					width: 44px;
+					height: 44px;
+					border-radius: 12px;
+					background: hsl(var(--surface-1));
+					border: 1px solid hsl(var(--border));
+					flex-shrink: 0;
+				}
+
+				@media (min-width: 768px) {
+					.db-marquee-icon {
+						width: 52px;
+						height: 52px;
 					}
-					.db-spot-glow {
-						opacity: 0 !important;
-					}
-					.db-spot-card {
-						background: rgba(255,255,255,0.03);
-						border: 1px solid rgba(255,255,255,0.05);
-					}
-					.db-spot-card > div:last-child {
-						margin: 0;
-						background: transparent;
+					.db-marquee-track {
+						gap: 4rem;
 					}
 				}
 
 				@media (prefers-reduced-motion: reduce) {
-					.db-spot-glow,
-					.db-spot-card::before {
-						transition: none !important;
+					.db-marquee-track {
+						animation: none;
+						transform: translateX(0);
 					}
 				}
 			`}</style>

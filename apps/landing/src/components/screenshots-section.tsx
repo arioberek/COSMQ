@@ -13,11 +13,13 @@ interface Screenshot {
 }
 
 const screenshots: Screenshot[] = [
-	{ src: Screenshot1, alt: "COSMQ - Connection List", label: "Connections" },
-	{ src: Screenshot2, alt: "COSMQ - New Connection", label: "Add Database" },
-	{ src: Screenshot3, alt: "COSMQ - Query Editor", label: "Write Queries" },
-	{ src: Screenshot4, alt: "COSMQ - Results View", label: "View Results" },
+	{ src: Screenshot1, alt: "COSMQ — Connection list", label: "Connections" },
+	{ src: Screenshot2, alt: "COSMQ — New connection", label: "Add database" },
+	{ src: Screenshot3, alt: "COSMQ — Query editor", label: "Write queries" },
+	{ src: Screenshot4, alt: "COSMQ — Results view", label: "Read results" },
 ];
+
+const PARALLAX_OFFSETS = [40, 20, 60, 30] as const;
 
 export function ScreenshotsSection() {
 	const [selectedImage, setSelectedImage] = useState<Screenshot | null>(null);
@@ -73,43 +75,39 @@ export function ScreenshotsSection() {
 		};
 	}, [selectedImage, closeModal]);
 
-	// Parallax offsets for each card
 	const offsets = [
-		useTransform(scrollYProgress, [0, 1], [40, -40]),
-		useTransform(scrollYProgress, [0, 1], [20, -20]),
-		useTransform(scrollYProgress, [0, 1], [60, -60]),
-		useTransform(scrollYProgress, [0, 1], [30, -30]),
+		useTransform(scrollYProgress, [0, 1], [PARALLAX_OFFSETS[0], -PARALLAX_OFFSETS[0]]),
+		useTransform(scrollYProgress, [0, 1], [PARALLAX_OFFSETS[1], -PARALLAX_OFFSETS[1]]),
+		useTransform(scrollYProgress, [0, 1], [PARALLAX_OFFSETS[2], -PARALLAX_OFFSETS[2]]),
+		useTransform(scrollYProgress, [0, 1], [PARALLAX_OFFSETS[3], -PARALLAX_OFFSETS[3]]),
 	];
 
 	return (
-		<section ref={sectionRef} className="relative py-32 px-6 lg:px-10 overflow-hidden">
-			{/* Section bg accent */}
-			<div className="absolute inset-0 bg-gradient-to-b from-transparent via-[#7c5cff]/[0.02] to-transparent pointer-events-none" />
-
-			<div className="relative max-w-[1400px] mx-auto">
-				{/* Header */}
+		<section ref={sectionRef} className="relative py-24 md:py-32 px-6 lg:px-10 overflow-hidden">
+			<div className="relative max-w-[1280px] mx-auto">
 				<div className="text-center mb-16">
 					<motion.span
 						initial={{ opacity: 0 }}
 						whileInView={{ opacity: 1 }}
 						viewport={{ once: true }}
-						className="inline-block text-[11px] font-mono uppercase tracking-[0.3em] text-[#555] mb-5"
+						className="eyebrow mb-6"
 					>
-						Preview
+						<span className="eyebrow-num">02</span>
+						<span className="eyebrow-rule" />
+						<span>Inside</span>
 					</motion.span>
 					<motion.h2
-						initial={{ opacity: 0, y: 20 }}
+						initial={{ opacity: 0, y: 16 }}
 						whileInView={{ opacity: 1, y: 0 }}
 						viewport={{ once: true }}
 						transition={{ duration: 0.6, delay: 0.1 }}
-						className="text-[clamp(2rem,5vw,3.5rem)] font-bold tracking-[-0.03em] leading-[1.1] text-white"
+						className="text-[clamp(2rem,5vw,3.25rem)] font-bold tracking-[-0.03em] leading-[1.1] text-foreground"
 					>
-						See it in action
+						What it <span className="font-display font-normal">looks like.</span>
 					</motion.h2>
 				</div>
 
-				{/* Screenshot grid with parallax */}
-				<div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-5">
+				<div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-5 max-w-[1080px] mx-auto">
 					{screenshots.map((screenshot, i) => (
 						<motion.button
 							key={screenshot.label}
@@ -117,22 +115,22 @@ export function ScreenshotsSection() {
 							className="relative cursor-zoom-in group"
 							aria-label={`View ${screenshot.label} screenshot`}
 							style={{ y: offsets[i] }}
-							initial={{ opacity: 0, y: 40 }}
+							initial={{ opacity: 0, y: 32 }}
 							whileInView={{ opacity: 1, y: 0 }}
 							viewport={{ once: true }}
 							transition={{
 								duration: 0.6,
-								delay: i * 0.1,
-								ease: [0.25, 0.46, 0.45, 0.94],
+								delay: i * 0.08,
+								ease: [0.22, 1, 0.36, 1],
 							}}
-							whileHover={{ scale: 1.03 }}
+							whileHover={{ scale: 1.02 }}
 							whileTap={{ scale: 0.98 }}
 							onClick={(e) => {
 								triggerRef.current = e.currentTarget as HTMLButtonElement;
 								setSelectedImage(screenshot);
 							}}
 						>
-							<div className="rounded-2xl overflow-hidden border border-white/[0.05] bg-[#0c0c12] shadow-[0_20px_60px_rgba(0,0,0,0.5)] group-hover:border-white/[0.1] group-hover:shadow-[0_20px_60px_rgba(124,92,255,0.1)] transition-all duration-500">
+							<div className="rounded-2xl overflow-hidden border border-border bg-card shadow-[0_20px_60px_rgba(0,0,0,0.5)] group-hover:border-foreground/15 transition-colors duration-500">
 								<img
 									src={screenshot.src.src}
 									width={screenshot.src.width}
@@ -142,7 +140,7 @@ export function ScreenshotsSection() {
 									loading="lazy"
 								/>
 							</div>
-							<div className="mt-3 text-[12px] text-[#555] font-medium tracking-wider uppercase text-center group-hover:text-[#888] transition-colors duration-300">
+							<div className="mt-3 text-[12px] text-muted-foreground font-mono tracking-[0.12em] uppercase text-center group-hover:text-foreground transition-colors duration-300">
 								{screenshot.label}
 							</div>
 						</motion.button>
@@ -150,13 +148,12 @@ export function ScreenshotsSection() {
 				</div>
 			</div>
 
-			{/* Lightbox modal */}
 			<AnimatePresence>
 				{selectedImage && (
 					<motion.div
 						ref={modalRef}
-						className="fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-md"
-						style={{ background: "rgba(6,6,10,0.92)" }}
+						className="fixed inset-0 z-50 flex items-center justify-center p-4"
+						style={{ background: "hsl(var(--background) / 0.94)" }}
 						role="dialog"
 						aria-modal="true"
 						aria-label={selectedImage.alt}
@@ -168,26 +165,26 @@ export function ScreenshotsSection() {
 					>
 						<motion.div
 							className="relative"
-							initial={{ scale: 0.85, opacity: 0 }}
+							initial={{ scale: 0.9, opacity: 0 }}
 							animate={{ scale: 1, opacity: 1 }}
-							exit={{ scale: 0.9, opacity: 0 }}
+							exit={{ scale: 0.92, opacity: 0 }}
 							transition={{ type: "spring", stiffness: 400, damping: 30 }}
 							onClick={(e) => e.stopPropagation()}
 						>
 							<button
 								type="button"
-								className="absolute -top-12 right-0 text-[#555] hover:text-white transition-colors p-1"
+								className="absolute -top-14 right-0 inline-flex items-center justify-center w-11 h-11 rounded-full text-muted-foreground hover:text-foreground hover:bg-card transition-colors"
 								onClick={closeModal}
 								aria-label="Close modal"
 							>
 								<svg
 									xmlns="http://www.w3.org/2000/svg"
-									width="24"
-									height="24"
+									width="20"
+									height="20"
 									viewBox="0 0 24 24"
 									fill="none"
 									stroke="currentColor"
-									strokeWidth="1.5"
+									strokeWidth="1.6"
 									strokeLinecap="round"
 									strokeLinejoin="round"
 									aria-hidden="true"
@@ -201,7 +198,7 @@ export function ScreenshotsSection() {
 								width={selectedImage.src.width}
 								height={selectedImage.src.height}
 								alt={selectedImage.alt}
-								className="max-h-[80vh] w-auto rounded-2xl border border-white/[0.06] shadow-[0_20px_60px_rgba(0,0,0,0.6)]"
+								className="max-h-[80vh] w-auto rounded-2xl border border-border shadow-[0_20px_60px_rgba(0,0,0,0.6)]"
 							/>
 						</motion.div>
 					</motion.div>

@@ -4,57 +4,44 @@
 
 @layer base {
 	:root {
-		--background: 0 0% 100%;
-		--foreground: 0 0% 3.9%;
-		--card: 0 0% 100%;
-		--card-foreground: 0 0% 3.9%;
-		--popover: 0 0% 100%;
-		--popover-foreground: 0 0% 3.9%;
-		--primary: 0 0% 9%;
-		--primary-foreground: 0 0% 98%;
-		--secondary: 0 0% 96.1%;
-		--secondary-foreground: 0 0% 9%;
-		--muted: 0 0% 96.1%;
-		--muted-foreground: 0 0% 45.1%;
-		--accent: 0 0% 96.1%;
-		--accent-foreground: 0 0% 9%;
-		--destructive: 0 84.2% 60.2%;
+		/* Committed dark palette — no light theme */
+		--background: 240 14% 4%;
+		--foreground: 240 20% 95%;
+		--card: 240 14% 6%;
+		--card-foreground: 240 20% 95%;
+		--popover: 240 14% 6%;
+		--popover-foreground: 240 20% 95%;
+		--primary: 240 20% 95%;
+		--primary-foreground: 240 14% 4%;
+		--secondary: 240 10% 10%;
+		--secondary-foreground: 240 20% 95%;
+		--muted: 240 10% 10%;
+		--muted-foreground: 220 9% 65%;
+		--accent: 252 100% 68%;
+		--accent-foreground: 0 0% 100%;
+		--destructive: 0 62% 30%;
 		--destructive-foreground: 0 0% 98%;
-		--border: 0 0% 89.8%;
-		--input: 0 0% 89.8%;
-		--ring: 0 0% 3.9%;
+		--border: 240 10% 14%;
+		--input: 240 10% 14%;
+		--ring: 252 100% 68%;
 		--chart-1: 12 76% 61%;
 		--chart-2: 173 58% 39%;
 		--chart-3: 197 37% 24%;
 		--chart-4: 43 74% 66%;
 		--chart-5: 27 87% 67%;
-		--radius: 0.5rem;
-	}
-	.dark {
-		--background: 0 0% 3.9%;
-		--foreground: 0 0% 98%;
-		--card: 0 0% 3.9%;
-		--card-foreground: 0 0% 98%;
-		--popover: 0 0% 3.9%;
-		--popover-foreground: 0 0% 98%;
-		--primary: 0 0% 98%;
-		--primary-foreground: 0 0% 9%;
-		--secondary: 0 0% 14.9%;
-		--secondary-foreground: 0 0% 98%;
-		--muted: 0 0% 14.9%;
-		--muted-foreground: 0 0% 63.9%;
-		--accent: 0 0% 14.9%;
-		--accent-foreground: 0 0% 98%;
-		--destructive: 0 62.8% 30.6%;
-		--destructive-foreground: 0 0% 98%;
-		--border: 0 0% 14.9%;
-		--input: 0 0% 14.9%;
-		--ring: 0 0% 83.1%;
-		--chart-1: 220 70% 50%;
-		--chart-2: 160 60% 45%;
-		--chart-3: 30 80% 55%;
-		--chart-4: 280 65% 60%;
-		--chart-5: 340 75% 55%;
+		--radius: 0.75rem;
+
+		--surface-1: 240 12% 7%;
+		--surface-2: 240 12% 10%;
+		--rule: 240 8% 18%;
+
+		--alien-1: 199 89% 60%;
+		--alien-2: 234 89% 74%;
+		--alien-3: 270 95% 75%;
+
+		--font-sans: "Geist Variable", "Geist", system-ui, sans-serif;
+		--font-serif: "Instrument Serif", Georgia, serif;
+		--font-mono: "Geist Mono Variable", "Geist Mono", ui-monospace, monospace;
 	}
 }
 
@@ -62,12 +49,19 @@
 	* {
 		@apply border-border;
 	}
+	html {
+		font-family: var(--font-sans);
+	}
 	body {
 		@apply bg-background text-foreground;
 	}
 
+	#main {
+		scroll-margin-top: 5rem;
+	}
+
 	:focus-visible {
-		outline: 2px solid #38bdf8;
+		outline: 2px solid hsl(var(--ring));
 		outline-offset: 2px;
 		border-radius: 4px;
 	}
@@ -84,33 +78,15 @@
 	}
 }
 
-/* ── Aurora background — cool tones, subtle ── */
-@keyframes aurora-shift {
-	0%,
-	100% {
-		background-position: 0% 50%;
-	}
-	25% {
-		background-position: 100% 0%;
-	}
-	50% {
-		background-position: 100% 100%;
-	}
-	75% {
-		background-position: 0% 100%;
-	}
-}
-
+/* ── Static aurora — no animation, no paint cost ── */
 .aurora-bg {
 	background:
-		radial-gradient(ellipse 80% 60% at 20% 40%, rgba(56, 189, 248, 0.07) 0%, transparent 60%),
-		radial-gradient(ellipse 60% 80% at 80% 20%, rgba(129, 140, 248, 0.06) 0%, transparent 60%),
-		radial-gradient(ellipse 70% 50% at 50% 80%, rgba(6, 182, 212, 0.05) 0%, transparent 60%);
-	background-size: 200% 200%;
-	animation: aurora-shift 25s ease-in-out infinite;
+		radial-gradient(ellipse 80% 60% at 20% 40%, hsl(var(--alien-1) / 0.05) 0%, transparent 60%),
+		radial-gradient(ellipse 60% 80% at 80% 20%, hsl(var(--alien-2) / 0.05) 0%, transparent 60%),
+		radial-gradient(ellipse 70% 50% at 50% 80%, hsl(var(--alien-3) / 0.04) 0%, transparent 60%);
 }
 
-/* ── Film grain — smaller element, lower cost ── */
+/* ── Film grain — small, fixed, GPU-cheap ── */
 @keyframes grain {
 	0%,
 	100% {
@@ -140,7 +116,7 @@
 	width: 200%;
 	height: 200%;
 	background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
-	opacity: 0.025;
+	opacity: 0.022;
 	pointer-events: none;
 	z-index: 9999;
 	animation: grain 6s steps(6) infinite;
@@ -149,12 +125,12 @@
 /* ── Grid pattern ── */
 .grid-pattern {
 	background-image:
-		linear-gradient(rgba(255, 255, 255, 0.015) 1px, transparent 1px),
-		linear-gradient(90deg, rgba(255, 255, 255, 0.015) 1px, transparent 1px);
+		linear-gradient(hsl(var(--foreground) / 0.012) 1px, transparent 1px),
+		linear-gradient(90deg, hsl(var(--foreground) / 0.012) 1px, transparent 1px);
 	background-size: 60px 60px;
 }
 
-/* ── Glow pulse ── */
+/* ── Pulse dot ── */
 @keyframes glow-pulse {
 	0%,
 	100% {
@@ -164,26 +140,24 @@
 		opacity: 0.9;
 	}
 }
-
 .glow-pulse {
 	animation: glow-pulse 3s ease-in-out infinite;
 }
 
-/* ── Alien energy rings — pure CSS, no JS ── */
+/* ── Alien rings ── */
 @keyframes ring-expand {
 	0% {
 		opacity: 0;
 		transform: scale(0.3);
 	}
 	30% {
-		opacity: 0.08;
+		opacity: 0.06;
 	}
 	100% {
 		opacity: 0;
 		transform: scale(2);
 	}
 }
-
 .alien-ring {
 	will-change: transform, opacity;
 }
@@ -194,7 +168,35 @@
 	animation: ring-expand 6s ease-out 3s infinite;
 }
 
-/* ── Scrollbar — neutral ── */
+/* ── Editorial display face — used sparingly ── */
+.font-display {
+	font-family: var(--font-serif);
+	font-style: italic;
+	font-weight: 400;
+	letter-spacing: -0.02em;
+}
+
+/* ── Section eyebrow ── */
+.eyebrow {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.75rem;
+	font-family: var(--font-mono);
+	font-size: 11px;
+	letter-spacing: 0.18em;
+	text-transform: uppercase;
+	color: hsl(var(--muted-foreground));
+}
+.eyebrow .eyebrow-num {
+	color: hsl(var(--foreground) / 0.5);
+}
+.eyebrow .eyebrow-rule {
+	width: 28px;
+	height: 1px;
+	background: hsl(var(--rule));
+}
+
+/* ── Scrollbar ── */
 ::-webkit-scrollbar {
 	width: 6px;
 }
@@ -202,9 +204,9 @@
 	background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-	background: rgba(148, 163, 184, 0.2);
+	background: hsl(var(--muted-foreground) / 0.25);
 	border-radius: 3px;
 }
 ::-webkit-scrollbar-thumb:hover {
-	background: rgba(148, 163, 184, 0.35);
+	background: hsl(var(--muted-foreground) / 0.4);
 }
