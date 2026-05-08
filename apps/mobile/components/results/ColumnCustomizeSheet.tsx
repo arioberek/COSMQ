@@ -91,7 +91,12 @@ export const ColumnCustomizeSheet = memo(function ColumnCustomizeSheet({
               Pin to force show. Hide to omit from cards.
             </Text>
           </YStack>
-          <Pressable hitSlop={10} onPress={onReset}>
+          <Pressable
+            hitSlop={10}
+            onPress={onReset}
+            accessibilityRole="button"
+            accessibilityLabel="Reset column customization"
+          >
             <Text color="$primary" fontSize={13} fontWeight="600">
               Reset
             </Text>
@@ -100,12 +105,16 @@ export const ColumnCustomizeSheet = memo(function ColumnCustomizeSheet({
 
         <ScrollView showsVerticalScrollIndicator={false}>
           <YStack gap={6} paddingBottom={32}>
-            {columns.map((col) => {
+            {columns.map((col, idx) => {
               const isPinned = prefs.pinned.includes(col.name);
               const isHidden = prefs.hidden.includes(col.name);
               return (
                 <XStack
-                  key={col.name}
+                  // Suffix the index so duplicate column names from a join
+                  // without aliases don't collide as React keys. Pin/hide
+                  // prefs themselves are still keyed by display name —
+                  // duplicates share the same toggle state by design.
+                  key={`${col.name}-${idx}`}
                   alignItems="center"
                   justifyContent="space-between"
                   paddingHorizontal="$sm"
@@ -132,7 +141,13 @@ export const ColumnCustomizeSheet = memo(function ColumnCustomizeSheet({
                     ) : null}
                   </YStack>
                   <XStack gap={6}>
-                    <Pressable hitSlop={6} onPress={() => handlePin(col.name)}>
+                    <Pressable
+                      hitSlop={6}
+                      onPress={() => handlePin(col.name)}
+                      accessibilityRole="button"
+                      accessibilityLabel={isPinned ? `Unpin ${col.name}` : `Pin ${col.name}`}
+                      accessibilityState={{ selected: isPinned }}
+                    >
                       <YStack
                         width={36}
                         height={36}
@@ -148,7 +163,13 @@ export const ColumnCustomizeSheet = memo(function ColumnCustomizeSheet({
                         />
                       </YStack>
                     </Pressable>
-                    <Pressable hitSlop={6} onPress={() => handleHide(col.name)}>
+                    <Pressable
+                      hitSlop={6}
+                      onPress={() => handleHide(col.name)}
+                      accessibilityRole="button"
+                      accessibilityLabel={isHidden ? `Show ${col.name}` : `Hide ${col.name}`}
+                      accessibilityState={{ selected: isHidden }}
+                    >
                       <YStack
                         width={36}
                         height={36}
