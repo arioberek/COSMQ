@@ -220,17 +220,27 @@ const coerceLiteral = (raw: string): unknown => {
   }
 };
 
-const buildMongoFilterClause = (filter: MongoFilter): unknown => {
+// Returns null when the filter should be skipped entirely — e.g. a comparison
+// operator with an empty value, which means the user added the filter but
+// hasn't typed anything yet.
+const buildMongoFilterClause = (filter: MongoFilter): unknown | null => {
+  const trimmed = filter.value.trim();
   if (filter.operator === "$exists") {
-    return { $exists: filter.value.trim().toLowerCase() !== "false" };
+    return { $exists: trimmed.toLowerCase() !== "false" };
   }
   if (filter.operator === "$regex") {
+    if (trimmed === "") return null;
     return { $regex: filter.value };
   }
   if (filter.operator === "$in" || filter.operator === "$nin") {
     const items = splitListLiteral(filter.value).map(coerceLiteral);
+    if (items.length === 0) return null;
     return { [filter.operator]: items };
   }
+  // Comparison operators ($eq/$ne/$gt/$lt/$gte/$lte): empty input means the
+  // user hasn't filled in a value yet, so skip the clause rather than
+  // emitting `{ $eq: "" }` and silently changing the result set.
+  if (trimmed === "") return null;
   return { [filter.operator]: coerceLiteral(filter.value) };
 };
 
@@ -241,6 +251,7 @@ export const mongoBuilderToString = (state: MongoBuilderState): string => {
   for (const f of state.filters) {
     if (!f.field) continue;
     const clause = buildMongoFilterClause(f);
+    if (clause === null) continue;
     if (filterDoc[f.field]) {
       // Merge multiple operators on the same field into one nested doc
       const existing = filterDoc[f.field];
