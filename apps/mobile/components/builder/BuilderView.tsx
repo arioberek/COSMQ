@@ -53,11 +53,20 @@ export const BuilderView = memo(function BuilderView({
   const [sqlState, setSqlState] = useState<SqlBuilderState>(emptySqlBuilderState);
   const [mongoState, setMongoState] = useState<MongoBuilderState>(emptyMongoBuilderState);
 
+  // Request tokens guard async metadata calls. A connection switch or a fast
+  // table swap can leave earlier `listTables` / `describeTable` promises in
+  // flight; their resolutions must not overwrite state belonging to a newer
+  // request.
+  const tablesReqRef = useRef(0);
+  const columnsReqRef = useRef(0);
+
   // Reset builder state when the connection changes.
   const lastConnRef = useRef<string | null>(null);
   useEffect(() => {
     if (lastConnRef.current !== connectionId) {
       lastConnRef.current = connectionId;
+      tablesReqRef.current += 1;
+      columnsReqRef.current += 1;
       setSqlState(emptySqlBuilderState());
       setMongoState(emptyMongoBuilderState());
       setTables([]);
@@ -67,15 +76,18 @@ export const BuilderView = memo(function BuilderView({
   }, [connectionId]);
 
   const loadTables = useCallback(async () => {
+    const reqId = ++tablesReqRef.current;
     setLoadingTables(true);
     setError(null);
     try {
       const list = await instance.listTables();
+      if (tablesReqRef.current !== reqId) return;
       setTables(list);
     } catch (err) {
+      if (tablesReqRef.current !== reqId) return;
       setError(formatQueryError(err, type));
     } finally {
-      setLoadingTables(false);
+      if (tablesReqRef.current === reqId) setLoadingTables(false);
     }
   }, [instance, type]);
 
@@ -89,30 +101,42 @@ export const BuilderView = memo(function BuilderView({
 
   const loadColumns = useCallback(
     async (schema: string | undefined, table: string) => {
+      const reqId = ++columnsReqRef.current;
+      setColumns([]);
       setLoadingColumns(true);
       try {
         const cols = await instance.describeTable(schema, table);
+        if (columnsReqRef.current !== reqId) return;
         setColumns(cols);
       } catch (err) {
+        if (columnsReqRef.current !== reqId) return;
         setError(formatQueryError(err, type));
         setColumns([]);
       } finally {
-        setLoadingColumns(false);
+        if (columnsReqRef.current === reqId) setLoadingColumns(false);
       }
     },
     [instance, type],
   );
 
-  // Auto-load columns whenever the table/collection changes.
+  // Auto-load columns whenever the table/collection changes. Bumping
+  // `columnsReqRef` on clear cancels any in-flight describe call so a stale
+  // response can't repopulate the picker after the user deselects.
   useEffect(() => {
     if (sql) {
       const t = sqlState.table;
       if (t) loadColumns(t.schema, t.name);
-      else setColumns([]);
+      else {
+        columnsReqRef.current += 1;
+        setColumns([]);
+      }
     } else {
       const c = mongoState.collection;
       if (c) loadColumns(undefined, c);
-      else setColumns([]);
+      else {
+        columnsReqRef.current += 1;
+        setColumns([]);
+      }
     }
   }, [
     sql,
