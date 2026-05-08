@@ -39,7 +39,14 @@ export const inferLiteralKind = (raw: string): LiteralKind => {
   return "string";
 };
 
-const escapeStringLiteral = (raw: string): string => raw.replace(/'/g, "''");
+const escapeStringLiteral = (raw: string, type: DatabaseType): string => {
+  // MySQL/MariaDB treat backslash as an escape character inside '...' strings
+  // unless NO_BACKSLASH_ESCAPES is set (it's not by default). Postgres,
+  // CockroachDB, and SQLite follow the SQL standard — only `'` doubling needed.
+  const needsBackslashEscape = type === "mysql" || type === "mariadb";
+  const backslashEscaped = needsBackslashEscape ? raw.replace(/\\/g, "\\\\") : raw;
+  return backslashEscaped.replace(/'/g, "''");
+};
 
 export const formatSqlLiteral = (raw: string, type: DatabaseType): string => {
   const kind = inferLiteralKind(raw);
@@ -57,7 +64,7 @@ export const formatSqlLiteral = (raw: string, type: DatabaseType): string => {
       return truthy ? "TRUE" : "FALSE";
     }
     case "string":
-      return `'${escapeStringLiteral(raw)}'`;
+      return `'${escapeStringLiteral(raw, type)}'`;
   }
 };
 
