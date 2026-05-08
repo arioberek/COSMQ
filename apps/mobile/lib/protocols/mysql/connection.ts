@@ -334,7 +334,11 @@ export class MySQLConnection implements DatabaseConnection {
   }
 
   async describeTable(schema: string | undefined, table: string): Promise<ColumnInfo[]> {
-    const safeSchema = escapeMySQLStringLiteral(schema ?? this.config.database);
+    const effectiveSchema = schema ?? this.config.database;
+    if (!effectiveSchema) {
+      throw new Error("describeTable: no schema provided and the connection has no default database");
+    }
+    const safeSchema = escapeMySQLStringLiteral(effectiveSchema);
     const safeTable = escapeMySQLStringLiteral(table);
 
     const result = await this.query(
