@@ -6,7 +6,7 @@ import { Text, useTheme as useTamaguiTheme, XStack, YStack } from "tamagui";
 import { useHaptic } from "../../lib/haptics";
 import type { ColumnInfo } from "../../lib/types";
 import { CellValue } from "./CellValue";
-import { type ResolvedColumns } from "./columnPriority";
+import type { ResolvedColumns } from "./columnPriority";
 import { previewString, stringifyCell } from "./format";
 
 type CardsViewProps = {
@@ -209,11 +209,7 @@ const CardItem = memo(function CardItem({
   );
 });
 
-export const CardsView = memo(function CardsView({
-  rows,
-  resolved,
-  onOpenDetail,
-}: CardsViewProps) {
+export const CardsView = memo(function CardsView({ rows, resolved, onOpenDetail }: CardsViewProps) {
   const data = useMemo(
     () =>
       rows.map(

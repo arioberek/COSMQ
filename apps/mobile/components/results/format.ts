@@ -1,12 +1,6 @@
 import type { ColumnInfo } from "../../lib/types";
 
-export type CellKind =
-  | "null"
-  | "boolean"
-  | "number"
-  | "date"
-  | "json"
-  | "string";
+export type CellKind = "null" | "boolean" | "number" | "date" | "json" | "string";
 
 export const isNullish = (v: unknown): v is null | undefined => v === null || v === undefined;
 

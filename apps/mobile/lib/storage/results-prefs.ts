@@ -50,9 +50,7 @@ const enqueueWrite = (key: string, task: () => Promise<void>): Promise<void> => 
   return next;
 };
 
-export async function getResultsViewMode(
-  connectionId: string,
-): Promise<ResultsViewMode | null> {
+export async function getResultsViewMode(connectionId: string): Promise<ResultsViewMode | null> {
   const map = await readJson<Record<string, ResultsViewMode>>(VIEW_KEY, {});
   return map[connectionId] ?? null;
 }
@@ -73,10 +71,7 @@ export async function getColumnPrefs(prefsKey: string): Promise<ColumnPrefs> {
   return map[prefsKey] ?? { pinned: [], hidden: [] };
 }
 
-export async function setColumnPrefs(
-  prefsKey: string,
-  prefs: ColumnPrefs,
-): Promise<void> {
+export async function setColumnPrefs(prefsKey: string, prefs: ColumnPrefs): Promise<void> {
   return enqueueWrite(COLUMNS_KEY, async () => {
     const map = await readJson<Record<string, ColumnPrefs>>(COLUMNS_KEY, {});
     if (prefs.pinned.length === 0 && prefs.hidden.length === 0) {

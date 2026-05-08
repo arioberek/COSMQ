@@ -112,9 +112,7 @@ export const SortSheet = memo(function SortSheet({
                           }
                         />
                         <Text
-                          color={
-                            isSorted && sortDir === "asc" ? "$primary" : "$placeholderColor"
-                          }
+                          color={isSorted && sortDir === "asc" ? "$primary" : "$placeholderColor"}
                           fontSize={11}
                           fontWeight="600"
                         >
@@ -149,9 +147,7 @@ export const SortSheet = memo(function SortSheet({
                           }
                         />
                         <Text
-                          color={
-                            isSorted && sortDir === "desc" ? "$primary" : "$placeholderColor"
-                          }
+                          color={isSorted && sortDir === "desc" ? "$primary" : "$placeholderColor"}
                           fontSize={11}
                           fontWeight="600"
                         >

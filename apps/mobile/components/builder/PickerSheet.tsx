@@ -49,8 +49,7 @@ export const PickerSheet = memo(function PickerSheet({
     const needle = search.trim().toLowerCase();
     return options.filter(
       (o) =>
-        o.label.toLowerCase().includes(needle) ||
-        (o.sublabel ?? "").toLowerCase().includes(needle),
+        o.label.toLowerCase().includes(needle) || (o.sublabel ?? "").toLowerCase().includes(needle),
     );
   }, [options, search]);
 
@@ -137,7 +136,12 @@ export const PickerSheet = memo(function PickerSheet({
         <ScrollView showsVerticalScrollIndicator={false}>
           <YStack gap={6} paddingBottom={32}>
             {filtered.length === 0 ? (
-              <Text color="$placeholderColor" fontSize={13} textAlign="center" paddingVertical="$lg">
+              <Text
+                color="$placeholderColor"
+                fontSize={13}
+                textAlign="center"
+                paddingVertical="$lg"
+              >
                 {emptyText}
               </Text>
             ) : (

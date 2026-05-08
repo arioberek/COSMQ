@@ -20,15 +20,11 @@ import { formatQueryError } from "../../lib/errors";
 import { useHaptic } from "../../lib/haptics";
 import { normalizeAutoRollbackSeconds } from "../../lib/settings";
 import {
-  type EditorMode,
-  getEditorMode,
-  setEditorMode,
-} from "../../lib/storage/results-prefs";
-import {
   addToQueryHistory,
   getQueryHistory,
   type QueryHistoryItem,
 } from "../../lib/storage/query-history";
+import { type EditorMode, getEditorMode, setEditorMode } from "../../lib/storage/results-prefs";
 import {
   deleteSnippet,
   getSnippets,
@@ -999,9 +995,7 @@ export default function QueryScreen() {
                 style={[styles.modeToggleChip, active && styles.modeToggleChipActive]}
                 onPress={() => handleEditorModeChange(m)}
               >
-                <Text
-                  style={[styles.modeToggleText, active && styles.modeToggleTextActive]}
-                >
+                <Text style={[styles.modeToggleText, active && styles.modeToggleTextActive]}>
                   {m === "editor" ? "Editor" : "Builder"}
                 </Text>
               </Pressable>

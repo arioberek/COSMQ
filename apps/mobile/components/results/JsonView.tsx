@@ -42,12 +42,7 @@ const JsonNode = memo(function JsonNode({
   }, [data, haptic]);
 
   if (PRIMITIVE(data)) {
-    const display =
-      data === null
-        ? "null"
-        : typeof data === "string"
-          ? `"${data}"`
-          : String(data);
+    const display = data === null ? "null" : typeof data === "string" ? `"${data}"` : String(data);
     const color =
       data === null
         ? TYPE_COLOR.null
@@ -82,11 +77,7 @@ const JsonNode = memo(function JsonNode({
 
   return (
     <YStack>
-      <Pressable
-        onPress={() => setOpen((v) => !v)}
-        onLongPress={copy}
-        delayLongPress={350}
-      >
+      <Pressable onPress={() => setOpen((v) => !v)} onLongPress={copy} delayLongPress={350}>
         <XStack paddingLeft={depth * 12} alignItems="center" gap={6} paddingVertical={2}>
           <Ionicons
             name={open2 ? "chevron-down" : "chevron-forward"}

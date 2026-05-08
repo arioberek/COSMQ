@@ -110,12 +110,7 @@ export const DetailSheet = memo(function DetailSheet({
                     </XStack>
                     <YStack>
                       {value !== null && value !== undefined && typeof value === "object" ? (
-                        <Text
-                          color="$color"
-                          fontSize={12}
-                          fontFamily="$mono"
-                          selectable
-                        >
+                        <Text color="$color" fontSize={12} fontFamily="$mono" selectable>
                           {stringifyCell(value)}
                         </Text>
                       ) : (

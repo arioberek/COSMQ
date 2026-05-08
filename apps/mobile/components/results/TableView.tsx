@@ -36,11 +36,8 @@ const computeColumnWidth = (col: ColumnInfo, rows: Record<string, unknown>[]): n
   const headerPx = Math.max(col.name.length, (col.type ?? "").length) * COL_CHAR_PX + COL_PAD;
   const maxContent = rows.slice(0, 40).reduce((mx, row) => {
     const v = row[col.name];
-    const s = v === null || v === undefined
-      ? ""
-      : typeof v === "object"
-        ? JSON.stringify(v)
-        : String(v);
+    const s =
+      v === null || v === undefined ? "" : typeof v === "object" ? JSON.stringify(v) : String(v);
     return Math.max(mx, Math.min(s.length, 36));
   }, 0);
   const contentPx = maxContent * COL_CHAR_PX + COL_PAD;
@@ -149,13 +146,7 @@ const HeaderCell = memo(function HeaderCell({
         borderRightColor="$borderColor"
       >
         <YStack flex={1} gap={2}>
-          <Text
-            color="$color"
-            fontSize={12}
-            fontWeight="600"
-            fontFamily="$mono"
-            numberOfLines={1}
-          >
+          <Text color="$color" fontSize={12} fontWeight="600" fontFamily="$mono" numberOfLines={1}>
             {column.name}
           </Text>
           {column.type ? (
@@ -165,9 +156,7 @@ const HeaderCell = memo(function HeaderCell({
           ) : null}
         </YStack>
         <SortIndicator dir={isSorted ? sortDir : null} />
-        {resizing ? (
-          <ResizeHandle onChange={onResizeChange} onCommit={onResizeCommit} />
-        ) : null}
+        {resizing ? <ResizeHandle onChange={onResizeChange} onCommit={onResizeCommit} /> : null}
       </XStack>
     </Pressable>
   );

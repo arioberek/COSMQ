@@ -4,12 +4,7 @@ import { Pressable, ScrollView } from "react-native";
 import { Text, useTheme as useTamaguiTheme, XStack, YStack } from "tamagui";
 import { formatQueryError } from "../../lib/errors";
 import { useHaptic } from "../../lib/haptics";
-import type {
-  ColumnInfo,
-  DatabaseConnection,
-  DatabaseType,
-  TableInfo,
-} from "../../lib/types";
+import type { ColumnInfo, DatabaseConnection, DatabaseType, TableInfo } from "../../lib/types";
 import {
   emptyMongoBuilderState,
   emptySqlBuilderState,
@@ -138,13 +133,7 @@ export const BuilderView = memo(function BuilderView({
         setColumns([]);
       }
     }
-  }, [
-    sql,
-    sqlState.table?.schema,
-    sqlState.table?.name,
-    mongoState.collection,
-    loadColumns,
-  ]);
+  }, [sql, sqlState.table?.schema, sqlState.table?.name, mongoState.collection, loadColumns]);
 
   // Live-emit the generated query string.
   const generatedQuery = useMemo(() => {
@@ -197,12 +186,7 @@ export const BuilderView = memo(function BuilderView({
   return (
     <YStack gap="$md" flex={1}>
       <XStack alignItems="center" justifyContent="space-between">
-        <Text
-          color="$placeholderColor"
-          fontSize={11}
-          fontFamily="$mono"
-          letterSpacing={0.4}
-        >
+        <Text color="$placeholderColor" fontSize={11} fontFamily="$mono" letterSpacing={0.4}>
           {sql ? "SQL builder" : "MongoDB builder"}
         </Text>
         <Pressable hitSlop={6} onPress={loadTables} disabled={loadingTables}>
@@ -214,11 +198,7 @@ export const BuilderView = memo(function BuilderView({
             borderRadius={999}
             backgroundColor="$surfaceMuted"
           >
-            <Ionicons
-              name="refresh"
-              size={11}
-              color={tamagui.placeholderColor.val}
-            />
+            <Ionicons name="refresh" size={11} color={tamagui.placeholderColor.val} />
             <Text color="$placeholderColor" fontSize={11} fontWeight="600">
               {loadingTables ? "Loading…" : "Refresh"}
             </Text>
@@ -295,19 +275,12 @@ export const BuilderView = memo(function BuilderView({
               minHeight={64}
             >
               {generatedQuery ? (
-                <Text
-                  color="$color"
-                  fontSize={12}
-                  fontFamily="$mono"
-                  selectable
-                >
+                <Text color="$color" fontSize={12} fontFamily="$mono" selectable>
                   {generatedQuery}
                 </Text>
               ) : (
                 <Text color="$placeholderColor" fontSize={12}>
-                  {sql
-                    ? "Pick a table to start building."
-                    : "Pick a collection to start building."}
+                  {sql ? "Pick a table to start building." : "Pick a collection to start building."}
                 </Text>
               )}
             </YStack>
@@ -321,9 +294,7 @@ export const BuilderView = memo(function BuilderView({
         title={sql ? "Pick a table" : "Pick a collection"}
         options={tableOptions}
         selected={currentTableId ? [currentTableId] : []}
-        emptyText={
-          loadingTables ? "Loading…" : "No tables found. Tap Refresh."
-        }
+        emptyText={loadingTables ? "Loading…" : "No tables found. Tap Refresh."}
         onSelect={(ids) => {
           if (ids.length > 0) handlePickTable(ids[0]);
         }}

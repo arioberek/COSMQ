@@ -102,16 +102,11 @@ const renderSqlCondition = (cond: SqlCondition, type: DatabaseType): string | nu
   return `${col} ${cond.operator} ${formatSqlLiteral(cond.value, type)}`;
 };
 
-export const sqlBuilderToString = (
-  state: SqlBuilderState,
-  type: DatabaseType,
-): string => {
+export const sqlBuilderToString = (state: SqlBuilderState, type: DatabaseType): string => {
   if (!state.table) return "";
 
   const cols =
-    state.columns.length === 0
-      ? "*"
-      : state.columns.map((c) => quoteIdent(c, type)).join(", ");
+    state.columns.length === 0 ? "*" : state.columns.map((c) => quoteIdent(c, type)).join(", ");
   const tableRef = quoteQualified(state.table.name, type, state.table.schema);
 
   let sql = `SELECT ${cols}\nFROM ${tableRef}`;

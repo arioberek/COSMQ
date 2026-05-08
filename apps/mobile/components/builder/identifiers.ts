@@ -18,17 +18,12 @@ export const quoteIdent = (name: string, type: DatabaseType): string => {
   return `${open}${escapeIdentifier(name, close)}${close}`;
 };
 
-export const quoteQualified = (
-  name: string,
-  type: DatabaseType,
-  schema?: string,
-): string => {
+export const quoteQualified = (name: string, type: DatabaseType, schema?: string): string => {
   if (!schema) return quoteIdent(name, type);
   // "public" is only the implicit default for Postgres/CockroachDB. For
   // MySQL/MariaDB/SQLite, a database/schema literally named "public" must
   // still appear in the qualified identifier.
-  const isPgDefaultSchema =
-    (type === "postgres" || type === "cockroachdb") && schema === "public";
+  const isPgDefaultSchema = (type === "postgres" || type === "cockroachdb") && schema === "public";
   if (isPgDefaultSchema) return quoteIdent(name, type);
   return `${quoteIdent(schema, type)}.${quoteIdent(name, type)}`;
 };

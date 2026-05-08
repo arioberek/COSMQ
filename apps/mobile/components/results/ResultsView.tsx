@@ -14,12 +14,12 @@ import {
 } from "../../lib/storage/results-prefs";
 import type { QueryResult } from "../../lib/types";
 import { CardsView } from "./CardsView";
+import { ColumnCustomizeSheet } from "./ColumnCustomizeSheet";
 import { resolveColumns } from "./columnPriority";
 import { DetailSheet } from "./DetailSheet";
-import { ColumnCustomizeSheet } from "./ColumnCustomizeSheet";
 import { isNullish, stringifyCell } from "./format";
 import { JsonView } from "./JsonView";
-import { SortSheet, type SortDir } from "./SortSheet";
+import { type SortDir, SortSheet } from "./SortSheet";
 import { TableView } from "./TableView";
 
 type ResultsViewProps = {
@@ -96,11 +96,7 @@ const ViewSwitcher = memo(function ViewSwitcher({
                 size={13}
                 color={active ? tamagui.color.val : tamagui.placeholderColor.val}
               />
-              <Text
-                color={active ? "$color" : "$placeholderColor"}
-                fontSize={11}
-                fontWeight="600"
-              >
+              <Text color={active ? "$color" : "$placeholderColor"} fontSize={11} fontWeight="600">
                 {item.label}
               </Text>
             </XStack>
@@ -196,9 +192,7 @@ export const ResultsView = memo(function ResultsView({
 
   const displayRows = useMemo(() => {
     if (!sortColumn || !sortDir) return filteredRows;
-    const sorted = [...filteredRows].sort((a, b) =>
-      compareValues(a[sortColumn], b[sortColumn]),
-    );
+    const sorted = [...filteredRows].sort((a, b) => compareValues(a[sortColumn], b[sortColumn]));
     if (sortDir === "desc") sorted.reverse();
     return sorted;
   }, [filteredRows, sortColumn, sortDir]);
@@ -228,20 +222,13 @@ export const ResultsView = memo(function ResultsView({
 
   if (result.columns.length === 0) {
     return (
-      <XStack
-        alignItems="center"
-        gap="$sm"
-        paddingVertical="$lg"
-        paddingHorizontal="$xs"
-      >
+      <XStack alignItems="center" gap="$sm" paddingVertical="$lg" paddingHorizontal="$xs">
         <Text color="$success" fontSize={18} fontWeight="600">
           ✓
         </Text>
         <Text color="$textMuted" fontSize={14}>
           {result.rowCount > 0
-            ? `${result.rowCount.toLocaleString()} row${
-                result.rowCount === 1 ? "" : "s"
-              } affected`
+            ? `${result.rowCount.toLocaleString()} row${result.rowCount === 1 ? "" : "s"} affected`
             : "Query executed successfully"}
         </Text>
       </XStack>
@@ -310,11 +297,7 @@ export const ResultsView = memo(function ResultsView({
             />
             {search ? (
               <Pressable hitSlop={6} onPress={() => setSearch("")}>
-                <Ionicons
-                  name="close-circle"
-                  size={14}
-                  color={tamagui.placeholderColor.val}
-                />
+                <Ionicons name="close-circle" size={14} color={tamagui.placeholderColor.val} />
               </Pressable>
             ) : null}
           </XStack>
@@ -373,13 +356,7 @@ export const ResultsView = memo(function ResultsView({
 
       <YStack flex={1}>
         {result.rows.length === 0 ? (
-          <YStack
-            flex={1}
-            alignItems="center"
-            justifyContent="center"
-            padding="$lg"
-            gap="$sm"
-          >
+          <YStack flex={1} alignItems="center" justifyContent="center" padding="$lg" gap="$sm">
             <Ionicons name="leaf-outline" size={28} color={tamagui.placeholderColor.val} />
             <Text color="$color" fontSize={15} fontWeight="600">
               No rows returned

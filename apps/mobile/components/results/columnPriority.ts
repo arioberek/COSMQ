@@ -48,10 +48,7 @@ const firstNonNull = (col: string, rows: Row[]): unknown => {
   return null;
 };
 
-export const detectPrimaryKey = (
-  columns: ColumnInfo[],
-  rows: Row[],
-): ColumnInfo | null => {
+export const detectPrimaryKey = (columns: ColumnInfo[], rows: Row[]): ColumnInfo | null => {
   if (columns.length === 0) return null;
   const exact = columns.find((c) => isLikelyPkName(c.name));
   if (exact) return exact;
@@ -93,10 +90,7 @@ export interface OrderedColumns {
   ordered: ColumnInfo[];
 }
 
-export const orderColumnsByPriority = (
-  columns: ColumnInfo[],
-  rows: Row[],
-): OrderedColumns => {
+export const orderColumnsByPriority = (columns: ColumnInfo[], rows: Row[]): OrderedColumns => {
   const primary = detectPrimaryKey(columns, rows);
   const pkName = primary?.name ?? null;
   const ordered = [...columns]

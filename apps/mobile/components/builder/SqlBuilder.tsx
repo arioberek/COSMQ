@@ -7,10 +7,10 @@ import type { ColumnInfo, DatabaseType, TableInfo } from "../../lib/types";
 import { BuilderSection } from "./BuilderSection";
 import {
   newId,
+  SQL_OPERATORS,
   type SqlBuilderState,
   type SqlCombinator,
   type SqlCondition,
-  SQL_OPERATORS,
   type SqlOperator,
   type SqlSort,
 } from "./builder-state";
@@ -35,8 +35,7 @@ const tableLabel = (state: SqlBuilderState): string => {
     : state.table.name;
 };
 
-const isOperatorWithoutValue = (op: SqlOperator) =>
-  op === "IS NULL" || op === "IS NOT NULL";
+const isOperatorWithoutValue = (op: SqlOperator) => op === "IS NULL" || op === "IS NOT NULL";
 
 const placeholderForOperator = (op: SqlOperator): string => {
   switch (op) {
@@ -254,7 +253,9 @@ export const SqlBuilder = memo(function SqlBuilder({
                   key={cond.id}
                   index={idx}
                   combinator={cond.combinator}
-                  onCombinatorChange={(c) => updateCondition(cond.id, { combinator: c as SqlCombinator })}
+                  onCombinatorChange={(c) =>
+                    updateCondition(cond.id, { combinator: c as SqlCombinator })
+                  }
                   column={cond.column}
                   onColumnChange={(c) => updateCondition(cond.id, { column: c })}
                   columns={columns}

@@ -3,8 +3,8 @@ import { memo, useCallback } from "react";
 import { Pressable, ScrollView } from "react-native";
 import { Sheet, Text, useTheme as useTamaguiTheme, XStack, YStack } from "tamagui";
 import { useHaptic } from "../../lib/haptics";
-import type { ColumnInfo } from "../../lib/types";
 import type { ColumnPrefs } from "../../lib/storage/results-prefs";
+import type { ColumnInfo } from "../../lib/types";
 
 type ColumnCustomizeSheetProps = {
   open: boolean;

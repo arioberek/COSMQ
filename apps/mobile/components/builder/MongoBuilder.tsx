@@ -6,10 +6,10 @@ import { useHaptic } from "../../lib/haptics";
 import type { ColumnInfo, TableInfo } from "../../lib/types";
 import { BuilderSection } from "./BuilderSection";
 import {
+  MONGO_OPERATORS,
   type MongoBuilderState,
   type MongoFilter,
   type MongoOperator,
-  MONGO_OPERATORS,
   type MongoSort,
   newId,
 } from "./builder-state";

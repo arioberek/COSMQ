@@ -159,4 +159,3 @@ export function SortRow<Dir extends string | number>({
     </XStack>
   );
 }
-
