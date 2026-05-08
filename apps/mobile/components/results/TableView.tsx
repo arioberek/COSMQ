@@ -2,6 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import * as Clipboard from "expo-clipboard";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
+  FlatList,
   type NativeScrollEvent,
   type NativeSyntheticEvent,
   PanResponder,
@@ -172,6 +173,38 @@ const HeaderCell = memo(function HeaderCell({
   );
 });
 
+const DataRow = memo(function DataRow({
+  row,
+  index,
+  stickyWidth,
+  dataCols,
+  widths,
+  onCopy,
+}: {
+  row: Record<string, unknown>;
+  index: number;
+  stickyWidth: number;
+  dataCols: ColumnInfo[];
+  widths: Record<string, number>;
+  onCopy: (v: unknown) => void;
+}) {
+  return (
+    <XStack>
+      {stickyWidth > 0 ? <YStack width={stickyWidth} /> : null}
+      {dataCols.map((col) => (
+        <DataCell
+          key={`c-${col.name}`}
+          column={col}
+          value={row[col.name]}
+          width={widths[col.name] ?? COL_MIN}
+          alt={index % 2 === 1}
+          onCopy={onCopy}
+        />
+      ))}
+    </XStack>
+  );
+});
+
 const DataCell = memo(function DataCell({
   column,
   value,
@@ -310,15 +343,15 @@ export const TableView = memo(function TableView({
     [resizingCol, handleSortPress],
   );
 
-  const verticalScrollRef = useRef<ScrollView>(null);
-  const stickyScrollRef = useRef<ScrollView>(null);
+  const verticalScrollRef = useRef<FlatList<Record<string, unknown>>>(null);
+  const stickyScrollRef = useRef<FlatList<Record<string, unknown>>>(null);
   const lastSyncedRef = useRef(0);
 
   const onMainScroll = useCallback((e: NativeSyntheticEvent<NativeScrollEvent>) => {
     const y = e.nativeEvent.contentOffset.y;
     if (Math.abs(y - lastSyncedRef.current) < 0.5) return;
     lastSyncedRef.current = y;
-    stickyScrollRef.current?.scrollTo({ y, animated: false });
+    stickyScrollRef.current?.scrollToOffset({ offset: y, animated: false });
   }, []);
 
   const renderHeader = (col: ColumnInfo, width: number, isSticky: boolean) => (
@@ -363,34 +396,36 @@ export const TableView = memo(function TableView({
           bounces={false}
           contentContainerStyle={{ minWidth: totalDataWidth + (stickyCol ? PK_WIDTH : 0) }}
         >
-          <ScrollView
+          <FlatList
             ref={verticalScrollRef}
+            data={rows}
+            keyExtractor={(_, i) => `r-${i}`}
             scrollEventThrottle={16}
             onScroll={onMainScroll}
             showsVerticalScrollIndicator={false}
             stickyHeaderIndices={[0]}
             nestedScrollEnabled
-          >
-            <XStack backgroundColor="$surfaceAlt">
-              {stickyCol ? <YStack width={PK_WIDTH} /> : null}
-              {dataCols.map((col) => renderHeader(col, widths[col.name] ?? COL_MIN, false))}
-            </XStack>
-            {rows.map((row, ri) => (
-              <XStack key={`r-${ri}`}>
+            removeClippedSubviews
+            initialNumToRender={20}
+            windowSize={9}
+            maxToRenderPerBatch={20}
+            ListHeaderComponent={
+              <XStack backgroundColor="$surfaceAlt">
                 {stickyCol ? <YStack width={PK_WIDTH} /> : null}
-                {dataCols.map((col) => (
-                  <DataCell
-                    key={`c-${col.name}-${ri}`}
-                    column={col}
-                    value={row[col.name]}
-                    width={widths[col.name] ?? COL_MIN}
-                    alt={ri % 2 === 1}
-                    onCopy={copyCell}
-                  />
-                ))}
+                {dataCols.map((col) => renderHeader(col, widths[col.name] ?? COL_MIN, false))}
               </XStack>
-            ))}
-          </ScrollView>
+            }
+            renderItem={({ item, index }) => (
+              <DataRow
+                row={item}
+                index={index}
+                stickyWidth={stickyCol ? PK_WIDTH : 0}
+                dataCols={dataCols}
+                widths={widths}
+                onCopy={copyCell}
+              />
+            )}
+          />
         </ScrollView>
 
         {stickyCol ? (
@@ -404,26 +439,32 @@ export const TableView = memo(function TableView({
             }}
             pointerEvents="box-none"
           >
-            <ScrollView
+            <FlatList
               ref={stickyScrollRef}
+              data={rows}
+              keyExtractor={(_, i) => `sticky-${i}`}
               showsVerticalScrollIndicator={false}
               scrollEnabled={false}
               stickyHeaderIndices={[0]}
-            >
-              <XStack backgroundColor="$surfaceAlt">
-                {renderHeader(stickyCol, PK_WIDTH, true)}
-              </XStack>
-              {rows.map((row, ri) => (
+              removeClippedSubviews
+              initialNumToRender={20}
+              windowSize={9}
+              maxToRenderPerBatch={20}
+              ListHeaderComponent={
+                <XStack backgroundColor="$surfaceAlt">
+                  {renderHeader(stickyCol, PK_WIDTH, true)}
+                </XStack>
+              }
+              renderItem={({ item, index }) => (
                 <DataCell
-                  key={`sticky-${ri}`}
                   column={stickyCol}
-                  value={row[stickyCol.name]}
+                  value={item[stickyCol.name]}
                   width={PK_WIDTH}
-                  alt={ri % 2 === 1}
+                  alt={index % 2 === 1}
                   onCopy={copyCell}
                 />
-              ))}
-            </ScrollView>
+              )}
+            />
           </View>
         ) : null}
       </View>
