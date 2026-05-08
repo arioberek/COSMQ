@@ -309,7 +309,7 @@ const darkTheme = {
   cardBorder: cosmicTokens.color.darkCardBorder,
   overlay: cosmicTokens.color.darkOverlay,
 
-  dialogOverlay: "rgba(4, 4, 9, 0.86)",
+  dialogOverlay: cosmicTokens.color.darkOverlay,
   dialogBorder: "rgba(255,255,255,0.12)",
   dialogText: "#f0f0f5",
   dialogTextMuted: "#c5c5d6",
@@ -378,7 +378,7 @@ const lightTheme = {
   cardBorder: cosmicTokens.color.lightCardBorder,
   overlay: cosmicTokens.color.lightOverlay,
 
-  dialogOverlay: "rgba(15, 15, 26, 0.55)",
+  dialogOverlay: cosmicTokens.color.lightOverlay,
   dialogBorder: "rgba(15, 15, 26, 0.13)",
   dialogText: "#0f0f1a",
   dialogTextMuted: "#3a3a4f",
