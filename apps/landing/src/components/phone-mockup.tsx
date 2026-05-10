@@ -1,4 +1,5 @@
 import { motion } from "motion/react";
+import phoneScreenshot from "@/assets/screenshots/app/1.jpeg";
 import { Iphone } from "./ui/iphone";
 
 export function PhoneMockup() {
@@ -21,12 +22,10 @@ export function PhoneMockup() {
 					ease: "easeInOut",
 				}}
 			>
-				{/* Raw image from public/ — bypasses Astro's image optimization pipeline */}
-				<Iphone src="/screenshots/1.jpeg" className="dark" />
+				<Iphone src={phoneScreenshot.src} />
 			</motion.div>
 
-			{/* Shadow + glow — outside any transform stack for perf */}
-			<div className="absolute -bottom-6 left-[10%] right-[10%] h-[40px] bg-[radial-gradient(ellipse,rgba(56,189,248,0.12)_0%,transparent_70%)] blur-xl pointer-events-none" />
+			<div className="absolute -bottom-6 left-[10%] right-[10%] h-[40px] bg-[radial-gradient(ellipse,hsl(var(--alien-1)/0.12)_0%,transparent_70%)] blur-xl pointer-events-none" />
 			<div className="absolute -bottom-4 left-[5%] right-[5%] h-[30px] bg-[radial-gradient(ellipse,rgba(0,0,0,0.4)_0%,transparent_70%)] blur-lg pointer-events-none" />
 		</motion.div>
 	);

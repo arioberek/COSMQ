@@ -4,6 +4,11 @@ export default {
 	content: ["./src/**/*.{astro,html,js,jsx,md,mdx,svelte,ts,tsx,vue}"],
 	theme: {
 		extend: {
+			fontFamily: {
+				sans: ['"Geist Variable"', "Geist", "system-ui", "sans-serif"],
+				mono: ['"Geist Mono Variable"', '"Geist Mono"', "ui-monospace", "monospace"],
+				display: ['"Instrument Serif"', "Georgia", "serif"],
+			},
 			borderRadius: {
 				lg: "var(--radius)",
 				md: "calc(var(--radius) - 2px)",

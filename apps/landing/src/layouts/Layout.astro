@@ -1,22 +1,24 @@
 ---
 import AlienIcon from '../assets/logos/alien.svg';
+import '@fontsource-variable/geist/index.css';
+import '@fontsource-variable/geist-mono/index.css';
+import '@fontsource/instrument-serif/400.css';
+import '@fontsource/instrument-serif/400-italic.css';
 import '../styles/global.css';
 ---
 <!doctype html>
-<html lang="en" class="scroll-smooth">
+<html lang="en" class="dark scroll-smooth">
 	<head>
 		<meta charset="UTF-8" />
 		<meta name="viewport" content="width=device-width" />
+		<meta name="theme-color" content="#06060a" />
 		<link rel="icon" type="image/svg+xml" href={AlienIcon.src} />
 		<meta name="generator" content={Astro.generator} />
-		<meta name="description" content="COSMQ - Universal mobile database client for iOS and Android. Connect directly to PostgreSQL, MySQL, and more." />
-		<title>COSMQ - Mobile Database Client</title>
-		<link rel="preconnect" href="https://fonts.googleapis.com">
-		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-		<link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+		<meta name="description" content="COSMQ — universal mobile database client. PostgreSQL, MySQL, MongoDB and more, direct from your phone." />
+		<title>COSMQ — Mobile Database Client</title>
 	</head>
-	<body class="m-0 w-full min-h-screen flex flex-col bg-[#06060a] text-[#f0f0f5] font-['Inter',system-ui,sans-serif] film-grain">
-		<a href="#main" class="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-[200] focus:px-4 focus:py-2 focus:rounded-lg focus:bg-[#7c5cff] focus:text-white focus:text-sm focus:font-medium focus:outline-none">
+	<body class="m-0 w-full min-h-screen flex flex-col bg-background text-foreground font-sans film-grain">
+		<a href="#main" class="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-[200] focus:px-4 focus:py-2 focus:rounded-lg focus:bg-accent focus:text-accent-foreground focus:text-sm focus:font-medium focus:outline-none">
 			Skip to content
 		</a>
 		<slot />
@@ -25,6 +27,9 @@ import '../styles/global.css';
 
 <style is:global>
 	code, pre {
-		font-family: 'JetBrains Mono', monospace;
+		font-family: var(--font-mono);
+	}
+	html {
+		font-feature-settings: "ss01", "cv11";
 	}
 </style>
