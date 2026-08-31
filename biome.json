@@ -18,6 +18,8 @@
       "!apps/mobile/android",
       "!apps/mobile/.tamagui",
       "!**/*.astro",
+      "!**/*.md",
+      "!**/.bug-hunter",
       "!**/*.lock",
       "!**/*.lockb",
       "!**/bun.lock"

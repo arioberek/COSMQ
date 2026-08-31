@@ -39,9 +39,9 @@ export function DatabaseMarquee() {
 			</motion.div>
 
 			<div className="db-marquee-mask">
-				<div className="db-marquee-track" aria-hidden="false" role="list">
+				<ul className="db-marquee-track" aria-hidden="false">
 					{track.map((db, i) => (
-						<div key={`${db.name}-${i}`} role="listitem" className="db-marquee-item">
+						<li key={`${db.name}-${i}`} className="db-marquee-item">
 							<div className="db-marquee-icon">
 								<db.icon
 									className="w-7 h-7 md:w-8 md:h-8 brightness-0 invert opacity-70"
@@ -53,9 +53,9 @@ export function DatabaseMarquee() {
 							<span className="font-mono text-[12px] md:text-[13px] tracking-[0.16em] uppercase text-muted-foreground whitespace-nowrap">
 								{db.name}
 							</span>
-						</div>
+						</li>
 					))}
-				</div>
+				</ul>
 			</div>
 
 			<style>{`

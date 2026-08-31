@@ -98,14 +98,22 @@ function AlienBackground() {
 			<div className="alien-breathe">
 				{/* Glow layer — blurred, GPU composited */}
 				<div className="absolute alien-fade" style={{ filter: "blur(28px)" }}>
-					<svg viewBox="0 0 510 498" className="w-[55vw] max-w-[640px] h-auto opacity-[0.16]">
+					<svg
+						aria-hidden="true"
+						viewBox="0 0 510 498"
+						className="w-[55vw] max-w-[640px] h-auto opacity-[0.16]"
+					>
 						<use href="#alien-symbol" />
 					</svg>
 				</div>
 
 				{/* Crisp layer */}
 				<div className="absolute alien-fade">
-					<svg viewBox="0 0 510 498" className="w-[48vw] max-w-[560px] h-auto opacity-[0.10]">
+					<svg
+						aria-hidden="true"
+						viewBox="0 0 510 498"
+						className="w-[48vw] max-w-[560px] h-auto opacity-[0.10]"
+					>
 						<use href="#alien-symbol" />
 					</svg>
 				</div>
