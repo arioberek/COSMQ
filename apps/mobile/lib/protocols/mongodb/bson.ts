@@ -49,7 +49,7 @@ export class ObjectId {
     const buffer = Buffer.alloc(12);
     const timestamp = Math.floor(Date.now() / 1000);
     buffer.writeUInt32BE(timestamp, 0);
-    const random = Math.floor(Math.random() * 0xffffffffffff);
+    const random = Math.floor(Math.random() * 0xffffffffff);
     buffer.writeUIntBE(random, 4, 5);
     const counter = Math.floor(Math.random() * 0xffffff);
     buffer.writeUIntBE(counter, 9, 3);
@@ -269,6 +269,11 @@ function decodeValue(
     case BsonType.TIMESTAMP: {
       const value = Number(buffer.readBigInt64LE(pos));
       return { value, newPos: pos + 8 };
+    }
+
+    case BsonType.DECIMAL128: {
+      const value = buffer.subarray(pos, pos + 16).toString("hex");
+      return { value, newPos: pos + 16 };
     }
 
     default:

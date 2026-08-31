@@ -37,6 +37,7 @@ npm-debug.*
 
 # Local tooling
 .osgrep/
+.bug-hunter/
 
 # Logs
 *.log

@@ -11,6 +11,24 @@ import type {
 
 type SQLiteDatabase = Awaited<ReturnType<typeof SQLite.openDatabaseAsync>>;
 
+function stripLeadingSqlComments(sql: string): string {
+  let s = sql.trim();
+  while (true) {
+    if (s.startsWith("--")) {
+      const nl = s.indexOf("\n");
+      if (nl === -1) return "";
+      s = s.slice(nl + 1).trim();
+    } else if (s.startsWith("/*")) {
+      const end = s.indexOf("*/");
+      if (end === -1) return "";
+      s = s.slice(end + 2).trim();
+    } else {
+      break;
+    }
+  }
+  return s;
+}
+
 export class SQLiteConnection implements DatabaseConnection {
   config: ConnectionConfig;
   state: ConnectionState = { status: "disconnected" };
@@ -51,13 +69,22 @@ export class SQLiteConnection implements DatabaseConnection {
 
     const startTime = Date.now();
     const trimmedSql = sql.trim();
-    const command = trimmedSql.split(/\s+/)[0].toUpperCase();
+    const effectiveSql = stripLeadingSqlComments(trimmedSql);
+    const command = effectiveSql.split(/\s+/)[0]?.toUpperCase() ?? "";
 
+    const hasReturning = /\bRETURNING\b/i.test(effectiveSql);
     const isCteRead =
       command === "WITH" &&
-      /^WITH(?:\s+RECURSIVE)?\s+[\s\S]+\)\s*(?:SELECT|VALUES)\b/i.test(trimmedSql);
+      (/^WITH(?:\s+RECURSIVE)?\s+[\s\S]+\)\s*(?:SELECT|VALUES|TABLE)\b/i.test(effectiveSql) ||
+        hasReturning);
     const isSelect =
-      command === "SELECT" || command === "PRAGMA" || command === "EXPLAIN" || isCteRead;
+      command === "SELECT" ||
+      command === "PRAGMA" ||
+      command === "EXPLAIN" ||
+      command === "VALUES" ||
+      command === "TABLE" ||
+      isCteRead ||
+      hasReturning;
 
     if (isSelect) {
       const rows = await this.db.getAllAsync(trimmedSql);

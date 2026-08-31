@@ -432,10 +432,13 @@ export class MongoDBConnection implements DatabaseConnection {
       }
     }
 
-    return Array.from(columnSet).map((name) => ({
-      name,
-      type: this.inferMongoType(documents[0][name]),
-    }));
+    return Array.from(columnSet).map((name) => {
+      const sampleDoc = documents.find((doc) => doc[name] !== undefined) ?? documents[0];
+      return {
+        name,
+        type: this.inferMongoType(sampleDoc[name]),
+      };
+    });
   }
 
   private inferMongoType(value: unknown): string {

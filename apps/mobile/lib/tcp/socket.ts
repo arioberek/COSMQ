@@ -244,6 +244,10 @@ export class TcpClient {
         resolve(this.buffer.read(expectedLength));
         return;
       }
+      if (!expectedLength && this.buffer.length > 0) {
+        resolve(this.buffer.read());
+        return;
+      }
 
       this.messageQueue.push({ resolve, reject });
     });
@@ -275,6 +279,7 @@ export class TcpClient {
       this.socket = null;
       this.connected = false;
       this.buffer.clear();
+      this.rejectPendingMessages(new Error("Connection closed"));
     }
   }
 

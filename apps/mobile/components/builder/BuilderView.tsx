@@ -91,8 +91,7 @@ export const BuilderView = memo(function BuilderView({
     if (tables.length === 0 && !loadingTables) {
       loadTables();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [connectionId]);
+  }, [tables.length, loadingTables, loadTables]);
 
   const loadColumns = useCallback(
     async (schema: string | undefined, table: string) => {
@@ -133,7 +132,7 @@ export const BuilderView = memo(function BuilderView({
         setColumns([]);
       }
     }
-  }, [sql, sqlState.table?.schema, sqlState.table?.name, mongoState.collection, loadColumns]);
+  }, [sql, sqlState.table, mongoState.collection, loadColumns]);
 
   // Live-emit the generated query string.
   const generatedQuery = useMemo(() => {
