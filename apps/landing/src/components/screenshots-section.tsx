@@ -1,4 +1,4 @@
-import { AnimatePresence, motion, useScroll, useTransform } from "motion/react";
+import { AnimatePresence, motion, useReducedMotion, useScroll, useTransform } from "motion/react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import Screenshot1 from "@/assets/screenshots/app/1.jpeg";
@@ -13,19 +13,41 @@ interface Screenshot {
 }
 
 const screenshots: Screenshot[] = [
-	{ src: Screenshot1, alt: "COSMQ — Connection list", label: "Connections" },
-	{ src: Screenshot2, alt: "COSMQ — New connection", label: "Add database" },
-	{ src: Screenshot3, alt: "COSMQ — Query editor", label: "Write queries" },
-	{ src: Screenshot4, alt: "COSMQ — Results view", label: "Read results" },
+	{
+		src: Screenshot1,
+		alt: "COSMQ connection list with saved PostgreSQL, MySQL and CockroachDB databases",
+		label: "Connections",
+	},
+	{
+		src: Screenshot2,
+		alt: "New connection form with a connection URL field, colour tags and database type picker",
+		label: "New connection",
+	},
+	{
+		src: Screenshot3,
+		alt: "Connection details for a PostgreSQL database showing host, port and user",
+		label: "Connection details",
+	},
+	{
+		src: Screenshot4,
+		alt: "Settings screen with dark mode, Face ID app lock and auto-rollback timer",
+		label: "Settings",
+	},
 ];
 
-const PARALLAX_OFFSETS = [40, 20, 60, 30] as const;
+// Uneven on purpose: the row drifts apart slightly as it scrolls past.
+const PARALLAX_OFFSETS = [28, 12, 36, 20] as const;
 
+/**
+ * Displays screenshot cards with reduced-motion-aware parallax and an enlarged modal viewer.
+ * Traps focus and locks scrolling while the viewer is open, then restores trigger focus.
+ */
 export function ScreenshotsSection() {
 	const [selectedImage, setSelectedImage] = useState<Screenshot | null>(null);
 	const modalRef = useRef<HTMLDivElement>(null);
 	const triggerRef = useRef<HTMLButtonElement | null>(null);
 	const sectionRef = useRef<HTMLDivElement>(null);
+	const reduceMotion = useReducedMotion();
 
 	const { scrollYProgress } = useScroll({
 		target: sectionRef,
@@ -41,7 +63,7 @@ export function ScreenshotsSection() {
 		document.body.style.overflow = "hidden";
 
 		const closeBtn = modalRef.current.querySelector<HTMLButtonElement>(
-			"button[aria-label='Close modal']",
+			"button[aria-label='Close']",
 		);
 		closeBtn?.focus();
 
@@ -75,75 +97,92 @@ export function ScreenshotsSection() {
 		};
 	}, [selectedImage, closeModal]);
 
+	const amount = reduceMotion ? 0 : 1;
 	const offsets = [
-		useTransform(scrollYProgress, [0, 1], [PARALLAX_OFFSETS[0], -PARALLAX_OFFSETS[0]]),
-		useTransform(scrollYProgress, [0, 1], [PARALLAX_OFFSETS[1], -PARALLAX_OFFSETS[1]]),
-		useTransform(scrollYProgress, [0, 1], [PARALLAX_OFFSETS[2], -PARALLAX_OFFSETS[2]]),
-		useTransform(scrollYProgress, [0, 1], [PARALLAX_OFFSETS[3], -PARALLAX_OFFSETS[3]]),
+		useTransform(
+			scrollYProgress,
+			[0, 1],
+			[PARALLAX_OFFSETS[0] * amount, -PARALLAX_OFFSETS[0] * amount],
+		),
+		useTransform(
+			scrollYProgress,
+			[0, 1],
+			[PARALLAX_OFFSETS[1] * amount, -PARALLAX_OFFSETS[1] * amount],
+		),
+		useTransform(
+			scrollYProgress,
+			[0, 1],
+			[PARALLAX_OFFSETS[2] * amount, -PARALLAX_OFFSETS[2] * amount],
+		),
+		useTransform(
+			scrollYProgress,
+			[0, 1],
+			[PARALLAX_OFFSETS[3] * amount, -PARALLAX_OFFSETS[3] * amount],
+		),
 	];
 
 	return (
-		<section ref={sectionRef} className="relative py-24 md:py-32 px-6 lg:px-10 overflow-hidden">
+		<section
+			ref={sectionRef}
+			id="screenshots"
+			className="relative pt-20 pb-16 md:pt-28 md:pb-20 px-6 lg:px-10 overflow-hidden"
+		>
 			<div className="relative max-w-[1280px] mx-auto">
-				<div className="text-center mb-16">
-					<motion.span
-						initial={{ opacity: 0 }}
-						whileInView={{ opacity: 1 }}
-						viewport={{ once: true }}
-						className="eyebrow mb-6"
-					>
+				<motion.div
+					className="text-center mb-14 md:mb-16"
+					initial={{ opacity: 0, y: 12 }}
+					whileInView={{ opacity: 1, y: 0 }}
+					viewport={{ once: true, margin: "-80px" }}
+					transition={{ duration: 0.6, ease: [0.23, 1, 0.32, 1] }}
+				>
+					<span className="eyebrow mb-6">
 						<span className="eyebrow-num">02</span>
 						<span className="eyebrow-rule" />
 						<span>Inside</span>
-					</motion.span>
-					<motion.h2
-						initial={{ opacity: 0, y: 16 }}
-						whileInView={{ opacity: 1, y: 0 }}
-						viewport={{ once: true }}
-						transition={{ duration: 0.6, delay: 0.1 }}
-						className="text-[clamp(2rem,5vw,3.25rem)] font-bold tracking-[-0.03em] leading-[1.1] text-foreground"
-					>
+					</span>
+					<h2 className="text-[clamp(2rem,5vw,3.25rem)] font-semibold tracking-[-0.035em] leading-[1.08] text-foreground">
 						What it <span className="font-display font-normal">looks like.</span>
-					</motion.h2>
-				</div>
+					</h2>
+				</motion.div>
 
 				<div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-5 max-w-[1080px] mx-auto">
 					{screenshots.map((screenshot, i) => (
-						<motion.button
-							key={screenshot.label}
-							type="button"
-							className="relative cursor-zoom-in group"
-							aria-label={`View ${screenshot.label} screenshot`}
-							style={{ y: offsets[i] }}
-							initial={{ opacity: 0, y: 32 }}
-							whileInView={{ opacity: 1, y: 0 }}
-							viewport={{ once: true }}
-							transition={{
-								duration: 0.6,
-								delay: i * 0.08,
-								ease: [0.22, 1, 0.36, 1],
-							}}
-							whileHover={{ scale: 1.02 }}
-							whileTap={{ scale: 0.98 }}
-							onClick={(e) => {
-								triggerRef.current = e.currentTarget as HTMLButtonElement;
-								setSelectedImage(screenshot);
-							}}
-						>
-							<div className="rounded-2xl overflow-hidden border border-border bg-card shadow-[0_20px_60px_rgba(0,0,0,0.5)] group-hover:border-foreground/15 transition-colors duration-500">
-								<img
-									src={screenshot.src.src}
-									width={screenshot.src.width}
-									height={screenshot.src.height}
-									alt={screenshot.alt}
-									className="w-full h-auto object-cover"
-									loading="lazy"
-								/>
-							</div>
-							<div className="mt-3 text-[12px] text-muted-foreground font-mono tracking-[0.12em] uppercase text-center group-hover:text-foreground transition-colors duration-300">
-								{screenshot.label}
-							</div>
-						</motion.button>
+						// Parallax lives on the wrapper so it never fights the entry animation for `y`.
+						<motion.div key={screenshot.label} style={{ y: offsets[i] }}>
+							<motion.button
+								type="button"
+								className="relative w-full cursor-zoom-in group"
+								aria-label={`Enlarge screenshot: ${screenshot.label}`}
+								initial={{ opacity: 0, y: 24 }}
+								whileInView={{ opacity: 1, y: 0 }}
+								viewport={{ once: true, margin: "-60px" }}
+								transition={{
+									duration: 0.6,
+									delay: i * 0.06,
+									ease: [0.23, 1, 0.32, 1],
+								}}
+								whileHover={{ scale: 1.015 }}
+								whileTap={{ scale: 0.98 }}
+								onClick={(e) => {
+									triggerRef.current = e.currentTarget as HTMLButtonElement;
+									setSelectedImage(screenshot);
+								}}
+							>
+								<div className="rounded-2xl overflow-hidden border border-border bg-card shadow-[0_24px_60px_-12px_hsl(var(--shadow-tint)/0.8)] group-hover:border-foreground/15 transition-colors duration-200">
+									<img
+										src={screenshot.src.src}
+										width={screenshot.src.width}
+										height={screenshot.src.height}
+										alt={screenshot.alt}
+										className="w-full h-auto object-cover"
+										loading="lazy"
+									/>
+								</div>
+								<div className="mt-4 text-[13px] font-medium text-muted-foreground text-center group-hover:text-foreground transition-colors duration-200">
+									{screenshot.label}
+								</div>
+							</motion.button>
+						</motion.div>
 					))}
 				</div>
 			</div>
@@ -152,30 +191,32 @@ export function ScreenshotsSection() {
 				{selectedImage && (
 					<motion.div
 						ref={modalRef}
-						className="fixed inset-0 z-50 flex items-center justify-center p-4"
+						className="fixed inset-0 z-[var(--z-modal)] flex items-center justify-center p-4"
 						style={{ background: "hsl(var(--background) / 0.94)" }}
 						role="dialog"
 						aria-modal="true"
 						aria-label={selectedImage.alt}
 						initial={{ opacity: 0 }}
-						animate={{ opacity: 1 }}
-						exit={{ opacity: 0 }}
-						transition={{ duration: 0.25 }}
+						animate={{ opacity: 1, transition: { duration: 0.2 } }}
+						exit={{ opacity: 0, transition: { duration: 0.15 } }}
 						onClick={closeModal}
 					>
 						<motion.div
 							className="relative"
-							initial={{ scale: 0.9, opacity: 0 }}
-							animate={{ scale: 1, opacity: 1 }}
-							exit={{ scale: 0.92, opacity: 0 }}
-							transition={{ type: "spring", stiffness: 400, damping: 30 }}
+							initial={{ scale: 0.95, opacity: 0 }}
+							animate={{
+								scale: 1,
+								opacity: 1,
+								transition: { type: "spring", duration: 0.35, bounce: 0.1 },
+							}}
+							exit={{ scale: 0.97, opacity: 0, transition: { duration: 0.15, ease: "easeOut" } }}
 							onClick={(e) => e.stopPropagation()}
 						>
 							<button
 								type="button"
-								className="absolute -top-14 right-0 inline-flex items-center justify-center w-11 h-11 rounded-full text-muted-foreground hover:text-foreground hover:bg-card transition-colors"
+								className="absolute -top-14 right-0 inline-flex items-center justify-center w-11 h-11 rounded-full text-muted-foreground hover:text-foreground hover:bg-card active:scale-[0.97] transition-[color,background-color,transform] duration-200"
 								onClick={closeModal}
-								aria-label="Close modal"
+								aria-label="Close"
 							>
 								<svg
 									xmlns="http://www.w3.org/2000/svg"
@@ -198,7 +239,7 @@ export function ScreenshotsSection() {
 								width={selectedImage.src.width}
 								height={selectedImage.src.height}
 								alt={selectedImage.alt}
-								className="max-h-[80vh] w-auto rounded-2xl border border-border shadow-[0_20px_60px_rgba(0,0,0,0.6)]"
+								className="max-h-[80dvh] w-auto rounded-2xl border border-border shadow-[0_32px_80px_-16px_hsl(var(--shadow-tint)/0.9)]"
 							/>
 						</motion.div>
 					</motion.div>

@@ -17,15 +17,10 @@ const ALIEN_PATHS = [
 	"M220.919 193.668C221.638 193.774 223.083 193.854 223.534 194.231C223.129 194.404 223.062 194.461 222.634 194.551C222.09 194.481 221.373 194.487 220.809 194.472L220.558 194.135L220.919 193.668Z",
 ];
 
-function MagneticButton({
-	children,
-	href,
-	variant = "primary",
-}: {
-	children: React.ReactNode;
-	href: string;
-	variant?: "primary" | "secondary";
-}) {
+/**
+ * Renders a link whose spring motion follows the pointer and recenters when it leaves.
+ */
+function MagneticButton({ children, href }: { children: React.ReactNode; href: string }) {
 	const ref = useRef<HTMLAnchorElement>(null);
 	const x = useMotionValue(0);
 	const y = useMotionValue(0);
@@ -47,11 +42,6 @@ function MagneticButton({
 		y.set(0);
 	}, [x, y]);
 
-	const base =
-		variant === "primary"
-			? "bg-foreground text-background hover:bg-foreground/90"
-			: "bg-transparent text-foreground border border-border hover:border-foreground/40";
-
 	return (
 		<motion.a
 			ref={ref}
@@ -59,15 +49,17 @@ function MagneticButton({
 			style={{ x: springX, y: springY }}
 			onMouseMove={handleMouse}
 			onMouseLeave={handleLeave}
-			whileTap={{ scale: 0.96 }}
-			className={`inline-flex items-center justify-center min-h-[48px] px-7 py-3 rounded-full font-medium text-[15px] no-underline transition-colors duration-300 ${base}`}
+			whileTap={{ scale: 0.97 }}
+			className="inline-flex items-center justify-center gap-2 min-h-[48px] px-7 py-3 rounded-full font-medium text-[15px] no-underline bg-foreground text-background hover:bg-foreground/90 transition-colors duration-200"
 		>
 			{children}
 		</motion.a>
 	);
 }
 
-// Single inlined symbol — both layers reference via <use>, no path duplication.
+/**
+ * Builds the decorative alien backdrop, sharing one SVG symbol between glow and crisp layers.
+ */
 function AlienBackground() {
 	return (
 		<div
@@ -77,14 +69,9 @@ function AlienBackground() {
 			{/* Hidden defs */}
 			<svg width="0" height="0" className="absolute" aria-hidden="true">
 				<defs>
-					<linearGradient id="alien-fill-grad" x1="0%" y1="0%" x2="100%" y2="100%">
-						<stop offset="0%" stopColor="hsl(var(--alien-1))" />
-						<stop offset="50%" stopColor="hsl(var(--alien-2))" />
-						<stop offset="100%" stopColor="hsl(var(--alien-3))" />
-					</linearGradient>
 					<symbol id="alien-symbol" viewBox="0 0 510 498">
 						{ALIEN_PATHS.map((d, i) => (
-							<path key={i} d={d} fill="url(#alien-fill-grad)" />
+							<path key={i} d={d} fill="hsl(var(--accent))" />
 						))}
 					</symbol>
 				</defs>
@@ -94,14 +81,13 @@ function AlienBackground() {
 			<div className="absolute w-[40%] aspect-square rounded-full border border-border alien-ring alien-ring-1" />
 			<div className="absolute w-[40%] aspect-square rounded-full border border-border alien-ring alien-ring-2" />
 
-			{/* Breathing wrapper */}
-			<div className="alien-breathe">
+			<div className="alien-stack">
 				{/* Glow layer — blurred, GPU composited */}
 				<div className="absolute alien-fade" style={{ filter: "blur(28px)" }}>
 					<svg
 						aria-hidden="true"
 						viewBox="0 0 510 498"
-						className="w-[55vw] max-w-[640px] h-auto opacity-[0.16]"
+						className="w-[55vw] max-w-[640px] h-auto opacity-[0.14]"
 					>
 						<use href="#alien-symbol" />
 					</svg>
@@ -112,7 +98,7 @@ function AlienBackground() {
 					<svg
 						aria-hidden="true"
 						viewBox="0 0 510 498"
-						className="w-[48vw] max-w-[560px] h-auto opacity-[0.10]"
+						className="w-[48vw] max-w-[560px] h-auto opacity-[0.09]"
 					>
 						<use href="#alien-symbol" />
 					</svg>
@@ -122,33 +108,30 @@ function AlienBackground() {
 			<style>{`
 				.alien-fade {
 					opacity: 0;
-					animation: alien-reveal 1.6s cubic-bezier(0.22, 1, 0.36, 1) 0.3s forwards;
+					animation: alien-reveal 1.6s var(--ease-out) 0.3s forwards;
 				}
 				@keyframes alien-reveal {
-					0% { opacity: 0; transform: scale(0.92); }
+					0% { opacity: 0; transform: scale(0.96); }
 					100% { opacity: 1; transform: scale(1); }
 				}
-				.alien-breathe {
+				.alien-stack {
 					position: absolute;
 					inset: 0;
 					display: flex;
 					align-items: center;
 					justify-content: center;
-					animation: alien-breathe 9s ease-in-out infinite;
-				}
-				@keyframes alien-breathe {
-					0%, 100% { transform: scale(0.97); }
-					50% { transform: scale(1.03); }
 				}
 				@media (prefers-reduced-motion: reduce) {
 					.alien-fade { opacity: 1 !important; animation: none !important; }
-					.alien-breathe { animation: none !important; }
 				}
 			`}</style>
 		</div>
 	);
 }
 
+/**
+ * Introduces COSMQ with animated copy, project and feature links, and the phone preview.
+ */
 export const HeroSection = () => {
 	return (
 		<section className="relative min-h-[100dvh] flex items-center overflow-visible">
@@ -162,11 +145,14 @@ export const HeroSection = () => {
 					<motion.div
 						initial={{ opacity: 0, y: 12, filter: "blur(6px)" }}
 						animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-						transition={{ duration: 0.5, delay: 0.1, ease: [0.22, 1, 0.36, 1] }}
-						className="inline-flex items-center gap-2.5 bg-card/60 text-muted-foreground px-4 py-2 rounded-full text-[13px] font-medium mb-10 border border-border"
+						transition={{ duration: 0.5, delay: 0.1, ease: [0.23, 1, 0.32, 1] }}
+						className="inline-flex items-center gap-2.5 text-muted-foreground text-[13px] font-medium mb-8 md:mb-10"
 					>
-						<span className="w-1.5 h-1.5 rounded-full bg-[hsl(var(--alien-1))] glow-pulse" />
-						Open source · Mobile database client
+						<span
+							className="w-1.5 h-1.5 rounded-[1px] bg-[hsl(var(--accent))]"
+							aria-hidden="true"
+						/>
+						Open source, MIT licensed, for iOS and Android
 					</motion.div>
 
 					<h1 className="text-[clamp(2.8rem,8vw,6rem)] leading-[1.05] mb-8 font-black tracking-[-0.04em] text-foreground">
@@ -174,7 +160,7 @@ export const HeroSection = () => {
 							className="block"
 							initial={{ opacity: 0, y: 32, filter: "blur(8px)" }}
 							animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-							transition={{ duration: 0.7, delay: 0.22, ease: [0.22, 1, 0.36, 1] }}
+							transition={{ duration: 0.7, delay: 0.22, ease: [0.23, 1, 0.32, 1] }}
 						>
 							Your databases.
 						</motion.span>
@@ -182,7 +168,7 @@ export const HeroSection = () => {
 							className="block font-display font-normal text-foreground/95 pb-[0.1em]"
 							initial={{ opacity: 0, y: 32, filter: "blur(8px)" }}
 							animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-							transition={{ duration: 0.7, delay: 0.34, ease: [0.22, 1, 0.36, 1] }}
+							transition={{ duration: 0.7, delay: 0.34, ease: [0.23, 1, 0.32, 1] }}
 						>
 							Everywhere.
 						</motion.span>
@@ -191,25 +177,34 @@ export const HeroSection = () => {
 					<motion.p
 						initial={{ opacity: 0, y: 16, filter: "blur(4px)" }}
 						animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-						transition={{ duration: 0.6, delay: 0.46, ease: [0.22, 1, 0.36, 1] }}
-						className="text-[clamp(1rem,2.2vw,1.2rem)] text-muted-foreground max-w-[520px] mx-auto lg:mx-0 mb-12 leading-[1.6]"
+						transition={{ duration: 0.6, delay: 0.46, ease: [0.23, 1, 0.32, 1] }}
+						className="text-[clamp(1rem,2.2vw,1.2rem)] text-muted-foreground max-w-[32rem] mx-auto lg:mx-0 mb-10 md:mb-12 leading-[1.6]"
 					>
-						Connect directly to PostgreSQL, MySQL, MongoDB and more. Run queries and read results
-						from your phone, with native speed and no proxy in between.
+						Connect straight to PostgreSQL, MySQL, MongoDB and more from your phone. Write a query,
+						read the results, and skip the proxy in between.
 					</motion.p>
 
 					<motion.div
 						initial={{ opacity: 0, y: 16, filter: "blur(4px)" }}
 						animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-						transition={{ duration: 0.5, delay: 0.58, ease: [0.22, 1, 0.36, 1] }}
-						className="flex flex-wrap gap-3 justify-center lg:justify-start"
+						transition={{ duration: 0.5, delay: 0.58, ease: [0.23, 1, 0.32, 1] }}
+						className="flex flex-wrap items-center gap-x-6 gap-y-3 justify-center lg:justify-start"
 					>
-						<MagneticButton href="https://github.com/arioberek/COSMQ" variant="primary">
+						<MagneticButton href="https://github.com/arioberek/COSMQ">
 							View on GitHub
 						</MagneticButton>
-						<MagneticButton href="#features" variant="secondary">
+						<a
+							href="#features"
+							className="group inline-flex items-center gap-1.5 min-h-11 text-[15px] font-medium text-muted-foreground no-underline hover:text-foreground transition-colors duration-200"
+						>
 							How it works
-						</MagneticButton>
+							<span
+								aria-hidden="true"
+								className="transition-transform duration-200 ease-out group-hover:translate-y-0.5"
+							>
+								↓
+							</span>
+						</a>
 					</motion.div>
 				</div>
 

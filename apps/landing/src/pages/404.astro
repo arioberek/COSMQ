@@ -1,0 +1,27 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout title="Page not found — COSMQ" description="This page doesn't exist. Head back to the COSMQ homepage.">
+	<main id="main" class="relative flex-1 flex items-center px-6 lg:px-10 min-h-[100dvh] overflow-hidden">
+		<div class="absolute inset-0 aurora-bg pointer-events-none" aria-hidden="true"></div>
+		<div class="absolute inset-0 grid-pattern opacity-30 pointer-events-none" aria-hidden="true"></div>
+		<div class="relative max-w-[1280px] w-full mx-auto">
+			<span class="eyebrow mb-6">
+				<span class="eyebrow-num">404</span>
+				<span class="eyebrow-rule"></span>
+				<span>Not found</span>
+			</span>
+			<h1 class="text-[clamp(2.5rem,7vw,5rem)] font-semibold tracking-[-0.04em] leading-[1.02] text-foreground mb-6">
+				0 rows returned.
+				<span class="font-display font-normal block text-foreground/90">This page isn't here.</span>
+			</h1>
+			<p class="text-muted-foreground text-base md:text-lg leading-[1.7] max-w-[32rem] mb-10">
+				The link may be old, or the address has a typo. The homepage has everything COSMQ does.
+			</p>
+			<a href="/" class="inline-flex items-center justify-center min-h-12 px-7 rounded-full font-medium text-[15px] no-underline bg-foreground text-background hover:bg-foreground/90 active:scale-[0.97] transition-[background-color,transform] duration-200">
+				Back to the homepage
+			</a>
+		</div>
+	</main>
+</Layout>

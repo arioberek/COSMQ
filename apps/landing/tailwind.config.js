@@ -2,6 +2,8 @@
 export default {
 	darkMode: ["class"],
 	content: ["./src/**/*.{astro,html,js,jsx,md,mdx,svelte,ts,tsx,vue}"],
+	// Gate hover: styles behind (hover: hover) so taps on touch screens don't leave them stuck.
+	future: { hoverOnlyWhenSupported: true },
 	theme: {
 		extend: {
 			fontFamily: {

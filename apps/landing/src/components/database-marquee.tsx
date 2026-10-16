@@ -13,33 +13,43 @@ const databases = [
 // Duplicated track for seamless infinite loop.
 const track = [...databases, ...databases];
 
+/**
+ * Displays supported databases in a looping track with a separate screen reader list.
+ */
 export function DatabaseMarquee() {
 	return (
-		<section className="relative py-24 md:py-32 overflow-hidden">
+		<section id="databases" className="relative pt-20 pb-24 md:pt-24 md:pb-32 overflow-hidden">
 			<div className="absolute top-0 left-1/2 -translate-x-1/2 w-[200px] h-px bg-gradient-to-r from-transparent via-border to-transparent" />
 
 			<motion.div
 				className="text-center mb-14 md:mb-16 px-6"
-				initial={{ opacity: 0, y: 16 }}
+				initial={{ opacity: 0, y: 12 }}
 				whileInView={{ opacity: 1, y: 0 }}
-				viewport={{ once: true }}
-				transition={{ duration: 0.6 }}
+				viewport={{ once: true, margin: "-80px" }}
+				transition={{ duration: 0.6, ease: [0.23, 1, 0.32, 1] }}
 			>
 				<span className="eyebrow mb-6 justify-center">
 					<span className="eyebrow-num">03</span>
 					<span className="eyebrow-rule" />
 					<span>Databases</span>
 				</span>
-				<h2 className="text-[clamp(2rem,5vw,3.25rem)] font-bold tracking-[-0.03em] leading-[1.1] text-foreground mb-4">
+				<h2 className="text-[clamp(2rem,5vw,3.25rem)] font-semibold tracking-[-0.035em] leading-[1.08] text-foreground mb-4">
 					Talks to <span className="font-display font-normal">your stack.</span>
 				</h2>
-				<p className="text-muted-foreground text-base max-w-[460px] mx-auto leading-relaxed">
-					First-class support for the databases that already run your app.
+				<p className="text-muted-foreground text-base max-w-[30rem] mx-auto leading-relaxed">
+					Paste the connection string you already use. COSMQ handles the protocol.
 				</p>
 			</motion.div>
 
-			<div className="db-marquee-mask">
-				<ul className="db-marquee-track" aria-hidden="false">
+			<ul className="sr-only">
+				{databases.map((db) => (
+					<li key={db.name}>{db.name}</li>
+				))}
+			</ul>
+
+			{/* Visual loop only; the list above is what assistive tech reads. */}
+			<div className="db-marquee-mask" aria-hidden="true">
+				<ul className="db-marquee-track">
 					{track.map((db, i) => (
 						<li key={`${db.name}-${i}`} className="db-marquee-item">
 							<div className="db-marquee-icon">
@@ -50,7 +60,7 @@ export function DatabaseMarquee() {
 									alt=""
 								/>
 							</div>
-							<span className="font-mono text-[12px] md:text-[13px] tracking-[0.16em] uppercase text-muted-foreground whitespace-nowrap">
+							<span className="text-[15px] md:text-base font-medium tracking-[-0.01em] text-muted-foreground whitespace-nowrap">
 								{db.name}
 							</span>
 						</li>

@@ -7,21 +7,29 @@ import AlienLogo from '../assets/logos/alien.svg';
 import TextLogo from '../assets/logos/text.svg';
 import { HeroSection } from '../components/hero-section';
 import { Image } from 'astro:assets';
+
+const repo = 'https://github.com/arioberek/COSMQ';
+const navLink =
+	'inline-flex items-center min-h-11 px-3 text-muted-foreground no-underline text-[14px] font-medium transition-colors duration-200 hover:text-foreground';
+const footerLink =
+	'inline-flex items-center min-h-11 px-3 text-muted-foreground no-underline text-[13px] hover:text-foreground transition-colors duration-200';
 ---
 
 <Layout>
-	<header class="fixed top-0 left-0 right-0 z-[100] border-b border-border bg-background/85">
-		<nav class="max-w-[1400px] mx-auto px-6 lg:px-10 h-16 flex justify-between items-center">
-			<a href="/" class="inline-flex items-center min-h-11 no-underline group">
-				<Image src={AlienLogo} alt="COSMQ" width={28} height={28} class="md:hidden block opacity-90 group-hover:opacity-100 transition-opacity" />
-				<Image src={TextLogo} alt="COSMQ" class="h-7 w-auto opacity-90 hidden md:block group-hover:opacity-100 transition-opacity" />
+	<header class="fixed top-0 left-0 right-0 z-[var(--z-header)] border-b border-border bg-background/75 backdrop-blur-md backdrop-saturate-150">
+		<nav aria-label="Primary" class="max-w-[1400px] mx-auto px-6 lg:px-10 h-16 flex justify-between items-center">
+			<a href="/" class="inline-flex items-center min-h-11 no-underline group" aria-label="COSMQ home">
+				<Image src={AlienLogo} alt="" width={28} height={28} class="md:hidden block opacity-90 group-hover:opacity-100 transition-opacity duration-200" />
+				<Image src={TextLogo} alt="" class="h-7 w-auto opacity-90 hidden md:block group-hover:opacity-100 transition-opacity duration-200" />
 			</a>
 			<div class="flex gap-1 md:gap-2 items-center">
-				<a href="#features" class="inline-flex items-center min-h-11 px-3 text-muted-foreground no-underline text-[13px] font-medium tracking-wide uppercase transition-colors duration-300 hover:text-foreground">Features</a>
-				<a href="https://github.com/arioberek/COSMQ" class="inline-flex items-center min-h-11 px-5 text-foreground no-underline text-[13px] font-semibold tracking-wide rounded-full bg-card border border-border hover:bg-secondary hover:border-foreground/20 transition-colors duration-300">GitHub</a>
+				<a href="#features" class={`${navLink} hidden sm:inline-flex`}>Features</a>
+				<a href="#screenshots" class={`${navLink} hidden sm:inline-flex`}>Screenshots</a>
+				<a href={repo} class="inline-flex items-center min-h-11 ml-1 px-5 text-foreground no-underline text-[14px] font-medium rounded-full border border-border hover:bg-secondary hover:border-foreground/20 active:scale-[0.97] transition-[background-color,border-color,transform] duration-200">GitHub</a>
 			</div>
 		</nav>
 	</header>
+
 	<main id="main" class="w-full overflow-x-hidden">
 		<HeroSection client:idle />
 
@@ -31,20 +39,53 @@ import { Image } from 'astro:assets';
 
 		<DatabaseMarquee client:visible />
 
-		<footer class="relative py-16 px-6 border-t border-border">
-			<div class="max-w-[1400px] mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
-				<div class="flex items-center gap-3">
-					<Image src={AlienLogo} alt="" width={22} height={22} class="opacity-50" aria-hidden="true" />
-					<p class="m-0 text-muted-foreground text-sm tracking-wide">&copy; {new Date().getFullYear()} COSMQ · Built by <a href="https://arielton.com" class="inline-flex items-center min-h-11 text-foreground no-underline hover:text-foreground/80 transition-colors duration-300">Arielton Oberek</a></p>
+		<section aria-labelledby="get-it" class="relative px-6 lg:px-10 pt-24 pb-28 md:pt-32 md:pb-40 border-t border-border overflow-hidden">
+			<div class="absolute inset-0 aurora-bg opacity-80 pointer-events-none" aria-hidden="true"></div>
+			<div class="relative max-w-[1280px] mx-auto grid md:grid-cols-12 gap-10 md:gap-10 items-end">
+				<div class="md:col-span-7">
+					<span class="eyebrow mb-6">
+						<span class="eyebrow-num">04</span>
+						<span class="eyebrow-rule"></span>
+						<span>Get it</span>
+					</span>
+					<h2 id="get-it" class="text-[clamp(2.25rem,5.5vw,4rem)] font-semibold tracking-[-0.04em] leading-[1.02] text-foreground">
+						Read the source. <span class="font-display font-normal block">Then point it at prod.</span>
+					</h2>
 				</div>
-				<nav aria-label="Footer">
-					<ul class="flex flex-wrap gap-2 md:gap-4 list-none m-0 p-0 justify-center">
-						<li><a href="https://github.com/arioberek/COSMQ" class="inline-flex items-center min-h-11 px-3 text-muted-foreground no-underline text-[13px] tracking-wide hover:text-foreground transition-colors duration-300">GitHub</a></li>
-						<li><a href="https://github.com/arioberek/COSMQ/blob/main/LICENSE" class="inline-flex items-center min-h-11 px-3 text-muted-foreground no-underline text-[13px] tracking-wide hover:text-foreground transition-colors duration-300">License</a></li>
-						<li><a href="https://github.com/arioberek/COSMQ/issues" class="inline-flex items-center min-h-11 px-3 text-muted-foreground no-underline text-[13px] tracking-wide hover:text-foreground transition-colors duration-300">Issues</a></li>
-					</ul>
-				</nav>
+				<div class="md:col-span-5 md:pb-2">
+					<p class="text-muted-foreground text-base leading-[1.7] max-w-[28rem] mb-8">
+						COSMQ is MIT licensed and built in the open. Build it from source today, or watch the
+						repo to hear about store releases.
+					</p>
+					<div class="flex flex-wrap items-center gap-x-6 gap-y-3">
+						<a href={repo} class="inline-flex items-center justify-center min-h-12 px-7 rounded-full font-medium text-[15px] no-underline bg-foreground text-background hover:bg-foreground/90 active:scale-[0.97] transition-[background-color,transform] duration-200">
+							Star on GitHub
+						</a>
+						<a href={`${repo}/issues`} class="group inline-flex items-center gap-1.5 min-h-11 text-[15px] font-medium text-muted-foreground no-underline hover:text-foreground transition-colors duration-200">
+							Report an issue
+							<span aria-hidden="true" class="transition-transform duration-200 ease-out group-hover:translate-x-0.5">→</span>
+						</a>
+					</div>
+				</div>
 			</div>
-		</footer>
+		</section>
 	</main>
+
+	<footer class="relative pt-10 pb-12 px-6 lg:px-10 border-t border-border">
+		<div class="max-w-[1400px] mx-auto flex flex-col md:flex-row items-center justify-between gap-4 md:gap-6">
+			<div class="flex items-center gap-3">
+				<Image src={AlienLogo} alt="" width={20} height={20} aria-hidden="true" />
+				<p class="m-0 text-muted-foreground text-sm">
+					&copy; {new Date().getFullYear()} COSMQ · Built by <a href="https://arielton.com" class="text-foreground no-underline underline-offset-4 hover:underline">Arielton Oberek</a>
+				</p>
+			</div>
+			<nav aria-label="Footer">
+				<ul class="flex flex-wrap gap-1 md:gap-2 list-none m-0 p-0 justify-center">
+					<li><a href={repo} class={footerLink}>GitHub</a></li>
+					<li><a href={`${repo}/blob/main/LICENSE`} class={footerLink}>MIT license</a></li>
+					<li><a href={`${repo}/issues`} class={footerLink}>Issues</a></li>
+				</ul>
+			</nav>
+		</div>
+	</footer>
 </Layout>
