@@ -1,9 +1,10 @@
 import { Ionicons } from "@expo/vector-icons";
 import { memo, useEffect, useState } from "react";
 import { Pressable } from "react-native";
-import { Text, useTheme as useTamaguiTheme, XStack } from "tamagui";
+import { useTheme as useTamaguiTheme, XStack } from "tamagui";
 import { useHaptic } from "../../lib/haptics";
 import type { ColumnInfo } from "../../lib/types";
+import { AppText } from "../ui/Text";
 import {
   cellKind,
   formatDate,
@@ -18,13 +19,25 @@ type CellValueProps = {
   value: unknown;
   numberOfLines?: number;
   onJsonPress?: (value: unknown, column: ColumnInfo) => void;
+  /** Text alignment for multi-line values. */
+  textAlign?: "left" | "right";
 };
+
+/** Tertiary italic "NULL", shared by cards, table and detail views. */
+export const NullValue = memo(function NullValue() {
+  return (
+    <AppText variant="code" tone="tertiary" fontStyle="italic">
+      NULL
+    </AppText>
+  );
+});
 
 export const CellValue = memo(function CellValue({
   column,
   value,
   numberOfLines = 1,
   onJsonPress,
+  textAlign,
 }: CellValueProps) {
   const tamagui = useTamaguiTheme();
   const haptic = useHaptic();
@@ -40,22 +53,21 @@ export const CellValue = memo(function CellValue({
     return () => clearTimeout(id);
   }, [showExact]);
 
-  if (kind === "null") {
-    return (
-      <Text color="$placeholderColor" fontSize={13}>
-        —
-      </Text>
-    );
-  }
+  if (kind === "null") return <NullValue />;
 
   if (kind === "boolean") {
     const truthy = truthyBoolean(value);
     return (
-      <Ionicons
-        name={truthy ? "checkmark-circle" : "close-circle"}
-        size={16}
-        color={truthy ? tamagui.success.val : tamagui.placeholderColor.val}
-      />
+      <XStack alignItems="center" gap={4}>
+        <Ionicons
+          name={truthy ? "checkmark-circle" : "close-circle"}
+          size={16}
+          color={truthy ? tamagui.success.val : tamagui.textSubtle.val}
+        />
+        <AppText variant="code" tone="secondary">
+          {truthy ? "true" : "false"}
+        </AppText>
+      </XStack>
     );
   }
 
@@ -63,9 +75,14 @@ export const CellValue = memo(function CellValue({
     const n = typeof value === "number" ? value : Number(value);
     if (!Number.isFinite(n)) {
       return (
-        <Text color="$color" fontSize={13} numberOfLines={numberOfLines} selectable>
+        <AppText
+          variant="code"
+          numberOfLines={numberOfLines}
+          style={textAlign ? { textAlign } : undefined}
+          selectable
+        >
           {String(value)}
-        </Text>
+        </AppText>
       );
     }
     const display = showExact ? formatNumberExact(n) : formatNumberCompact(n);
@@ -80,54 +97,69 @@ export const CellValue = memo(function CellValue({
         }}
         delayLongPress={300}
       >
-        <Text
-          color="$color"
-          fontSize={13}
-          fontFamily="$mono"
+        <AppText
+          variant="code"
           fontVariant={["tabular-nums"]}
           numberOfLines={numberOfLines}
+          style={textAlign ? { textAlign } : undefined}
           selectable
         >
           {display}
-        </Text>
+        </AppText>
       </Pressable>
     );
   }
 
   if (kind === "date") {
     return (
-      <Text color="$color" fontSize={13} numberOfLines={numberOfLines} selectable>
+      <AppText
+        variant="code"
+        numberOfLines={numberOfLines}
+        style={textAlign ? { textAlign } : undefined}
+        selectable
+      >
         {formatDate(value)}
-      </Text>
+      </AppText>
     );
   }
 
   if (kind === "json") {
     return (
-      <Pressable onPress={() => onJsonPress?.(value, column)} hitSlop={6}>
+      <Pressable
+        onPress={() => onJsonPress?.(value, column)}
+        hitSlop={8}
+        accessibilityRole="button"
+        accessibilityLabel={`Open ${column.name} JSON`}
+      >
         <XStack
           alignItems="center"
           gap={4}
           paddingHorizontal={6}
           paddingVertical={2}
-          backgroundColor="$surfaceMuted"
-          borderRadius="$xs"
+          backgroundColor="$fill"
+          borderRadius="$sm"
           alignSelf="flex-start"
+          style={{ borderCurve: "continuous" }}
         >
-          <Text color="$placeholderColor" fontSize={11} fontFamily="$mono">
+          <AppText variant="code" tone="secondary">
             {"{…}"}
-          </Text>
-          <Text color="$placeholderColor" fontSize={11}>
+          </AppText>
+          <AppText variant="caption2" tone="secondary" emphasized>
             JSON
-          </Text>
+          </AppText>
         </XStack>
       </Pressable>
     );
   }
 
   return (
-    <Text color="$color" fontSize={13} numberOfLines={numberOfLines} selectable>
+    <AppText
+      variant="code"
+      numberOfLines={numberOfLines}
+      style={textAlign ? { textAlign } : undefined}
+      selectable
+    >
       {previewString(value, 200)}
-    </Text>
+    </AppText>
   );
 });

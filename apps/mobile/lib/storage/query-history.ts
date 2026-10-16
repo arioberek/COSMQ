@@ -1,4 +1,4 @@
-import * as SecureStore from "expo-secure-store";
+import * as SecureStore from "./secure-store";
 
 const HISTORY_KEY = "cosmq_query_history";
 const MAX_HISTORY = 50;

@@ -1,363 +1,241 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Link, router, Stack } from "expo-router";
-import { memo, useCallback, useState } from "react";
-import { FlatList, Pressable, View } from "react-native";
-import Animated, {
-  FadeIn,
-  FadeOutLeft,
-  LinearTransition,
-  useAnimatedStyle,
-  useReducedMotion,
-  useSharedValue,
-  withTiming,
-} from "react-native-reanimated";
-import { Text, useTheme, XStack, YStack } from "tamagui";
+import { router, Stack } from "expo-router";
+import { memo, useCallback, useMemo } from "react";
+import { Alert, Pressable, ScrollView } from "react-native";
+import { useTheme, XStack, YStack } from "tamagui";
 import AlienLogo from "../assets/logos/alien.svg";
 import { DatabaseIcon } from "../components/database-icon";
 import { SwipeableRow } from "../components/swipeable-row";
-import { Dialog } from "../components/ui/Dialog";
+import { AppText, Button, EmptyState, ListRow, ListSection } from "../components/ui";
+import { DATABASE_LABELS } from "../lib/database-meta";
 import { deleteConnection, getConnections } from "../lib/storage/connections";
 import { CONNECTION_COLORS, type ConnectionConfig } from "../lib/types";
 import { useConnectionStore } from "../stores/connection";
 
-type ConnectionItemProps = {
-  connection: ConnectionConfig;
-  onEdit: (connection: ConnectionConfig) => void;
-  onDelete: (connection: ConnectionConfig) => void;
-};
+const describeTarget = (connection: ConnectionConfig) =>
+  connection.type === "sqlite"
+    ? connection.database
+    : connection.port
+      ? `${connection.host}:${connection.port}`
+      : connection.host;
 
-// Static status indicator. The previous infinite-pulse halo (1.0 → 2.4 scale
-// looping forever) drew the eye on every connected card and looked busy when
-// multiple connections were active; a calm dot communicates state without
-// the visual noise.
-const StatusPulse = memo(function StatusPulse({ isConnected }: { isConnected: boolean }) {
+const ConnectionTile = memo(function ConnectionTile({
+  connection,
+}: {
+  connection: ConnectionConfig;
+}) {
   const theme = useTheme();
-  const dotColor = isConnected ? theme.success.val : theme.disabled.val;
+  const tag = CONNECTION_COLORS.includes(connection.color as (typeof CONNECTION_COLORS)[number])
+    ? (connection.color as string)
+    : null;
 
   return (
-    <View style={{ width: 14, height: 14, alignItems: "center", justifyContent: "center" }}>
-      <View
-        style={{
-          width: 6,
-          height: 6,
-          borderRadius: 3,
-          backgroundColor: dotColor,
-        }}
-      />
-    </View>
+    <YStack
+      width={36}
+      height={36}
+      borderRadius={9}
+      style={{ borderCurve: "continuous" }}
+      alignItems="center"
+      justifyContent="center"
+      backgroundColor={tag ?? "$fill"}
+    >
+      <DatabaseIcon type={connection.type} size={20} color={tag ? "#ffffff" : theme.color.val} />
+    </YStack>
   );
 });
 
-const ConnectionItem = memo(function ConnectionItem({
+type ConnectionRowProps = {
+  connection: ConnectionConfig;
+  isConnected: boolean;
+  onDelete: (connection: ConnectionConfig) => void;
+  showSeparator?: boolean;
+};
+
+const ConnectionRow = memo(function ConnectionRow({
   connection,
-  onEdit,
+  isConnected,
   onDelete,
-}: ConnectionItemProps) {
+  showSeparator,
+}: ConnectionRowProps) {
   const theme = useTheme();
-  const { activeConnections } = useConnectionStore();
-  const activeConnection = activeConnections.get(connection.id);
-  const isConnected = activeConnection?.state.status === "connected";
-  const reducedMotion = useReducedMotion();
 
-  const scale = useSharedValue(1);
-  const cardStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }],
-  }));
-
-  const handlePress = useCallback(() => {
-    if (isConnected) {
-      router.push(`/query/${connection.id}`);
-    } else {
-      router.push(`/connection/${connection.id}`);
-    }
+  const open = useCallback(() => {
+    router.push(isConnected ? `/query/${connection.id}` : `/connection/${connection.id}`);
   }, [connection.id, isConnected]);
-
-  const handleEdit = useCallback(() => onEdit(connection), [onEdit, connection]);
-  const handleDelete = useCallback(() => onDelete(connection), [onDelete, connection]);
-
-  const hasColorTag =
-    Boolean(connection.color) &&
-    CONNECTION_COLORS.includes(connection.color as (typeof CONNECTION_COLORS)[number]);
 
   return (
     <SwipeableRow
       rightActions={[
         {
-          icon: "pencil",
-          color: theme.primary.val,
-          onPress: handleEdit,
+          label: "Edit",
+          color: theme.textSubtle.val,
+          onPress: () => router.push(`/connection/new?edit=${connection.id}`),
         },
-        {
-          icon: "trash",
-          color: theme.danger.val,
-          onPress: handleDelete,
-        },
+        { label: "Delete", color: theme.danger.val, onPress: () => onDelete(connection) },
       ]}
     >
-      <Animated.View style={reducedMotion ? undefined : cardStyle}>
-        <Pressable
-          onPressIn={() => {
-            if (!reducedMotion) {
-              scale.value = withTiming(0.98, { duration: 90 });
-            }
-          }}
-          onPressOut={() => {
-            if (!reducedMotion) {
-              scale.value = withTiming(1, { duration: 140 });
-            }
-          }}
-          onPress={handlePress}
-          style={{
-            borderRadius: 14,
-            borderWidth: 1,
-            borderColor: theme.cardBorder.val,
-            backgroundColor: theme.surface.val,
-          }}
-        >
-          <XStack alignItems="center" padding="$md" gap="$md">
-            <YStack
-              width={44}
-              height={44}
-              borderRadius={10}
-              justifyContent="center"
-              alignItems="center"
-              backgroundColor={hasColorTag ? `${connection.color}22` : theme.surfaceAlt.val}
-              borderWidth={1}
-              borderColor={hasColorTag ? `${connection.color}55` : theme.borderColor.val}
-            >
-              <DatabaseIcon
-                type={connection.type}
-                size={22}
-                color={hasColorTag ? (connection.color as string) : theme.color.val}
-              />
-            </YStack>
-            <YStack flex={1} minWidth={0}>
-              <Text
-                color="$color"
-                fontSize={16}
-                fontWeight="600"
-                letterSpacing={-0.1}
-                numberOfLines={1}
-              >
-                {connection.name}
-              </Text>
-              <Text
-                color="$textSubtle"
-                fontSize={12}
-                marginTop={2}
-                fontFamily="$mono"
-                numberOfLines={1}
-                ellipsizeMode="middle"
-              >
-                {connection.host}:{connection.port}/{connection.database}
-              </Text>
-            </YStack>
-            <XStack alignItems="center" gap={6}>
-              <StatusPulse isConnected={isConnected} />
-              <Text color="$textSubtle" fontSize={11} fontWeight="500">
-                {isConnected ? "Connected" : "Idle"}
-              </Text>
-            </XStack>
-          </XStack>
-        </Pressable>
-      </Animated.View>
+      <YStack backgroundColor="$surface">
+        <ListRow
+          icon={<ConnectionTile connection={connection} />}
+          title={
+            <AppText variant="body" emphasized numberOfLines={1}>
+              {connection.name}
+            </AppText>
+          }
+          subtitle={
+            <AppText variant="footnote" tone="secondary" numberOfLines={1} ellipsizeMode="middle">
+              {DATABASE_LABELS[connection.type]} · {describeTarget(connection)}
+            </AppText>
+          }
+          value={
+            isConnected ? (
+              <XStack alignItems="center" gap={6}>
+                <YStack width={7} height={7} borderRadius={4} backgroundColor="$successLight" />
+                <AppText variant="footnote" tone="secondary">
+                  Connected
+                </AppText>
+              </XStack>
+            ) : undefined
+          }
+          accessory="chevron"
+          onPress={open}
+          showSeparator={showSeparator}
+          accessibilityLabel={`${connection.name}, ${DATABASE_LABELS[connection.type]}${isConnected ? ", connected" : ""}`}
+        />
+      </YStack>
     </SwipeableRow>
   );
 });
 
+function HeaderButton({
+  icon,
+  label,
+  onPress,
+}: {
+  icon: keyof typeof Ionicons.glyphMap;
+  label: string;
+  onPress: () => void;
+}) {
+  const theme = useTheme();
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      hitSlop={8}
+      style={({ pressed }) => ({ padding: 4, opacity: pressed ? 0.5 : 1 })}
+    >
+      <Ionicons name={icon} size={24} color={theme.accent.val} />
+    </Pressable>
+  );
+}
+
 export default function HomeScreen() {
   const theme = useTheme();
   const queryClient = useQueryClient();
-  const reducedMotion = useReducedMotion();
-  const [connectionToDelete, setConnectionToDelete] = useState<ConnectionConfig | null>(null);
-  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const { activeConnections } = useConnectionStore();
 
-  const { data: connections = [] } = useQuery({
+  const { data: connections = [], isLoading } = useQuery({
     queryKey: ["connections"],
     queryFn: getConnections,
   });
 
-  const handleEdit = useCallback((connection: ConnectionConfig) => {
-    router.push(`/connection/new?edit=${connection.id}`);
-  }, []);
-
-  const handleDeleteRequest = useCallback((connection: ConnectionConfig) => {
-    setConnectionToDelete(connection);
-  }, []);
-
-  const handleDeleteConfirm = useCallback(async () => {
-    if (!connectionToDelete) return;
-
-    try {
-      await deleteConnection(connectionToDelete.id);
-      await queryClient.invalidateQueries({ queryKey: ["connections"] });
-      setConnectionToDelete(null);
-    } catch (error) {
-      console.error("Failed to delete connection:", error);
-      const message = error instanceof Error ? error.message : "Unknown error";
-      setDeleteError(`Could not delete "${connectionToDelete.name}": ${message}`);
-    }
-  }, [connectionToDelete, queryClient]);
-
-  const renderItem = useCallback(
-    ({ item }: { item: ConnectionConfig; index: number }) => (
-      <Animated.View
-        entering={reducedMotion ? undefined : FadeIn.duration(180)}
-        exiting={reducedMotion ? undefined : FadeOutLeft.duration(140)}
-        layout={reducedMotion ? undefined : LinearTransition.duration(200)}
-      >
-        <ConnectionItem connection={item} onEdit={handleEdit} onDelete={handleDeleteRequest} />
-      </Animated.View>
-    ),
-    [reducedMotion, handleEdit, handleDeleteRequest],
+  const isConnected = useCallback(
+    (id: string) => activeConnections.get(id)?.state.status === "connected",
+    [activeConnections],
   );
 
+  const [connected, saved] = useMemo(() => {
+    const live = connections.filter((c) => isConnected(c.id));
+    const rest = connections.filter((c) => !isConnected(c.id));
+    return [live, rest];
+  }, [connections, isConnected]);
+
+  const handleDelete = useCallback(
+    (connection: ConnectionConfig) => {
+      Alert.alert(
+        `Delete “${connection.name}”?`,
+        "The saved connection and its password will be removed from this device.",
+        [
+          { text: "Cancel", style: "cancel" },
+          {
+            text: "Delete",
+            style: "destructive",
+            onPress: async () => {
+              try {
+                await deleteConnection(connection.id);
+                await queryClient.invalidateQueries({ queryKey: ["connections"] });
+              } catch (error) {
+                const message = error instanceof Error ? error.message : "Unknown error";
+                Alert.alert("Couldn’t Delete Connection", message);
+              }
+            },
+          },
+        ],
+      );
+    },
+    [queryClient],
+  );
+
+  const addConnection = useCallback(() => router.push("/connection/new"), []);
+
   return (
-    <YStack flex={1} backgroundColor="$background">
+    <>
       <Stack.Screen
         options={{
-          headerTransparent: true,
-          headerStyle: {
-            backgroundColor: "transparent",
-          },
-          headerRight: () => (
-            <Pressable
+          headerLeft: () => (
+            <HeaderButton
+              icon="settings-outline"
+              label="Settings"
               onPress={() => router.push("/settings")}
-              style={({ pressed }) => [{ padding: 6 }, pressed && { opacity: 0.6 }]}
-            >
-              <Ionicons name="settings-outline" size={22} color={theme.color.val} />
-            </Pressable>
+            />
+          ),
+          headerRight: () => (
+            <HeaderButton icon="add" label="New connection" onPress={addConnection} />
           ),
         }}
       />
-
-      {connections.length === 0 ? (
-        <YStack flex={1} justifyContent="center" alignItems="center" padding="$xl" paddingTop={100}>
-          <YStack
-            width={96}
-            height={96}
-            borderRadius={48}
-            justifyContent="center"
-            alignItems="center"
-            marginBottom="$lg"
-            backgroundColor="$surfaceAlt"
-            borderWidth={1}
-            borderColor="$borderColor"
-          >
-            <AlienLogo width={56} height={56} />
+      <ScrollView
+        contentInsetAdjustmentBehavior="automatic"
+        contentContainerStyle={{ padding: 16, paddingBottom: 48, gap: 28, flexGrow: 1 }}
+      >
+        {isLoading ? null : connections.length === 0 ? (
+          <YStack flex={1} justifyContent="center" paddingBottom="$xxl">
+            <EmptyState
+              icon={<AlienLogo width={88} height={88} color={theme.accent.val} />}
+              title="No Connections"
+              message="Add a PostgreSQL, MySQL, MariaDB, CockroachDB, MongoDB or SQLite database to start querying."
+              action={<Button onPress={addConnection}>Add Connection</Button>}
+            />
           </YStack>
-          <Text
-            color="$color"
-            fontSize={22}
-            fontWeight="600"
-            marginBottom="$xs"
-            letterSpacing={-0.3}
-          >
-            No connections yet
-          </Text>
-          <Text
-            color="$textSubtle"
-            fontSize={14}
-            textAlign="center"
-            marginBottom="$xl"
-            lineHeight={20}
-            maxWidth={300}
-          >
-            Add a database to start querying. Paste a connection URL or fill the fields manually.
-          </Text>
-          <Link href="/connection/new" asChild>
-            <Pressable
-              style={({ pressed }) => [
-                {
-                  borderRadius: 12,
-                  backgroundColor: theme.primary.val,
-                  paddingHorizontal: 24,
-                  paddingVertical: 12,
-                },
-                pressed && { opacity: 0.9 },
-              ]}
-            >
-              <Text color="$textOnPrimary" fontSize={15} fontWeight="600">
-                Add connection
-              </Text>
-            </Pressable>
-          </Link>
-        </YStack>
-      ) : (
-        <>
-          <Animated.View
-            entering={reducedMotion ? undefined : FadeIn.duration(120)}
-            style={{
-              paddingHorizontal: 20,
-              paddingTop: 110,
-              paddingBottom: 12,
-            }}
-          >
-            <Text color="$color" fontSize={26} fontWeight="600" letterSpacing={-0.4}>
-              Connections
-            </Text>
-            <Text color="$textSubtle" fontSize={13} marginTop={2}>
-              {connections.length} {connections.length === 1 ? "database" : "databases"}
-            </Text>
-          </Animated.View>
-          <FlatList
-            data={connections}
-            keyExtractor={(item) => item.id}
-            renderItem={renderItem}
-            contentContainerStyle={{ padding: 16, gap: 10, paddingBottom: 100 }}
-            showsVerticalScrollIndicator={false}
-          />
-          <Link href="/connection/new" asChild>
-            <Pressable
-              style={({ pressed }) => [
-                {
-                  position: "absolute",
-                  bottom: 28,
-                  right: 20,
-                  width: 52,
-                  height: 52,
-                  borderRadius: 26,
-                  backgroundColor: theme.primary.val,
-                  justifyContent: "center",
-                  alignItems: "center",
-                  shadowColor: "#000",
-                  shadowOffset: { width: 0, height: 4 },
-                  shadowOpacity: 0.25,
-                  shadowRadius: 8,
-                  elevation: 6,
-                },
-                pressed && { opacity: 0.9, transform: [{ scale: 0.96 }] },
-              ]}
-            >
-              <Ionicons name="add" size={26} color={theme.textOnPrimary.val} />
-            </Pressable>
-          </Link>
-        </>
-      )}
-
-      <Dialog
-        open={connectionToDelete !== null}
-        onOpenChange={(open) => {
-          if (!open) setConnectionToDelete(null);
-        }}
-        title="Delete connection"
-        description={`Delete "${connectionToDelete?.name}"? This cannot be undone.`}
-        confirmText="Delete"
-        cancelText="Cancel"
-        variant="danger"
-        onConfirm={handleDeleteConfirm}
-      />
-
-      <Dialog
-        open={deleteError !== null}
-        onOpenChange={(open) => {
-          if (!open) setDeleteError(null);
-        }}
-        title="Delete failed"
-        description={deleteError ?? ""}
-        primaryAction={{ label: "OK", onPress: () => setDeleteError(null) }}
-      />
-    </YStack>
+        ) : (
+          <>
+            {connected.length > 0 ? (
+              <ListSection title="Connected">
+                {connected.map((c) => (
+                  <ConnectionRow key={c.id} connection={c} isConnected onDelete={handleDelete} />
+                ))}
+              </ListSection>
+            ) : null}
+            {saved.length > 0 ? (
+              <ListSection
+                title={connected.length > 0 ? "Saved" : undefined}
+                footer="Swipe left on a connection to edit or delete it."
+              >
+                {saved.map((c) => (
+                  <ConnectionRow
+                    key={c.id}
+                    connection={c}
+                    isConnected={false}
+                    onDelete={handleDelete}
+                  />
+                ))}
+              </ListSection>
+            ) : null}
+          </>
+        )}
+      </ScrollView>
+    </>
   );
 }

@@ -1,4 +1,4 @@
-import * as SecureStore from "expo-secure-store";
+import * as SecureStore from "./secure-store";
 
 const SNIPPETS_KEY = "cosmq_query_snippets";
 

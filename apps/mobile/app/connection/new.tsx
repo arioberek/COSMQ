@@ -1,19 +1,22 @@
+import { Ionicons } from "@expo/vector-icons";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import * as Clipboard from "expo-clipboard";
 import * as DocumentPicker from "expo-document-picker";
 import * as LegacyFileSystem from "expo-file-system/legacy";
-import { useLocalSearchParams } from "expo-router";
-import type { FC } from "react";
-import { useEffect, useState } from "react";
-import { KeyboardAvoidingView, Platform, Pressable, TextInput } from "react-native";
-import type { SvgProps } from "react-native-svg";
-import { ScrollView, Switch, Text, useTheme, View, XStack, YStack } from "tamagui";
-import CockroachdbIcon from "../../assets/icons/cockroachdb.svg";
-import MariadbIcon from "../../assets/icons/mariadb.svg";
-import MongodbIcon from "../../assets/icons/mongodb.svg";
-import MysqlIcon from "../../assets/icons/mysql.svg";
-import PostgresqlIcon from "../../assets/icons/postgresql.svg";
-import SqliteIcon from "../../assets/icons/sqlite.svg";
-import { Button, Dialog } from "../../components/ui";
+import { Stack, useLocalSearchParams } from "expo-router";
+import { useEffect, useRef, useState } from "react";
+import { Alert, ScrollView, type TextInput } from "react-native";
+import { useTheme, XStack, YStack } from "tamagui";
+import { ColorTagPicker } from "../../components/connection/color-tag-picker";
+import { DatabaseTypePicker } from "../../components/connection/database-type-picker";
+import {
+  FormControlRow,
+  FormField,
+  HeaderTextButton,
+} from "../../components/connection/form-field";
+import { AppText, Button, ListRow, ListSection, Switch } from "../../components/ui";
+import { DATABASE_LABELS } from "../../lib/database-meta";
+import { useHaptic } from "../../lib/haptics";
 import { safeBack } from "../../lib/navigation";
 import {
   generateConnectionId,
@@ -21,7 +24,6 @@ import {
   saveConnection,
 } from "../../lib/storage/connections";
 import type { ConnectionColor, ConnectionConfig, DatabaseType } from "../../lib/types";
-import { CONNECTION_COLORS } from "../../lib/types";
 import { useConnectionStore } from "../../stores/connection";
 
 const DEFAULT_PORTS: Record<DatabaseType, number> = {
@@ -32,19 +34,6 @@ const DEFAULT_PORTS: Record<DatabaseType, number> = {
   cockroachdb: 26257,
   mongodb: 27017,
 };
-
-const DATABASE_OPTIONS: Array<{
-  type: DatabaseType;
-  label: string;
-  Icon: FC<SvgProps>;
-}> = [
-  { type: "postgres", label: "PostgreSQL", Icon: PostgresqlIcon },
-  { type: "mysql", label: "MySQL", Icon: MysqlIcon },
-  { type: "mariadb", label: "MariaDB", Icon: MariadbIcon },
-  { type: "sqlite", label: "SQLite", Icon: SqliteIcon },
-  { type: "cockroachdb", label: "CockroachDB", Icon: CockroachdbIcon },
-  { type: "mongodb", label: "MongoDB", Icon: MongodbIcon },
-];
 
 type ParsedConnectionUrl = {
   type?: DatabaseType;
@@ -143,75 +132,22 @@ const validateSqliteFile = async (uri: string): Promise<boolean> => {
   }
 };
 
-type AlertState = {
-  open: boolean;
-  title: string;
-  message: string;
-};
+type FormIssue = { title: string; message: string };
 
-type FormInputProps = {
-  value: string;
-  onChangeText: (text: string) => void;
-  placeholder?: string;
-  autoCapitalize?: "none" | "sentences" | "words" | "characters";
-  autoCorrect?: boolean;
-  keyboardType?: "default" | "number-pad" | "email-address";
-  secureTextEntry?: boolean;
-};
-
-const FormInput = ({
-  value,
-  onChangeText,
-  placeholder,
-  autoCapitalize,
-  autoCorrect,
-  keyboardType,
-  secureTextEntry,
-}: FormInputProps) => {
-  const theme = useTheme();
-  const [isFocused, setIsFocused] = useState(false);
-
-  return (
-    <TextInput
-      value={value}
-      onChangeText={onChangeText}
-      placeholder={placeholder}
-      placeholderTextColor={theme.placeholderColor.val}
-      autoCapitalize={autoCapitalize}
-      autoCorrect={autoCorrect}
-      keyboardType={keyboardType}
-      secureTextEntry={secureTextEntry}
-      onFocus={() => setIsFocused(true)}
-      onBlur={() => setIsFocused(false)}
-      style={{
-        backgroundColor: theme.surface.val,
-        borderWidth: 1,
-        borderColor: isFocused ? theme.primary.val : theme.cardBorder.val,
-        borderRadius: 10,
-        paddingHorizontal: 14,
-        paddingVertical: 12,
-        color: theme.color.val,
-        fontSize: 15,
-      }}
-    />
-  );
-};
-
-const FieldLabel = ({ children }: { children: React.ReactNode }) => (
-  <Text color="$textSubtle" fontSize={12} fontWeight="500" marginLeft={2}>
-    {children}
-  </Text>
-);
+type TestResult = { ok: true } | { ok: false; message: string };
 
 export default function NewConnectionScreen() {
   const theme = useTheme();
+  const haptic = useHaptic();
   const queryClient = useQueryClient();
   const { edit: editId } = useLocalSearchParams<{ edit?: string }>();
   const isEditMode = Boolean(editId);
 
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);
-  const [alert, setAlert] = useState<AlertState>({ open: false, title: "", message: "" });
+  const [testResult, setTestResult] = useState<{ signature: string; result: TestResult } | null>(
+    null,
+  );
 
   const { connect, disconnect } = useConnectionStore();
 
@@ -224,12 +160,19 @@ export default function NewConnectionScreen() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [ssl, setSsl] = useState(false);
+  const [verifyCertificate, setVerifyCertificate] = useState(true);
   const [color, setColor] = useState<ConnectionColor | undefined>(undefined);
   const [existingConnection, setExistingConnection] = useState<ConnectionConfig | null>(null);
 
+  const hostRef = useRef<TextInput>(null);
+  const portRef = useRef<TextInput>(null);
+  const databaseRef = useRef<TextInput>(null);
+  const usernameRef = useRef<TextInput>(null);
+  const passwordRef = useRef<TextInput>(null);
+
   const { data: connectionToEdit } = useQuery({
     queryKey: ["connection", editId],
-    queryFn: () => getConnectionWithPassword(editId!),
+    queryFn: () => getConnectionWithPassword(editId ?? ""),
     enabled: isEditMode,
   });
 
@@ -239,18 +182,82 @@ export default function NewConnectionScreen() {
       setName(connectionToEdit.name);
       setType(connectionToEdit.type);
       setHost(connectionToEdit.host);
-      setPort(connectionToEdit.port.toString());
+      setPort(connectionToEdit.port ? connectionToEdit.port.toString() : "");
       setDatabase(connectionToEdit.database);
       setUsername(connectionToEdit.username);
       setPassword(connectionToEdit.password);
-      setSsl(typeof connectionToEdit.ssl === "boolean" ? connectionToEdit.ssl : false);
+      if (typeof connectionToEdit.ssl === "object") {
+        setSsl(connectionToEdit.ssl.enabled);
+        setVerifyCertificate(connectionToEdit.ssl.rejectUnauthorized !== false);
+      } else {
+        setSsl(connectionToEdit.ssl);
+        setVerifyCertificate(true);
+      }
       setColor(connectionToEdit.color);
     }
   }, [connectionToEdit]);
 
-  const showAlert = (title: string, message: string) => {
-    setAlert({ open: true, title, message });
+  const sqlite = isSqlite(type);
+
+  // Plain `true` keeps the stored shape unchanged for the common case; an SslConfig is
+  // only written when verification is off or the connection already carried certificates.
+  const buildSsl = (): ConnectionConfig["ssl"] => {
+    if (sqlite || !ssl) return false;
+    const existing = typeof existingConnection?.ssl === "object" ? existingConnection.ssl : null;
+    if (verifyCertificate && !existing) return true;
+    return { ...existing, enabled: true, rejectUnauthorized: verifyCertificate };
   };
+
+  const buildConfig = (id: string, fallbackName: string): ConnectionConfig => ({
+    id,
+    name: name.trim() || fallbackName,
+    type,
+    host: sqlite ? "" : host.trim(),
+    port: sqlite ? 0 : parseInt(port, 10) || DEFAULT_PORTS[type],
+    database: database.trim(),
+    username: sqlite ? "" : username.trim(),
+    password: sqlite ? "" : password,
+    ssl: buildSsl(),
+    color,
+    createdAt: existingConnection?.createdAt ?? Date.now(),
+    updatedAt: Date.now(),
+  });
+
+  const findIssue = (requireName: boolean): FormIssue | null => {
+    if (requireName && !name.trim()) {
+      return {
+        title: "Name Required",
+        message: "Give the connection a name so you can find it later.",
+      };
+    }
+    if (!sqlite) {
+      if (!host.trim()) {
+        return { title: "Host Required", message: "Enter the server’s host name or IP address." };
+      }
+      if (!username.trim()) {
+        return { title: "User Required", message: "Enter the user name to sign in with." };
+      }
+    }
+    if (!database.trim()) {
+      return sqlite
+        ? { title: "Database File Required", message: "Choose a SQLite file or enter its path." }
+        : { title: "Database Required", message: "Enter the name of the database to open." };
+    }
+    return null;
+  };
+
+  const canSave = findIssue(true) === null;
+  const signature = JSON.stringify([
+    type,
+    host,
+    port,
+    database,
+    username,
+    password,
+    ssl,
+    verifyCertificate,
+  ]);
+  const visibleTestResult = testResult?.signature === signature ? testResult.result : null;
 
   const pickDatabaseFile = async (): Promise<string | null> => {
     try {
@@ -266,9 +273,9 @@ export default function NewConnectionScreen() {
       const isValid = await validateSqliteFile(uri);
 
       if (!isValid) {
-        showAlert(
-          "Invalid File",
-          "The selected file is not a valid SQLite database. Please select a .db, .sqlite, or .sqlite3 file.",
+        Alert.alert(
+          "Not a SQLite Database",
+          "Choose a .db, .sqlite or .sqlite3 file created by SQLite.",
         );
         return null;
       }
@@ -279,7 +286,13 @@ export default function NewConnectionScreen() {
     }
   };
 
+  const handleChooseFile = async () => {
+    const uri = await pickDatabaseFile();
+    if (uri) setDatabase(uri);
+  };
+
   const handleTypeChange = (newType: DatabaseType) => {
+    if (newType === type) return;
     setType(newType);
     const newPort = DEFAULT_PORTS[newType];
     setPort(newPort > 0 ? newPort.toString() : "");
@@ -309,49 +322,47 @@ export default function NewConnectionScreen() {
     if (parsed.ssl !== undefined) setSsl(parsed.ssl);
   };
 
-  const handleTestConnection = async () => {
-    if (!isSqlite(type)) {
-      if (!host.trim()) {
-        showAlert("Error", "Host is required");
-        return;
-      }
-      if (!username.trim()) {
-        showAlert("Error", "Username is required");
-        return;
-      }
-    }
+  const handlePasteUrl = async () => {
+    let text = "";
+    try {
+      text = (await Clipboard.getStringAsync()).trim();
+    } catch {}
 
-    if (!database.trim()) {
-      showAlert(
-        "Error",
-        isSqlite(type) ? "Database file path is required" : "Database name is required",
+    if (!text.includes("://") || !parseConnectionUrl(text, type)) {
+      Alert.alert(
+        "No Connection URL",
+        "Copy a URL such as postgres://user:password@host:5432/database, then try again.",
       );
+      return;
+    }
+    handleUrlChange(text);
+    haptic.light();
+  };
+
+  const handleTestConnection = async () => {
+    const issue = findIssue(false);
+    if (issue) {
+      Alert.alert(issue.title, issue.message);
       return;
     }
 
     setTesting(true);
     const testId = `test_${Date.now()}`;
+    const testedSignature = signature;
 
     try {
-      const testConfig: ConnectionConfig = {
-        id: testId,
-        name: name.trim() || "Test Connection",
-        type,
-        host: isSqlite(type) ? "" : host.trim(),
-        port: isSqlite(type) ? 0 : parseInt(port, 10) || DEFAULT_PORTS[type],
-        database: database.trim(),
-        username: isSqlite(type) ? "" : username.trim(),
-        password: isSqlite(type) ? "" : password,
-        ssl: isSqlite(type) ? false : ssl,
-        color,
-        createdAt: Date.now(),
-        updatedAt: Date.now(),
-      };
-
-      await connect(testConfig);
-      showAlert("Success", "Connection successful!");
+      await connect(buildConfig(testId, "Test Connection"));
+      setTestResult({ signature: testedSignature, result: { ok: true } });
+      haptic.success();
     } catch (error) {
-      showAlert("Connection Failed", error instanceof Error ? error.message : "Failed to connect");
+      setTestResult({
+        signature: testedSignature,
+        result: {
+          ok: false,
+          message: error instanceof Error ? error.message : "Failed to connect",
+        },
+      });
+      haptic.error();
     } finally {
       try {
         await disconnect(testId);
@@ -361,49 +372,16 @@ export default function NewConnectionScreen() {
   };
 
   const handleSave = async () => {
-    if (!name.trim()) {
-      showAlert("Error", "Connection name is required");
-      return;
-    }
-
-    if (!isSqlite(type)) {
-      if (!host.trim()) {
-        showAlert("Error", "Host is required");
-        return;
-      }
-      if (!username.trim()) {
-        showAlert("Error", "Username is required");
-        return;
-      }
-    }
-
-    if (!database.trim()) {
-      showAlert(
-        "Error",
-        isSqlite(type) ? "Database file path is required" : "Database name is required",
-      );
+    const issue = findIssue(true);
+    if (issue) {
+      Alert.alert(issue.title, issue.message);
       return;
     }
 
     setSaving(true);
 
     try {
-      const connection: ConnectionConfig = {
-        id: existingConnection?.id ?? generateConnectionId(),
-        name: name.trim(),
-        type,
-        host: isSqlite(type) ? "" : host.trim(),
-        port: isSqlite(type) ? 0 : parseInt(port, 10) || DEFAULT_PORTS[type],
-        database: database.trim(),
-        username: isSqlite(type) ? "" : username.trim(),
-        password: isSqlite(type) ? "" : password,
-        ssl: isSqlite(type) ? false : ssl,
-        color,
-        createdAt: existingConnection?.createdAt ?? Date.now(),
-        updatedAt: Date.now(),
-      };
-
-      await saveConnection(connection);
+      await saveConnection(buildConfig(existingConnection?.id ?? generateConnectionId(), ""));
       await queryClient.invalidateQueries({ queryKey: ["connections"] });
       if (isEditMode) {
         await queryClient.invalidateQueries({ queryKey: ["connection", editId] });
@@ -411,249 +389,262 @@ export default function NewConnectionScreen() {
 
       safeBack();
     } catch (error) {
-      showAlert("Error", error instanceof Error ? error.message : "Failed to save connection");
+      Alert.alert(
+        "Couldn’t Save Connection",
+        error instanceof Error ? error.message : "Failed to save connection",
+      );
     } finally {
       setSaving(false);
     }
   };
 
+  const busy = saving || testing;
+
   return (
-    <View flex={1} backgroundColor="$background">
-      <Dialog
-        open={alert.open}
-        onOpenChange={(open) => setAlert((prev) => ({ ...prev, open }))}
-        title={alert.title}
-        description={alert.message}
-        primaryAction={{
-          label: "OK",
-          onPress: () => setAlert((prev) => ({ ...prev, open: false })),
+    <>
+      <Stack.Screen
+        options={{
+          title: isEditMode ? "Edit Connection" : "New Connection",
+          headerLeft: () => <HeaderTextButton label="Cancel" onPress={() => safeBack()} />,
+          headerRight: () => (
+            <HeaderTextButton
+              label={isEditMode ? "Save" : "Add"}
+              emphasized
+              disabled={!canSave || testing}
+              loading={saving}
+              onPress={handleSave}
+            />
+          ),
         }}
       />
-
-      <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-        style={{ flex: 1 }}
+      <ScrollView
+        style={{ flex: 1, backgroundColor: theme.background.val }}
+        contentInsetAdjustmentBehavior="automatic"
+        automaticallyAdjustKeyboardInsets
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="interactive"
+        contentContainerStyle={{ padding: 16, paddingBottom: 48, gap: 28 }}
       >
-        <ScrollView
-          flex={1}
-          contentContainerStyle={{ padding: 20, gap: 20, paddingBottom: 100 }}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
+        {!sqlite ? (
+          <ListSection
+            title="Connection URL"
+            footer="Paste a URL to fill in the fields below. Nothing is saved until you tap Save."
+          >
+            <FormField
+              mono
+              value={connectionUrl}
+              onChangeText={handleUrlChange}
+              placeholder={`${type}://user:password@host:${DEFAULT_PORTS[type]}/db`}
+              keyboardType="url"
+              autoCapitalize="none"
+              autoCorrect={false}
+              spellCheck={false}
+              accessibilityLabel="Connection URL"
+              trailing={
+                <Button variant="tinted" size="sm" onPress={handlePasteUrl}>
+                  Paste
+                </Button>
+              }
+            />
+          </ListSection>
+        ) : null}
+
+        <YStack gap={6}>
+          <AppText
+            variant="footnote"
+            tone="secondary"
+            paddingHorizontal="$md"
+            textTransform="uppercase"
+          >
+            Database Type
+          </AppText>
+          <DatabaseTypePicker value={type} onChange={handleTypeChange} />
+        </YStack>
+
+        <ListSection
+          title="Connection"
+          footer={
+            sqlite
+              ? "A file you choose is copied into COSMQ on this device."
+              : `Leave the port empty to use the ${DATABASE_LABELS[type]} default, ${DEFAULT_PORTS[type]}.`
+          }
         >
-          <YStack gap="$sm">
-            <FieldLabel>Name</FieldLabel>
-            <FormInput value={name} onChangeText={setName} placeholder="My database" />
-          </YStack>
+          <FormField
+            label="Name"
+            value={name}
+            onChangeText={setName}
+            placeholder="Production"
+            autoCapitalize="words"
+            returnKeyType="next"
+            submitBehavior="submit"
+            onSubmitEditing={() => (sqlite ? databaseRef : hostRef).current?.focus()}
+          />
+          {!sqlite ? (
+            <FormField
+              label="Host"
+              inputRef={hostRef}
+              mono
+              value={host}
+              onChangeText={setHost}
+              placeholder="localhost"
+              keyboardType="url"
+              autoCapitalize="none"
+              autoCorrect={false}
+              spellCheck={false}
+              returnKeyType="next"
+              submitBehavior="submit"
+              onSubmitEditing={() => portRef.current?.focus()}
+            />
+          ) : null}
+          {!sqlite ? (
+            <FormField
+              label="Port"
+              inputRef={portRef}
+              mono
+              value={port}
+              onChangeText={setPort}
+              placeholder={DEFAULT_PORTS[type].toString()}
+              keyboardType="number-pad"
+              returnKeyType="next"
+              onSubmitEditing={() => databaseRef.current?.focus()}
+            />
+          ) : null}
+          <FormField
+            label={sqlite ? "File" : "Database"}
+            inputRef={databaseRef}
+            mono={sqlite}
+            value={database}
+            onChangeText={setDatabase}
+            placeholder={sqlite ? "local.db" : "Required"}
+            autoCapitalize="none"
+            autoCorrect={false}
+            spellCheck={false}
+            returnKeyType={sqlite ? "done" : "next"}
+            submitBehavior={sqlite ? "blurAndSubmit" : "submit"}
+            onSubmitEditing={() => (sqlite ? undefined : usernameRef.current?.focus())}
+          />
+          {sqlite ? (
+            <ListRow
+              title="Choose File…"
+              tint
+              icon={<Ionicons name="folder-open-outline" size={22} color={theme.accent.val} />}
+              onPress={handleChooseFile}
+            />
+          ) : null}
+        </ListSection>
 
-          <YStack gap="$sm">
-            <FieldLabel>Color tag (optional)</FieldLabel>
-            <XStack flexWrap="wrap" gap="$sm" paddingTop="$xs">
-              <Pressable
-                style={{
-                  width: 32,
-                  height: 32,
-                  borderRadius: 16,
-                  borderWidth: 1,
-                  borderColor: !color ? theme.primary.val : theme.cardBorder.val,
-                  justifyContent: "center",
-                  alignItems: "center",
-                  backgroundColor: theme.surface.val,
-                }}
-                onPress={() => setColor(undefined)}
-              >
-                <Text color={!color ? "$primary" : "$textSubtle"} fontSize={10} fontWeight="600">
-                  None
-                </Text>
-              </Pressable>
-              {CONNECTION_COLORS.map((c) => (
-                <Pressable
-                  key={c}
-                  style={{
-                    width: 32,
-                    height: 32,
-                    borderRadius: 16,
-                    borderWidth: color === c ? 2 : 1,
-                    borderColor: color === c ? theme.color.val : theme.cardBorder.val,
-                    backgroundColor: c,
-                  }}
-                  onPress={() => setColor(c)}
-                />
-              ))}
-            </XStack>
-          </YStack>
+        {!sqlite ? (
+          <ListSection title="Authentication">
+            <FormField
+              label="User"
+              inputRef={usernameRef}
+              value={username}
+              onChangeText={setUsername}
+              placeholder={type === "mongodb" ? "admin" : "postgres"}
+              autoCapitalize="none"
+              autoCorrect={false}
+              spellCheck={false}
+              returnKeyType="next"
+              submitBehavior="submit"
+              onSubmitEditing={() => passwordRef.current?.focus()}
+            />
+            <FormField
+              label="Password"
+              inputRef={passwordRef}
+              value={password}
+              onChangeText={setPassword}
+              placeholder="Optional"
+              secureTextEntry
+              autoCapitalize="none"
+              autoCorrect={false}
+              returnKeyType="done"
+            />
+          </ListSection>
+        ) : null}
 
-          {!isSqlite(type) && (
-            <YStack gap="$sm">
-              <FieldLabel>Connection URL</FieldLabel>
-              <FormInput
-                value={connectionUrl}
-                onChangeText={handleUrlChange}
-                placeholder="postgres://user:pass@host:5432/db?sslmode=require"
-                autoCapitalize="none"
-                autoCorrect={false}
+        {!sqlite ? (
+          <ListSection
+            title="Security"
+            footer={
+              ssl
+                ? verifyCertificate
+                  ? "The server’s certificate must be valid and trusted."
+                  : "Traffic is encrypted, but the server’s identity isn’t checked. Use only for self-signed certificates."
+                : "Turn on to encrypt traffic between this device and the server."
+            }
+          >
+            <FormControlRow
+              title="Use SSL/TLS"
+              control={
+                <Switch checked={ssl} onCheckedChange={setSsl} accessibilityLabel="Use SSL/TLS" />
+              }
+            />
+            {ssl ? (
+              <FormControlRow
+                title="Verify Certificate"
+                control={
+                  <Switch
+                    checked={verifyCertificate}
+                    onCheckedChange={setVerifyCertificate}
+                    accessibilityLabel="Verify certificate"
+                  />
+                }
               />
-            </YStack>
-          )}
+            ) : null}
+          </ListSection>
+        ) : null}
 
-          <YStack gap="$sm">
-            <FieldLabel>Database type</FieldLabel>
-            <XStack flexWrap="wrap" gap="$sm">
-              {DATABASE_OPTIONS.map((option) => {
-                const isActive = type === option.type;
-                return (
-                  <Pressable
-                    key={option.type}
-                    style={{
-                      width: "31%",
-                      borderRadius: 10,
-                      padding: 14,
-                      alignItems: "center",
-                      borderWidth: 1,
-                      borderColor: isActive ? theme.primary.val : theme.cardBorder.val,
-                      backgroundColor: isActive ? theme.primaryMuted.val : theme.surface.val,
-                    }}
-                    onPress={() => handleTypeChange(option.type)}
-                  >
-                    <View marginBottom="$xs">
-                      <option.Icon
-                        width={22}
-                        height={22}
-                        fill={isActive ? theme.primary.val : theme.color.val}
-                      />
-                    </View>
-                    <Text
-                      color={isActive ? "$primary" : "$textSubtle"}
-                      fontSize={11}
-                      fontWeight={isActive ? "600" : "500"}
-                      textAlign="center"
-                    >
-                      {option.label}
-                    </Text>
-                  </Pressable>
-                );
-              })}
-            </XStack>
-          </YStack>
+        <ListSection title="Color Tag" footer="Shown next to the connection in your list.">
+          <ColorTagPicker value={color} onChange={setColor} />
+        </ListSection>
 
-          {!isSqlite(type) && (
-            <XStack gap="$md">
-              <YStack gap="$sm" flex={2}>
-                <FieldLabel>Host</FieldLabel>
-                <FormInput
-                  value={host}
-                  onChangeText={setHost}
-                  placeholder="localhost"
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                />
-              </YStack>
-
-              <YStack gap="$sm" flex={1}>
-                <FieldLabel>Port</FieldLabel>
-                <FormInput
-                  value={port}
-                  onChangeText={setPort}
-                  placeholder={DEFAULT_PORTS[type].toString()}
-                  keyboardType="number-pad"
-                />
-              </YStack>
-            </XStack>
-          )}
-
-          <YStack gap="$sm">
-            <FieldLabel>{isSqlite(type) ? "Database file" : "Database"}</FieldLabel>
-            <XStack gap="$sm">
-              <View flex={1}>
-                <FormInput
-                  value={database}
-                  onChangeText={setDatabase}
-                  placeholder={isSqlite(type) ? "local.db" : "mydb"}
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                />
-              </View>
-              {isSqlite(type) && (
-                <Pressable
-                  style={{
-                    backgroundColor: theme.surface.val,
-                    borderRadius: 10,
-                    paddingHorizontal: 16,
-                    justifyContent: "center",
-                    borderWidth: 1,
-                    borderColor: theme.cardBorder.val,
-                  }}
-                  onPress={async () => {
-                    const uri = await pickDatabaseFile();
-                    if (uri) setDatabase(uri);
-                  }}
-                >
-                  <Text color="$color" fontSize={14} fontWeight="500">
-                    Browse
-                  </Text>
-                </Pressable>
-              )}
-            </XStack>
-          </YStack>
-
-          {!isSqlite(type) && (
-            <>
-              <XStack gap="$md">
-                <YStack gap="$sm" flex={1}>
-                  <FieldLabel>Username</FieldLabel>
-                  <FormInput
-                    value={username}
-                    onChangeText={setUsername}
-                    placeholder={type === "mongodb" ? "admin" : "postgres"}
-                    autoCapitalize="none"
-                    autoCorrect={false}
-                  />
-                </YStack>
-
-                <YStack gap="$sm" flex={1}>
-                  <FieldLabel>Password</FieldLabel>
-                  <FormInput
-                    value={password}
-                    onChangeText={setPassword}
-                    placeholder="••••••••"
-                    secureTextEntry
-                  />
-                </YStack>
-              </XStack>
-
+        <YStack gap="$sm">
+          <Button
+            variant="gray"
+            size="lg"
+            onPress={handleTestConnection}
+            loading={testing}
+            disabled={busy}
+          >
+            Test Connection
+          </Button>
+          {visibleTestResult ? (
+            visibleTestResult.ok ? (
               <XStack
-                justifyContent="space-between"
                 alignItems="center"
-                backgroundColor="$surface"
-                padding="$md"
-                borderRadius="$md"
-                borderWidth={1}
-                borderColor="$cardBorder"
+                justifyContent="center"
+                gap={6}
+                paddingVertical="$xs"
+                accessibilityLiveRegion="polite"
               >
-                <Text color="$color" fontSize={14} fontWeight="500">
-                  Use SSL / TLS
-                </Text>
-                <Switch
-                  checked={ssl}
-                  onCheckedChange={setSsl}
-                  backgroundColor={ssl ? "$primary" : "$surfaceAlt"}
-                >
-                  <Switch.Thumb animation="quick" backgroundColor="white" />
-                </Switch>
+                <Ionicons name="checkmark-circle" size={16} color={theme.success.val} />
+                <AppText variant="footnote" tone="success">
+                  Connected to {DATABASE_LABELS[type]} successfully
+                </AppText>
               </XStack>
-            </>
-          )}
-
-          <YStack gap="$sm" marginTop="$sm">
-            <Button variant="outlined" onPress={handleTestConnection} disabled={testing || saving}>
-              {testing ? "Testing…" : "Test connection"}
-            </Button>
-
-            <Button variant="primary" onPress={handleSave} disabled={saving}>
-              {saving ? "Saving…" : isEditMode ? "Update connection" : "Save connection"}
-            </Button>
-          </YStack>
-        </ScrollView>
-      </KeyboardAvoidingView>
-    </View>
+            ) : (
+              <YStack
+                gap="$xs"
+                padding={12}
+                borderRadius="$md"
+                style={{ borderCurve: "continuous" }}
+                backgroundColor="$dangerMuted"
+                accessibilityLiveRegion="polite"
+              >
+                <XStack alignItems="center" gap={6}>
+                  <Ionicons name="alert-circle" size={16} color={theme.danger.val} />
+                  <AppText variant="subhead" emphasized tone="danger">
+                    Connection Failed
+                  </AppText>
+                </XStack>
+                <AppText variant="footnote" tone="danger" selectable>
+                  {visibleTestResult.message}
+                </AppText>
+              </YStack>
+            )
+          ) : null}
+        </YStack>
+      </ScrollView>
+    </>
   );
 }

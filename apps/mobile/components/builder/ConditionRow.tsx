@@ -1,9 +1,11 @@
 import { Ionicons } from "@expo/vector-icons";
 import { memo, useState } from "react";
-import { Pressable, TextInput } from "react-native";
-import { Text, useTheme as useTamaguiTheme, XStack, YStack } from "tamagui";
+import { Pressable } from "react-native";
+import { useTheme as useTamaguiTheme, XStack, YStack } from "tamagui";
 import { useHaptic } from "../../lib/haptics";
 import type { ColumnInfo } from "../../lib/types";
+import { Input } from "../ui/Input";
+import { BuilderChip } from "./BuilderSection";
 import { PickerSheet } from "./PickerSheet";
 
 type ConditionRowProps = {
@@ -23,6 +25,10 @@ type ConditionRowProps = {
   onRemove: () => void;
 };
 
+/**
+ * One filter condition as a compact grouped row: chips for combinator,
+ * column and operator on the first line, the value field below.
+ */
 export const ConditionRow = memo(function ConditionRow({
   index,
   combinator,
@@ -45,139 +51,74 @@ export const ConditionRow = memo(function ConditionRow({
   const [showOps, setShowOps] = useState(false);
 
   return (
-    <YStack gap={6}>
-      {index > 0 && combinator ? (
-        <XStack gap={6}>
-          {(["AND", "OR"] as const).map((c) => {
-            const active = combinator === c;
-            return (
-              <Pressable
-                key={c}
-                onPress={() => {
-                  haptic.light();
-                  onCombinatorChange?.(c);
-                }}
-              >
-                <XStack
-                  paddingHorizontal={10}
-                  paddingVertical={4}
-                  borderRadius={999}
-                  backgroundColor={active ? "$primaryMuted" : "$surfaceMuted"}
-                >
-                  <Text
-                    color={active ? "$primary" : "$placeholderColor"}
-                    fontSize={11}
-                    fontWeight="600"
-                    fontFamily="$mono"
-                  >
-                    {c}
-                  </Text>
-                </XStack>
-              </Pressable>
-            );
-          })}
-        </XStack>
-      ) : null}
-
-      <XStack
-        gap={6}
-        alignItems="center"
-        backgroundColor="$surface"
-        borderWidth={1}
-        borderColor="$borderColor"
-        borderRadius="$sm"
-        padding={6}
-      >
-        <Pressable onPress={() => setShowColumns(true)} style={{ flex: 1 }}>
-          <XStack
-            paddingHorizontal={8}
-            paddingVertical={6}
-            borderRadius={6}
-            backgroundColor="$surfaceMuted"
-            alignItems="center"
-            gap={4}
-          >
-            <Text
-              color={column ? "$color" : "$placeholderColor"}
-              fontSize={12}
-              fontFamily="$mono"
-              numberOfLines={1}
-              flex={1}
-            >
-              {column || "column"}
-            </Text>
-            <Ionicons name="chevron-down" size={11} color={tamagui.placeholderColor.val} />
-          </XStack>
-        </Pressable>
-
-        <Pressable onPress={() => setShowOps(true)}>
-          <XStack
-            paddingHorizontal={8}
-            paddingVertical={6}
-            borderRadius={6}
-            backgroundColor="$primaryMuted"
-            alignItems="center"
-            gap={4}
-          >
-            <Text color="$primary" fontSize={12} fontWeight="600" fontFamily="$mono">
-              {operator}
-            </Text>
-            <Ionicons name="chevron-down" size={11} color={tamagui.primary.val} />
-          </XStack>
-        </Pressable>
-
-        {hideValue ? (
-          <YStack flex={1} />
-        ) : (
-          <XStack
-            flex={1}
-            paddingHorizontal={8}
-            paddingVertical={4}
-            borderRadius={6}
-            backgroundColor="$surfaceMuted"
-          >
-            <TextInput
-              value={value}
-              onChangeText={onValueChange}
-              placeholder={valuePlaceholder ?? "value"}
-              placeholderTextColor={tamagui.placeholderColor.val}
-              autoCapitalize="none"
-              autoCorrect={false}
-              style={{
-                flex: 1,
-                color: tamagui.color.val,
-                fontSize: 12,
-                fontFamily: "JetBrainsMono",
-                paddingVertical: 4,
-              }}
-            />
-          </XStack>
-        )}
-
+    <YStack gap="$sm" paddingHorizontal="$md" paddingVertical={10}>
+      <XStack alignItems="center" gap={6}>
+        {index > 0 && combinator ? (
+          <BuilderChip
+            label={combinator}
+            tone="accent"
+            accessibilityLabel={`Combine with ${combinator}. Tap to switch.`}
+            onPress={() => {
+              haptic.light();
+              onCombinatorChange?.(combinator === "AND" ? "OR" : "AND");
+            }}
+          />
+        ) : null}
+        <BuilderChip
+          label={column}
+          placeholder="Column"
+          chevron
+          shrink
+          accessibilityLabel={column ? `Column ${column}` : "Choose column"}
+          onPress={() => setShowColumns(true)}
+        />
+        <BuilderChip
+          label={operator}
+          tone="accent"
+          chevron
+          accessibilityLabel={`Operator ${operator}`}
+          onPress={() => setShowOps(true)}
+        />
+        <YStack flex={1} />
         <Pressable
           onPress={() => {
             haptic.light();
             onRemove();
           }}
-          hitSlop={6}
+          hitSlop={10}
+          accessibilityRole="button"
+          accessibilityLabel="Remove condition"
         >
-          <YStack
-            width={26}
-            height={26}
-            borderRadius={13}
-            backgroundColor="$surfaceMuted"
-            alignItems="center"
-            justifyContent="center"
-          >
-            <Ionicons name="close" size={13} color={tamagui.placeholderColor.val} />
-          </YStack>
+          <Ionicons name="close-circle" size={22} color={tamagui.textSubtle.val} />
         </Pressable>
       </XStack>
+
+      {hideValue ? null : (
+        <XStack
+          height={36}
+          alignItems="center"
+          paddingHorizontal={10}
+          borderRadius="$sm"
+          backgroundColor="$fill"
+          style={{ borderCurve: "continuous" }}
+        >
+          <Input
+            mono
+            value={value}
+            onChangeText={onValueChange}
+            placeholder={valuePlaceholder ?? "value"}
+            autoCapitalize="none"
+            autoCorrect={false}
+            accessibilityLabel="Value"
+            style={{ paddingVertical: 0, height: 36 }}
+          />
+        </XStack>
+      )}
 
       <PickerSheet
         open={showColumns}
         onOpenChange={setShowColumns}
-        title="Pick a column"
+        title="Column"
         options={columns.map((c) => ({ id: c.name, label: c.name, sublabel: c.type }))}
         selected={column ? [column] : []}
         onSelect={(ids) => {
@@ -189,7 +130,7 @@ export const ConditionRow = memo(function ConditionRow({
       <PickerSheet
         open={showOps}
         onOpenChange={setShowOps}
-        title="Pick an operator"
+        title="Operator"
         options={operators.map((o) => ({ id: o, label: o }))}
         selected={[operator]}
         searchable={false}

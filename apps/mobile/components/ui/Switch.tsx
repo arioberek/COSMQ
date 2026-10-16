@@ -1,78 +1,23 @@
 import { memo } from "react";
-import { type GetProps, styled, Switch as TamaguiSwitch } from "tamagui";
+import { Switch as NativeSwitch, type SwitchProps as NativeSwitchProps } from "react-native";
+import { useTheme } from "tamagui";
 
-const StyledSwitch = styled(TamaguiSwitch, {
-  backgroundColor: "$surfaceMuted",
-
-  variants: {
-    switchSize: {
-      small: {
-        width: 40,
-        height: 24,
-      },
-      medium: {
-        width: 50,
-        height: 30,
-      },
-      large: {
-        width: 60,
-        height: 36,
-      },
-    },
-  } as const,
-
-  defaultVariants: {
-    switchSize: "medium",
-  },
-});
-
-const StyledThumb = styled(TamaguiSwitch.Thumb, {
-  backgroundColor: "$switchThumb",
-  borderRadius: "$full",
-
-  variants: {
-    thumbSize: {
-      small: {
-        width: 20,
-        height: 20,
-      },
-      medium: {
-        width: 26,
-        height: 26,
-      },
-      large: {
-        width: 32,
-        height: 32,
-      },
-    },
-  } as const,
-
-  defaultVariants: {
-    thumbSize: "medium",
-  },
-});
-
-type SwitchSize = "small" | "medium" | "large";
-
-type SwitchProps = Omit<GetProps<typeof StyledSwitch>, "switchSize"> & {
-  size?: SwitchSize;
-  thumbSize?: SwitchSize;
+type SwitchProps = Omit<NativeSwitchProps, "value" | "onValueChange"> & {
+  checked: boolean;
+  onCheckedChange?: (checked: boolean) => void;
 };
 
-export const Switch = memo(function Switch({
-  size = "medium",
-  thumbSize,
-  checked,
-  ...props
-}: SwitchProps) {
+/** Platform switch (UISwitch / Material) tinted with the app accent. */
+export const Switch = memo(function Switch({ checked, onCheckedChange, ...props }: SwitchProps) {
+  const theme = useTheme();
   return (
-    <StyledSwitch
-      switchSize={size}
-      checked={checked}
-      backgroundColor={checked ? "$primary" : "$surfaceMuted"}
+    <NativeSwitch
+      value={checked}
+      onValueChange={onCheckedChange}
+      trackColor={{ true: theme.accent.val, false: theme.fill.val }}
+      ios_backgroundColor={theme.fill.val}
+      thumbColor="#ffffff"
       {...props}
-    >
-      <StyledThumb thumbSize={thumbSize ?? size} animation="quick" />
-    </StyledSwitch>
+    />
   );
 });

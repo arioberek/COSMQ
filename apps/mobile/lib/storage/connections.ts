@@ -1,6 +1,6 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import * as SecureStore from "expo-secure-store";
 import type { ConnectionConfig } from "../types";
+import * as SecureStore from "./secure-store";
 
 const CONNECTIONS_KEY = "cosmq_connections";
 const PASSWORD_PREFIX = "cosmq_pwd_";

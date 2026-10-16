@@ -1,10 +1,13 @@
 import { Ionicons } from "@expo/vector-icons";
 import { memo, useCallback } from "react";
-import { Pressable, ScrollView } from "react-native";
-import { Sheet, Text, useTheme as useTamaguiTheme, XStack, YStack } from "tamagui";
+import { Pressable } from "react-native";
+import { useTheme as useTamaguiTheme, XStack, YStack } from "tamagui";
 import { useHaptic } from "../../lib/haptics";
 import type { ColumnPrefs } from "../../lib/storage/results-prefs";
 import type { ColumnInfo } from "../../lib/types";
+import { ModalSheet } from "../ui/Dialog";
+import { ListRow, ListSection } from "../ui/List";
+import { AppText } from "../ui/Text";
 
 type ColumnCustomizeSheetProps = {
   open: boolean;
@@ -31,6 +34,49 @@ const toggleHide = (prefs: ColumnPrefs, name: string): ColumnPrefs => {
   };
 };
 
+const ToggleIcon = memo(function ToggleIcon({
+  active,
+  icon,
+  activeIcon,
+  label,
+  onPress,
+}: {
+  active: boolean;
+  icon: keyof typeof Ionicons.glyphMap;
+  activeIcon: keyof typeof Ionicons.glyphMap;
+  label: string;
+  onPress: () => void;
+}) {
+  const tamagui = useTamaguiTheme();
+  return (
+    <Pressable
+      hitSlop={6}
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      accessibilityState={{ selected: active }}
+    >
+      {({ pressed }) => (
+        <YStack
+          width={34}
+          height={34}
+          borderRadius="$full"
+          backgroundColor={active ? "$accentMuted" : "$fill"}
+          alignItems="center"
+          justifyContent="center"
+          opacity={pressed ? 0.6 : 1}
+        >
+          <Ionicons
+            name={active ? activeIcon : icon}
+            size={16}
+            color={active ? tamagui.accent.val : tamagui.textMuted.val}
+          />
+        </YStack>
+      )}
+    </Pressable>
+  );
+});
+
 export const ColumnCustomizeSheet = memo(function ColumnCustomizeSheet({
   open,
   onOpenChange,
@@ -39,7 +85,6 @@ export const ColumnCustomizeSheet = memo(function ColumnCustomizeSheet({
   onChange,
   onReset,
 }: ColumnCustomizeSheetProps) {
-  const tamagui = useTamaguiTheme();
   const haptic = useHaptic();
 
   const handlePin = useCallback(
@@ -58,140 +103,60 @@ export const ColumnCustomizeSheet = memo(function ColumnCustomizeSheet({
     [prefs, onChange, haptic],
   );
 
-  return (
-    <Sheet
-      modal
-      open={open}
-      onOpenChange={onOpenChange}
-      animation="medium"
-      zIndex={200000}
-      dismissOnSnapToBottom
-      snapPoints={[80]}
-    >
-      <Sheet.Overlay
-        animation="lazy"
-        enterStyle={{ opacity: 0 }}
-        exitStyle={{ opacity: 0 }}
-        backgroundColor="$dialogOverlay"
-      />
-      <Sheet.Frame
-        backgroundColor="$surfaceElevated"
-        borderTopLeftRadius={20}
-        borderTopRightRadius={20}
-        padding="$lg"
-        gap="$md"
-      >
-        <Sheet.Handle backgroundColor="$dialogHandle" alignSelf="center" />
-        <XStack alignItems="center" justifyContent="space-between">
-          <YStack gap={2}>
-            <Text fontSize={17} fontWeight="600" color="$color" letterSpacing={-0.2}>
-              Customize fields
-            </Text>
-            <Text color="$placeholderColor" fontSize={12}>
-              Pin to force show. Hide to omit from cards.
-            </Text>
-          </YStack>
-          <Pressable
-            hitSlop={10}
-            onPress={onReset}
-            accessibilityRole="button"
-            accessibilityLabel="Reset column customization"
-          >
-            <Text color="$primary" fontSize={13} fontWeight="600">
-              Reset
-            </Text>
-          </Pressable>
-        </XStack>
+  const customized = prefs.pinned.length + prefs.hidden.length > 0;
 
-        <ScrollView showsVerticalScrollIndicator={false}>
-          <YStack gap={6} paddingBottom={32}>
-            {columns.map((col, idx) => {
-              const isPinned = prefs.pinned.includes(col.name);
-              const isHidden = prefs.hidden.includes(col.name);
-              return (
-                <XStack
-                  // Suffix the index so duplicate column names from a join
-                  // without aliases don't collide as React keys. Pin/hide
-                  // prefs themselves are still keyed by display name —
-                  // duplicates share the same toggle state by design.
-                  key={`${col.name}-${idx}`}
-                  alignItems="center"
-                  justifyContent="space-between"
-                  paddingHorizontal="$sm"
-                  paddingVertical="$sm"
-                  backgroundColor="$surface"
-                  borderRadius="$sm"
-                  borderWidth={1}
-                  borderColor="$borderColor"
-                  gap="$sm"
-                >
-                  <YStack flex={1} gap={2}>
-                    <Text color="$color" fontSize={14} fontWeight="500" numberOfLines={1}>
-                      {col.name}
-                    </Text>
-                    {col.type ? (
-                      <Text
-                        color="$placeholderColor"
-                        fontSize={11}
-                        fontFamily="$mono"
-                        numberOfLines={1}
-                      >
-                        {col.type.toLowerCase()}
-                      </Text>
-                    ) : null}
-                  </YStack>
-                  <XStack gap={6}>
-                    <Pressable
-                      hitSlop={6}
-                      onPress={() => handlePin(col.name)}
-                      accessibilityRole="button"
-                      accessibilityLabel={isPinned ? `Unpin ${col.name}` : `Pin ${col.name}`}
-                      accessibilityState={{ selected: isPinned }}
-                    >
-                      <YStack
-                        width={36}
-                        height={36}
-                        borderRadius={10}
-                        backgroundColor={isPinned ? "$primaryMuted" : "$surfaceMuted"}
-                        alignItems="center"
-                        justifyContent="center"
-                      >
-                        <Ionicons
-                          name={isPinned ? "pin" : "pin-outline"}
-                          size={16}
-                          color={isPinned ? tamagui.primary.val : tamagui.placeholderColor.val}
-                        />
-                      </YStack>
-                    </Pressable>
-                    <Pressable
-                      hitSlop={6}
-                      onPress={() => handleHide(col.name)}
-                      accessibilityRole="button"
-                      accessibilityLabel={isHidden ? `Show ${col.name}` : `Hide ${col.name}`}
-                      accessibilityState={{ selected: isHidden }}
-                    >
-                      <YStack
-                        width={36}
-                        height={36}
-                        borderRadius={10}
-                        backgroundColor={isHidden ? "$dangerMuted" : "$surfaceMuted"}
-                        alignItems="center"
-                        justifyContent="center"
-                      >
-                        <Ionicons
-                          name={isHidden ? "eye-off" : "eye-outline"}
-                          size={16}
-                          color={isHidden ? tamagui.danger.val : tamagui.placeholderColor.val}
-                        />
-                      </YStack>
-                    </Pressable>
-                  </XStack>
+  return (
+    <ModalSheet open={open} onOpenChange={onOpenChange} title="Customize Fields" snapPoints={[80]}>
+      <ListSection footer="Pinned fields always show first. Hidden fields are left out of cards, the table and JSON.">
+        {columns.map((col, idx) => {
+          const isPinned = prefs.pinned.includes(col.name);
+          const isHidden = prefs.hidden.includes(col.name);
+          return (
+            <ListRow
+              // Suffix the index so duplicate column names from a join
+              // without aliases don't collide as React keys. Pin/hide
+              // prefs themselves are still keyed by display name —
+              // duplicates share the same toggle state by design.
+              // biome-ignore lint/suspicious/noArrayIndexKey: unaliased joins can repeat column names
+              key={`${col.name}-${idx}`}
+              title={
+                <AppText variant="body" tone={isHidden ? "tertiary" : "primary"} numberOfLines={1}>
+                  {col.name}
+                </AppText>
+              }
+              subtitle={col.type ? col.type.toLowerCase() : undefined}
+              accessory={
+                <XStack gap="$sm">
+                  <ToggleIcon
+                    active={isPinned}
+                    icon="pin-outline"
+                    activeIcon="pin"
+                    label={isPinned ? `Unpin ${col.name}` : `Pin ${col.name}`}
+                    onPress={() => handlePin(col.name)}
+                  />
+                  <ToggleIcon
+                    active={isHidden}
+                    icon="eye-outline"
+                    activeIcon="eye-off"
+                    label={isHidden ? `Show ${col.name}` : `Hide ${col.name}`}
+                    onPress={() => handleHide(col.name)}
+                  />
                 </XStack>
-              );
-            })}
-          </YStack>
-        </ScrollView>
-      </Sheet.Frame>
-    </Sheet>
+              }
+            />
+          );
+        })}
+      </ListSection>
+
+      <ListSection>
+        <ListRow
+          title="Reset to Defaults"
+          tint
+          disabled={!customized}
+          onPress={onReset}
+          accessibilityLabel="Reset column customization"
+        />
+      </ListSection>
+    </ModalSheet>
   );
 });

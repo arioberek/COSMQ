@@ -1,9 +1,11 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useState } from "react";
 import { Pressable } from "react-native";
-import { Text, useTheme as useTamaguiTheme, XStack, YStack } from "tamagui";
+import { useTheme as useTamaguiTheme, XStack, YStack } from "tamagui";
 import { useHaptic } from "../../lib/haptics";
 import type { ColumnInfo } from "../../lib/types";
+import { Segmented } from "../results/Segmented";
+import { BuilderChip } from "./BuilderSection";
 import { PickerSheet } from "./PickerSheet";
 
 type SortRowProps<Dir extends string | number> = {
@@ -36,119 +38,42 @@ export function SortRow<Dir extends string | number>({
   const [showColumns, setShowColumns] = useState(false);
 
   return (
-    <XStack
-      gap={6}
-      alignItems="center"
-      backgroundColor="$surface"
-      borderWidth={1}
-      borderColor="$borderColor"
-      borderRadius="$sm"
-      padding={6}
-    >
-      <Pressable onPress={() => setShowColumns(true)} style={{ flex: 1 }}>
-        <XStack
-          paddingHorizontal={8}
-          paddingVertical={6}
-          borderRadius={6}
-          backgroundColor="$surfaceMuted"
-          alignItems="center"
-          gap={4}
-        >
-          <Text
-            color={column ? "$color" : "$placeholderColor"}
-            fontSize={12}
-            fontFamily="$mono"
-            numberOfLines={1}
-            flex={1}
-          >
-            {column || "column"}
-          </Text>
-          <Ionicons name="chevron-down" size={11} color={tamagui.placeholderColor.val} />
-        </XStack>
-      </Pressable>
-
-      <XStack gap={4}>
-        <Pressable
-          onPress={() => {
-            haptic.light();
-            onDirChange(ascValue);
-          }}
-        >
-          <XStack
-            paddingHorizontal={10}
-            paddingVertical={6}
-            borderRadius={6}
-            backgroundColor={dir === ascValue ? "$primaryMuted" : "$surfaceMuted"}
-            alignItems="center"
-            gap={4}
-          >
-            <Ionicons
-              name="arrow-up"
-              size={11}
-              color={dir === ascValue ? tamagui.primary.val : tamagui.placeholderColor.val}
-            />
-            <Text
-              color={dir === ascValue ? "$primary" : "$placeholderColor"}
-              fontSize={11}
-              fontWeight="600"
-            >
-              {ascLabel}
-            </Text>
-          </XStack>
-        </Pressable>
-        <Pressable
-          onPress={() => {
-            haptic.light();
-            onDirChange(descValue);
-          }}
-        >
-          <XStack
-            paddingHorizontal={10}
-            paddingVertical={6}
-            borderRadius={6}
-            backgroundColor={dir === descValue ? "$primaryMuted" : "$surfaceMuted"}
-            alignItems="center"
-            gap={4}
-          >
-            <Ionicons
-              name="arrow-down"
-              size={11}
-              color={dir === descValue ? tamagui.primary.val : tamagui.placeholderColor.val}
-            />
-            <Text
-              color={dir === descValue ? "$primary" : "$placeholderColor"}
-              fontSize={11}
-              fontWeight="600"
-            >
-              {descLabel}
-            </Text>
-          </XStack>
-        </Pressable>
-      </XStack>
-
+    <XStack alignItems="center" gap="$sm" paddingHorizontal="$md" paddingVertical={10}>
+      <BuilderChip
+        label={column}
+        placeholder="Column"
+        chevron
+        shrink
+        accessibilityLabel={column ? `Sort column ${column}` : "Choose sort column"}
+        onPress={() => setShowColumns(true)}
+      />
+      <YStack flex={1} />
+      <Segmented
+        values={[ascLabel, descLabel]}
+        selectedIndex={dir === descValue ? 1 : 0}
+        onChange={(index) => {
+          haptic.light();
+          onDirChange(index === 1 ? descValue : ascValue);
+        }}
+        style={{ width: 124 }}
+        accessibilityLabel="Sort direction"
+      />
       <Pressable
         onPress={() => {
           haptic.light();
           onRemove();
         }}
-        hitSlop={6}
+        hitSlop={10}
+        accessibilityRole="button"
+        accessibilityLabel="Remove sort"
       >
-        <YStack
-          width={26}
-          height={26}
-          borderRadius={13}
-          backgroundColor="$surfaceMuted"
-          alignItems="center"
-          justifyContent="center"
-        >
-          <Ionicons name="close" size={13} color={tamagui.placeholderColor.val} />
-        </YStack>
+        <Ionicons name="close-circle" size={22} color={tamagui.textSubtle.val} />
       </Pressable>
 
       <PickerSheet
         open={showColumns}
         onOpenChange={setShowColumns}
-        title="Pick a column"
+        title="Column"
         options={columns.map((c) => ({ id: c.name, label: c.name, sublabel: c.type }))}
         selected={column ? [column] : []}
         onSelect={(ids) => {

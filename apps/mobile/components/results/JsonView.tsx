@@ -1,10 +1,13 @@
 import { Ionicons } from "@expo/vector-icons";
 import * as Clipboard from "expo-clipboard";
-import { memo, useCallback, useState } from "react";
+import { memo, useCallback, useMemo, useState } from "react";
 import { Pressable, ScrollView } from "react-native";
-import { Text, useTheme as useTamaguiTheme, XStack, YStack } from "tamagui";
+import { XStack, YStack } from "tamagui";
+import { type AppTheme, useTheme } from "../../hooks/useTheme";
 import { useHaptic } from "../../lib/haptics";
 import type { ColumnInfo } from "../../lib/types";
+import { EmptyState } from "../ui/EmptyState";
+import { AppText } from "../ui/Text";
 import { stringifyJson } from "./format";
 
 type JsonViewProps = {
@@ -12,27 +15,52 @@ type JsonViewProps = {
   columns: ColumnInfo[];
 };
 
-const TYPE_COLOR: Record<string, string> = {
-  string: "$success",
-  number: "$warning",
-  boolean: "$primary",
-  null: "$placeholderColor",
+type JsonColors = {
+  key: string;
+  index: string;
+  string: string;
+  number: string;
+  literal: string;
+  punctuation: string;
+  chevron: string;
 };
 
+const colorsFrom = (theme: AppTheme): JsonColors => ({
+  key: theme.syntax.operator,
+  index: theme.colors.textSubtle,
+  string: theme.syntax.string,
+  number: theme.syntax.number,
+  literal: theme.syntax.keyword,
+  punctuation: theme.syntax.punctuation,
+  chevron: theme.colors.textSubtle,
+});
+
+const INDENT = 14;
+
 const PRIMITIVE = (v: unknown) => v === null || (typeof v !== "object" && typeof v !== "function");
+
+const primitiveColor = (data: unknown, c: JsonColors): string => {
+  if (data === null || typeof data === "boolean") return c.literal;
+  if (typeof data === "string") return c.string;
+  if (typeof data === "number" || typeof data === "bigint") return c.number;
+  return c.punctuation;
+};
 
 const JsonNode = memo(function JsonNode({
   data,
   name,
+  isIndex,
   depth,
   defaultOpen,
+  colors,
 }: {
   data: unknown;
   name?: string;
+  isIndex?: boolean;
   depth: number;
   defaultOpen: boolean;
+  colors: JsonColors;
 }) {
-  const tamagui = useTamaguiTheme();
   const haptic = useHaptic();
   const [open, setOpen] = useState(defaultOpen);
 
@@ -47,29 +75,32 @@ const JsonNode = memo(function JsonNode({
     }
   }, [data, haptic]);
 
+  const label =
+    name !== undefined ? (
+      <AppText variant="code" style={{ color: isIndex ? colors.index : colors.key }}>
+        {isIndex ? name : `"${name}"`}
+        <AppText variant="code" style={{ color: colors.punctuation }}>
+          :
+        </AppText>
+      </AppText>
+    ) : null;
+
   if (PRIMITIVE(data)) {
     const display = data === null ? "null" : typeof data === "string" ? `"${data}"` : String(data);
-    const color =
-      data === null
-        ? TYPE_COLOR.null
-        : typeof data === "string"
-          ? TYPE_COLOR.string
-          : typeof data === "number"
-            ? TYPE_COLOR.number
-            : typeof data === "boolean"
-              ? TYPE_COLOR.boolean
-              : "$color";
     return (
       <Pressable onLongPress={copy} delayLongPress={300}>
-        <XStack paddingLeft={depth * 12} alignItems="center" gap={6} paddingVertical={2}>
-          {name !== undefined ? (
-            <Text color="$placeholderColor" fontSize={12} fontFamily="$mono" selectable>
-              {name}:
-            </Text>
-          ) : null}
-          <Text color={color} fontSize={12} fontFamily="$mono" selectable numberOfLines={1}>
+        {/* Leaf rows line up with the labels of expandable siblings. */}
+        <XStack paddingLeft={depth * INDENT + INDENT} alignItems="center" gap={6} minHeight={22}>
+          {label}
+          <AppText
+            variant="code"
+            selectable
+            numberOfLines={1}
+            flexShrink={1}
+            style={{ color: primitiveColor(data, colors) }}
+          >
             {display}
-          </Text>
+          </AppText>
         </XStack>
       </Pressable>
     );
@@ -79,35 +110,42 @@ const JsonNode = memo(function JsonNode({
   const entries = isArray
     ? (data as unknown[]).map((v, i) => [String(i), v] as const)
     : Object.entries(data as Record<string, unknown>);
-  const open2 = open;
 
   return (
     <YStack>
-      <Pressable onPress={() => setOpen((v) => !v)} onLongPress={copy} delayLongPress={350}>
-        <XStack paddingLeft={depth * 12} alignItems="center" gap={6} paddingVertical={2}>
-          <Ionicons
-            name={open2 ? "chevron-down" : "chevron-forward"}
-            size={12}
-            color={tamagui.placeholderColor.val}
-          />
-          {name !== undefined ? (
-            <Text color="$placeholderColor" fontSize={12} fontFamily="$mono">
-              {name}:
-            </Text>
-          ) : null}
-          <Text color="$color" fontSize={12} fontFamily="$mono">
-            {isArray ? `[ ${entries.length} ]` : `{ ${entries.length} }`}
-          </Text>
+      <Pressable
+        onPress={() => setOpen((v) => !v)}
+        onLongPress={copy}
+        delayLongPress={350}
+        accessibilityRole="button"
+        accessibilityState={{ expanded: open }}
+      >
+        <XStack paddingLeft={depth * INDENT} alignItems="center" gap={2} minHeight={22}>
+          <XStack width={INDENT - 2} alignItems="center">
+            <Ionicons
+              name={open ? "chevron-down" : "chevron-forward"}
+              size={11}
+              color={colors.chevron}
+            />
+          </XStack>
+          <XStack alignItems="center" gap={6}>
+            {label}
+            <AppText variant="code" style={{ color: colors.punctuation }}>
+              {isArray ? `[ ${entries.length} ]` : `{ ${entries.length} }`}
+            </AppText>
+          </XStack>
         </XStack>
       </Pressable>
-      {open2
+      {open
         ? entries.map(([k, v]) => (
             <JsonNode
               key={`${depth}-${k}`}
               data={v}
               name={isArray ? `[${k}]` : k}
+              isIndex={isArray}
               depth={depth + 1}
               defaultOpen={depth < 1}
+              colors={colors}
             />
           ))
         : null}
@@ -116,35 +154,40 @@ const JsonNode = memo(function JsonNode({
 });
 
 export const JsonView = memo(function JsonView({ rows, columns }: JsonViewProps) {
-  const data = rows.map((row) => {
-    const obj: Record<string, unknown> = {};
-    for (const col of columns) obj[col.name] = row[col.name];
-    return obj;
-  });
+  const theme = useTheme();
+  const colors = useMemo(() => colorsFrom(theme), [theme]);
+  const data = useMemo(
+    () =>
+      rows.map((row) => {
+        const obj: Record<string, unknown> = {};
+        for (const col of columns) obj[col.name] = row[col.name];
+        return obj;
+      }),
+    [rows, columns],
+  );
 
   if (rows.length === 0) {
     return (
-      <YStack flex={1} alignItems="center" justifyContent="center" padding="$lg" gap="$sm">
-        <Ionicons name="code-slash-outline" size={28} color="#8a8aa0" />
-        <Text color="$placeholderColor" fontSize={14}>
-          No rows match the current view.
-        </Text>
+      <YStack flex={1} alignItems="center" justifyContent="center" paddingVertical="$xl">
+        <EmptyState
+          icon={<Ionicons name="code-slash-outline" size={40} color={theme.colors.textSubtle} />}
+          title="No Matching Rows"
+          message="No rows match the current filter."
+        />
       </YStack>
     );
   }
 
   return (
-    <ScrollView showsVerticalScrollIndicator={false}>
+    <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 24 }}>
       <YStack
         backgroundColor="$surface"
-        borderWidth={1}
-        borderColor="$borderColor"
         borderRadius="$md"
-        padding="$sm"
-        paddingBottom="$lg"
+        paddingVertical={12}
+        paddingHorizontal={12}
         style={{ borderCurve: "continuous" }}
       >
-        <JsonNode data={data} depth={0} defaultOpen />
+        <JsonNode data={data} depth={0} defaultOpen colors={colors} />
       </YStack>
     </ScrollView>
   );

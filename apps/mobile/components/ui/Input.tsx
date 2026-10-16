@@ -1,85 +1,53 @@
-import { memo } from "react";
-import { type GetProps, styled, Input as TamaguiInput, Text, YStack } from "tamagui";
+import { memo, type Ref } from "react";
+import { TextInput, type TextInputProps } from "react-native";
+import { useTheme } from "tamagui";
 
-const StyledInput = styled(TamaguiInput, {
-  backgroundColor: "$surface",
-  borderWidth: 1,
-  borderColor: "$borderColor",
-  borderRadius: "$md",
-  paddingHorizontal: "$md",
-  paddingVertical: "$sm",
-  color: "$color",
-  height: "$inputMd",
-  placeholderTextColor: "$placeholderColor",
-
-  focusStyle: {
-    borderColor: "$primary",
-    borderWidth: 2,
-  },
-
-  variants: {
-    hasError: {
-      true: {
-        borderColor: "$danger",
-        focusStyle: {
-          borderColor: "$danger",
-          borderWidth: 2,
-        },
-      },
-    },
-    inputSize: {
-      sm: {
-        height: "$inputSm",
-        paddingHorizontal: "$sm",
-      },
-      md: {
-        height: "$inputMd",
-        paddingHorizontal: "$md",
-      },
-      lg: {
-        height: "$inputLg",
-        paddingHorizontal: "$lg",
-      },
-    },
-  } as const,
-
-  defaultVariants: {
-    inputSize: "md",
-  },
-});
-
-type StyledInputProps = GetProps<typeof StyledInput>;
-
-type InputSize = "sm" | "md" | "lg";
-
-type InputProps = Omit<StyledInputProps, "size" | "inputSize"> & {
-  size?: InputSize;
-  label?: string;
-  error?: string;
+export type InputProps = TextInputProps & {
+  /** JetBrains Mono, for hosts, ports, paths and URLs. */
+  mono?: boolean;
+  align?: "left" | "right";
+  ref?: Ref<TextInput>;
 };
 
+// Typography mirrors AppText: `body` (17pt system) or a mono face sized to sit on
+// the same baseline inside a 44pt row.
+const FIELD_TEXT = {
+  body: { fontSize: 17 },
+  mono: { fontFamily: "JetBrainsMono", fontSize: 15 },
+} as const;
+
+/**
+ * Borderless iOS text field. Place it inside a grouped row (`$surface`); it takes
+ * the remaining width and uses the accent for the caret and selection.
+ */
 export const Input = memo(function Input({
-  label,
-  error,
-  hasError,
-  size = "md",
+  mono,
+  align = "left",
+  style,
+  ref,
   ...props
 }: InputProps) {
-  const showError = Boolean(error) || hasError;
+  const theme = useTheme();
 
   return (
-    <YStack gap="$xs">
-      {label ? (
-        <Text color="$textMuted" fontSize={14} fontWeight="500">
-          {label}
-        </Text>
-      ) : null}
-      <StyledInput inputSize={size} hasError={showError} {...props} />
-      {error ? (
-        <Text color="$danger" fontSize={12}>
-          {error}
-        </Text>
-      ) : null}
-    </YStack>
+    <TextInput
+      ref={ref}
+      placeholderTextColor={theme.placeholderColor.val}
+      selectionColor={theme.accent.val}
+      cursorColor={theme.accent.val}
+      style={[
+        {
+          flex: 1,
+          minWidth: 0,
+          paddingVertical: 11,
+          paddingHorizontal: 0,
+          color: theme.color.val,
+          textAlign: align,
+        },
+        mono ? FIELD_TEXT.mono : FIELD_TEXT.body,
+        style,
+      ]}
+      {...props}
+    />
   );
 });

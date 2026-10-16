@@ -1,8 +1,9 @@
-import { Ionicons } from "@expo/vector-icons";
 import { memo, useEffect, useMemo, useState } from "react";
-import { Pressable, ScrollView, TextInput } from "react-native";
-import { Sheet, Text, useTheme as useTamaguiTheme, XStack, YStack } from "tamagui";
 import { useHaptic } from "../../lib/haptics";
+import { SearchField } from "../results/SearchField";
+import { ModalSheet } from "../ui/Dialog";
+import { ListRow, ListSection } from "../ui/List";
+import { AppText } from "../ui/Text";
 
 export interface PickerOption {
   id: string;
@@ -33,7 +34,6 @@ export const PickerSheet = memo(function PickerSheet({
   emptyText = "Nothing to pick.",
   onSelect,
 }: PickerSheetProps) {
-  const tamagui = useTamaguiTheme();
   const haptic = useHaptic();
   const [search, setSearch] = useState("");
 
@@ -67,134 +67,43 @@ export const PickerSheet = memo(function PickerSheet({
     onOpenChange(false);
   };
 
+  const showSearch = searchable && options.length > 6;
+
   return (
-    <Sheet
-      modal
+    <ModalSheet
       open={open}
       onOpenChange={onOpenChange}
-      animation="medium"
-      zIndex={200000}
-      dismissOnSnapToBottom
+      title={title}
+      subtitle={multi && selected.length > 0 ? `${selected.length} selected` : undefined}
       snapPoints={[80]}
+      toolbar={
+        showSearch ? (
+          <SearchField value={search} onChangeText={setSearch} placeholder="Search" />
+        ) : undefined
+      }
     >
-      <Sheet.Overlay
-        animation="lazy"
-        enterStyle={{ opacity: 0 }}
-        exitStyle={{ opacity: 0 }}
-        backgroundColor="$dialogOverlay"
-      />
-      <Sheet.Frame
-        backgroundColor="$surfaceElevated"
-        borderTopLeftRadius={20}
-        borderTopRightRadius={20}
-        padding="$lg"
-        gap="$md"
-      >
-        <Sheet.Handle backgroundColor="$dialogHandle" alignSelf="center" />
-        <XStack alignItems="center" justifyContent="space-between">
-          <Text fontSize={17} fontWeight="600" color="$color" letterSpacing={-0.2}>
-            {title}
-          </Text>
-          {multi ? (
-            <Pressable hitSlop={8} onPress={() => onOpenChange(false)}>
-              <Text color="$primary" fontSize={13} fontWeight="600">
-                Done
-              </Text>
-            </Pressable>
-          ) : null}
-        </XStack>
-
-        {searchable && options.length > 6 ? (
-          <XStack
-            alignItems="center"
-            backgroundColor="$surface"
-            borderRadius="$sm"
-            borderWidth={1}
-            borderColor="$borderColor"
-            paddingHorizontal="$sm"
-            gap={6}
-            height={36}
-          >
-            <Ionicons name="search" size={13} color={tamagui.placeholderColor.val} />
-            <TextInput
-              value={search}
-              onChangeText={setSearch}
-              placeholder="Search…"
-              placeholderTextColor={tamagui.placeholderColor.val}
-              autoCapitalize="none"
-              autoCorrect={false}
-              style={{ flex: 1, color: tamagui.color.val, fontSize: 14, paddingVertical: 0 }}
+      {filtered.length === 0 ? (
+        <AppText
+          variant="footnote"
+          tone="secondary"
+          paddingVertical="$lg"
+          style={{ textAlign: "center" }}
+        >
+          {search.trim() ? "No matches." : emptyText}
+        </AppText>
+      ) : (
+        <ListSection>
+          {filtered.map((opt) => (
+            <ListRow
+              key={opt.id}
+              title={opt.label}
+              subtitle={opt.sublabel}
+              accessory={selected.includes(opt.id) ? "check" : undefined}
+              onPress={() => toggle(opt.id)}
             />
-            {search ? (
-              <Pressable hitSlop={6} onPress={() => setSearch("")}>
-                <Ionicons name="close-circle" size={14} color={tamagui.placeholderColor.val} />
-              </Pressable>
-            ) : null}
-          </XStack>
-        ) : null}
-
-        <ScrollView showsVerticalScrollIndicator={false}>
-          <YStack gap={6} paddingBottom={32}>
-            {filtered.length === 0 ? (
-              <Text
-                color="$placeholderColor"
-                fontSize={13}
-                textAlign="center"
-                paddingVertical="$lg"
-              >
-                {emptyText}
-              </Text>
-            ) : (
-              filtered.map((opt) => {
-                const isSelected = selected.includes(opt.id);
-                return (
-                  <Pressable key={opt.id} onPress={() => toggle(opt.id)}>
-                    <XStack
-                      alignItems="center"
-                      paddingHorizontal="$sm"
-                      paddingVertical="$sm"
-                      backgroundColor="$surface"
-                      borderRadius="$sm"
-                      borderWidth={1}
-                      borderColor={isSelected ? "$primary" : "$borderColor"}
-                      gap="$sm"
-                    >
-                      <YStack flex={1} gap={2}>
-                        <Text color="$color" fontSize={14} fontWeight="500" numberOfLines={1}>
-                          {opt.label}
-                        </Text>
-                        {opt.sublabel ? (
-                          <Text
-                            color="$placeholderColor"
-                            fontSize={11}
-                            fontFamily="$mono"
-                            numberOfLines={1}
-                          >
-                            {opt.sublabel}
-                          </Text>
-                        ) : null}
-                      </YStack>
-                      <Ionicons
-                        name={
-                          isSelected
-                            ? multi
-                              ? "checkbox"
-                              : "checkmark-circle"
-                            : multi
-                              ? "square-outline"
-                              : "ellipse-outline"
-                        }
-                        size={20}
-                        color={isSelected ? tamagui.primary.val : tamagui.placeholderColor.val}
-                      />
-                    </XStack>
-                  </Pressable>
-                );
-              })
-            )}
-          </YStack>
-        </ScrollView>
-      </Sheet.Frame>
-    </Sheet>
+          ))}
+        </ListSection>
+      )}
+    </ModalSheet>
   );
 });

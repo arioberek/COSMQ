@@ -1,126 +1,116 @@
-import { memo } from "react";
+import { memo, type ReactNode } from "react";
 import { ActivityIndicator } from "react-native";
-import { type GetProps, styled, Button as TamaguiButton, Text, useTheme } from "tamagui";
+import { type GetProps, styled, Button as TamaguiButton, useTheme } from "tamagui";
+import { AppText } from "./Text";
 
+// iOS button styles: filled (prominent), tinted, gray, plain, destructive.
 const StyledButton = styled(TamaguiButton, {
   flexDirection: "row",
   alignItems: "center",
   justifyContent: "center",
   gap: "$sm",
-  borderRadius: "$md",
+  borderWidth: 0,
   animation: "quick",
+  pressStyle: { scale: 0.97, opacity: 0.8 },
 
   variants: {
-    variant: {
-      primary: {
-        backgroundColor: "$primary",
-        color: "$textOnPrimary",
-        pressStyle: {
-          backgroundColor: "$primaryLight",
-          opacity: 0.9,
-        },
-      },
-      secondary: {
-        backgroundColor: "$surface",
-        borderWidth: 1,
-        borderColor: "$borderColor",
-        color: "$color",
-        pressStyle: {
-          backgroundColor: "$surfaceAlt",
-        },
-      },
-      danger: {
-        backgroundColor: "$danger",
-        color: "$textOnDanger",
-        pressStyle: {
-          backgroundColor: "$dangerMuted",
-          opacity: 0.9,
-        },
-      },
-      ghost: {
-        backgroundColor: "transparent",
-        color: "$color",
-        pressStyle: {
-          backgroundColor: "$surfaceMuted",
-        },
-      },
-      outlined: {
-        backgroundColor: "transparent",
-        borderWidth: 1,
-        borderColor: "$borderColor",
-        color: "$color",
-        pressStyle: {
-          backgroundColor: "$surfaceMuted",
-        },
+    tone: {
+      filled: { backgroundColor: "$accentFill", pressStyle: { backgroundColor: "$accentFill" } },
+      tinted: { backgroundColor: "$accentMuted", pressStyle: { backgroundColor: "$accentMuted" } },
+      gray: { backgroundColor: "$fill", pressStyle: { backgroundColor: "$fill" } },
+      plain: { backgroundColor: "transparent", pressStyle: { backgroundColor: "transparent" } },
+      destructive: {
+        backgroundColor: "$dangerMuted",
+        pressStyle: { backgroundColor: "$dangerMuted" },
       },
     },
     buttonSize: {
-      sm: {
-        paddingHorizontal: "$md",
-        paddingVertical: "$xs",
-        height: "$buttonSm",
-      },
-      md: {
-        paddingHorizontal: "$lg",
-        paddingVertical: "$sm",
-        height: "$buttonMd",
-      },
-      lg: {
-        paddingHorizontal: "$xl",
-        paddingVertical: "$md",
-        height: "$buttonLg",
-      },
+      sm: { height: "$buttonSm", paddingHorizontal: 14, borderRadius: "$full" },
+      md: { height: "$buttonMd", paddingHorizontal: "$md", borderRadius: "$md" },
+      lg: { height: "$buttonLg", paddingHorizontal: "$lg", borderRadius: "$md" },
     },
   } as const,
 
   defaultVariants: {
-    variant: "primary",
+    tone: "filled",
     buttonSize: "md",
   },
 });
 
-type StyledButtonProps = GetProps<typeof StyledButton>;
+const ANIMATE_ONLY = ["transform", "opacity"];
 
-type ButtonSize = "sm" | "md" | "lg";
+type Tone = "filled" | "tinted" | "gray" | "plain" | "destructive";
+// Legacy names kept so existing call sites read naturally.
+type Variant = Tone | "primary" | "secondary" | "outlined" | "ghost" | "danger";
 
-type ButtonProps = Omit<StyledButtonProps, "children" | "size" | "buttonSize"> & {
-  size?: ButtonSize;
+const TONE_FOR: Record<Variant, Tone> = {
+  filled: "filled",
+  tinted: "tinted",
+  gray: "gray",
+  plain: "plain",
+  destructive: "destructive",
+  primary: "filled",
+  secondary: "gray",
+  outlined: "gray",
+  ghost: "plain",
+  danger: "destructive",
+};
+
+type ButtonProps = Omit<
+  GetProps<typeof StyledButton>,
+  "children" | "size" | "buttonSize" | "tone" | "variant"
+> & {
+  variant?: Variant;
+  size?: "sm" | "md" | "lg";
   loading?: boolean;
-  children: React.ReactNode;
+  children: ReactNode;
 };
 
 export const Button = memo(function Button({
   loading,
   disabled,
   children,
-  variant = "primary",
+  variant = "filled",
   size = "md",
   ...props
 }: ButtonProps) {
   const theme = useTheme();
+  const tone = TONE_FOR[variant];
   const isDisabled = disabled || loading;
 
   const textColor =
-    variant === "primary"
-      ? theme.textOnPrimary.val
-      : variant === "danger"
-        ? theme.textOnDanger.val
-        : theme.color.val;
+    tone === "filled"
+      ? theme.textOnAccent.val
+      : tone === "destructive"
+        ? theme.danger.val
+        : tone === "gray"
+          ? theme.color.val
+          : theme.accent.val;
 
   return (
     <StyledButton
-      variant={variant}
+      tone={tone}
       buttonSize={size}
       disabled={isDisabled}
-      opacity={isDisabled ? 0.6 : 1}
+      opacity={isDisabled ? 0.45 : 1}
+      // Only transform/opacity animate. Tamagui's RN animation driver can't
+      // interpolate web CSS-variable colors ("var(--accent)") and throws.
+      animateOnly={ANIMATE_ONLY}
+      accessibilityRole="button"
+      accessibilityState={{ disabled: !!isDisabled, busy: !!loading }}
       {...props}
     >
       {loading ? (
         <ActivityIndicator size="small" color={textColor} />
       ) : typeof children === "string" ? (
-        <Text color={textColor} fontWeight="600" fontSize={14}>
+        <AppText
+          variant={size === "sm" ? "subhead" : "headline"}
+          emphasized
+          style={{ color: textColor }}
+          numberOfLines={1}
+        >
           {children}
-        </Text>
+        </AppText>
       ) : (
         children
       )}

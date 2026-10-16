@@ -11,11 +11,6 @@
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
     "scheme": "cosmq",
-    "splash": {
-      "image": "./assets/splash.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#1a1a2e"
-    },
     "newArchEnabled": true,
     "assetBundlePatterns": ["**/*"],
     "ios": {
@@ -49,12 +44,18 @@
         ],
         "NSPrivacyCollectedDataTypes": [],
         "NSPrivacyTracking": false
+      },
+      "icon": {
+        "light": "./assets/icon.png",
+        "dark": "./assets/icon/ios-dark.png",
+        "tinted": "./assets/icon/ios-tinted.png"
       }
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#1a1a2e"
+        "monochromeImage": "./assets/icon/android-monochrome.png",
+        "backgroundColor": "#6E56CF"
       },
       "package": "com.cosmq.app"
     },
@@ -68,12 +69,13 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#1a1a2e",
           "image": "./assets/splash-icon.png",
-          "imageWidth": 280,
+          "imageWidth": 120,
+          "resizeMode": "contain",
+          "backgroundColor": "#F2F2F7",
           "dark": {
             "image": "./assets/splash-icon.png",
-            "backgroundColor": "#1a1a2e"
+            "backgroundColor": "#000000"
           }
         }
       ],

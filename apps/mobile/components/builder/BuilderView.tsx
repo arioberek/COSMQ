@@ -1,10 +1,11 @@
 import { Ionicons } from "@expo/vector-icons";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Pressable, ScrollView } from "react-native";
-import { Text, useTheme as useTamaguiTheme, XStack, YStack } from "tamagui";
+import { ActivityIndicator, Pressable, ScrollView } from "react-native";
+import { useTheme as useTamaguiTheme, XStack, YStack } from "tamagui";
 import { formatQueryError } from "../../lib/errors";
 import { useHaptic } from "../../lib/haptics";
 import type { ColumnInfo, DatabaseConnection, DatabaseType, TableInfo } from "../../lib/types";
+import { AppText } from "../ui/Text";
 import {
   emptyMongoBuilderState,
   emptySqlBuilderState,
@@ -184,40 +185,55 @@ export const BuilderView = memo(function BuilderView({
 
   return (
     <YStack gap="$md" flex={1}>
-      <XStack alignItems="center" justifyContent="space-between">
-        <Text color="$placeholderColor" fontSize={11} fontFamily="$mono" letterSpacing={0.4}>
-          {sql ? "SQL builder" : "MongoDB builder"}
-        </Text>
-        <Pressable hitSlop={6} onPress={loadTables} disabled={loadingTables}>
-          <XStack
-            alignItems="center"
-            gap={4}
-            paddingHorizontal={8}
-            paddingVertical={4}
-            borderRadius={999}
-            backgroundColor="$surfaceMuted"
-          >
-            <Ionicons name="refresh" size={11} color={tamagui.placeholderColor.val} />
-            <Text color="$placeholderColor" fontSize={11} fontWeight="600">
+      <XStack alignItems="center" justifyContent="space-between" paddingHorizontal="$md">
+        <AppText variant="footnote" tone="secondary">
+          {sql ? "SQL Builder" : "MongoDB Builder"}
+        </AppText>
+        <Pressable
+          hitSlop={10}
+          onPress={loadTables}
+          disabled={loadingTables}
+          accessibilityRole="button"
+          accessibilityLabel={sql ? "Refresh tables" : "Refresh collections"}
+          accessibilityState={{ busy: loadingTables }}
+          style={({ pressed }) => ({ opacity: pressed ? 0.5 : 1 })}
+        >
+          <XStack alignItems="center" gap={4}>
+            {loadingTables ? (
+              <ActivityIndicator size="small" color={tamagui.textSubtle.val} />
+            ) : (
+              <Ionicons name="refresh" size={15} color={tamagui.accent.val} />
+            )}
+            <AppText variant="subhead" tone={loadingTables ? "tertiary" : "accent"}>
               {loadingTables ? "Loading…" : "Refresh"}
-            </Text>
+            </AppText>
           </XStack>
         </Pressable>
       </XStack>
 
       {error ? (
-        <XStack
-          paddingHorizontal="$sm"
-          paddingVertical="$sm"
-          borderRadius="$sm"
+        <YStack
+          gap="$sm"
+          padding="$md"
+          borderRadius="$md"
           backgroundColor="$dangerMuted"
-          borderWidth={1}
-          borderColor="$danger"
+          style={{ borderCurve: "continuous" }}
         >
-          <Text color="$danger" fontSize={12} flex={1}>
+          <AppText variant="footnote" tone="danger" selectable>
             {error}
-          </Text>
-        </XStack>
+          </AppText>
+          <Pressable
+            onPress={loadTables}
+            disabled={loadingTables}
+            hitSlop={8}
+            accessibilityRole="button"
+            style={({ pressed }) => ({ alignSelf: "flex-start", opacity: pressed ? 0.5 : 1 })}
+          >
+            <AppText variant="subhead" tone="accent" emphasized>
+              Try Again
+            </AppText>
+          </Pressable>
+        </YStack>
       ) : null}
 
       <ScrollView
@@ -225,7 +241,7 @@ export const BuilderView = memo(function BuilderView({
         contentContainerStyle={{ paddingBottom: 24 }}
         keyboardShouldPersistTaps="handled"
       >
-        <YStack gap="$md">
+        <YStack gap={28}>
           {sql ? (
             <SqlBuilder
               state={sqlState}
@@ -248,39 +264,31 @@ export const BuilderView = memo(function BuilderView({
           )}
 
           <YStack gap={6}>
-            <XStack alignItems="center" justifyContent="space-between">
-              <Text
-                color="$placeholderColor"
-                fontSize={11}
-                fontFamily="$mono"
-                textTransform="uppercase"
-                letterSpacing={0.5}
-                fontWeight="700"
-              >
+            <XStack alignItems="baseline" justifyContent="space-between" paddingHorizontal="$md">
+              <AppText variant="footnote" tone="secondary" textTransform="uppercase">
                 Preview
-              </Text>
+              </AppText>
               {loadingColumns ? (
-                <Text color="$placeholderColor" fontSize={10}>
-                  loading columns…
-                </Text>
+                <AppText variant="footnote" tone="tertiary">
+                  Loading columns…
+                </AppText>
               ) : null}
             </XStack>
             <YStack
               backgroundColor="$surface"
-              borderWidth={1}
-              borderColor="$borderColor"
-              borderRadius="$sm"
-              padding={10}
+              borderRadius="$md"
+              padding="$md"
               minHeight={64}
+              style={{ borderCurve: "continuous" }}
             >
               {generatedQuery ? (
-                <Text color="$color" fontSize={12} fontFamily="$mono" selectable>
+                <AppText variant="code" selectable>
                   {generatedQuery}
-                </Text>
+                </AppText>
               ) : (
-                <Text color="$placeholderColor" fontSize={12}>
+                <AppText variant="footnote" tone="secondary">
                   {sql ? "Pick a table to start building." : "Pick a collection to start building."}
-                </Text>
+                </AppText>
               )}
             </YStack>
           </YStack>
@@ -290,7 +298,7 @@ export const BuilderView = memo(function BuilderView({
       <PickerSheet
         open={showTablePicker}
         onOpenChange={setShowTablePicker}
-        title={sql ? "Pick a table" : "Pick a collection"}
+        title={sql ? "Table" : "Collection"}
         options={tableOptions}
         selected={currentTableId ? [currentTableId] : []}
         emptyText={loadingTables ? "Loading…" : "No tables found. Tap Refresh."}

@@ -9,7 +9,8 @@ config.transformer = {
 
 config.resolver = {
   ...config.resolver,
-  assetExts: config.resolver.assetExts.filter((ext) => ext !== "svg"),
+  // wasm: expo-sqlite web worker (browser preview only).
+  assetExts: [...config.resolver.assetExts.filter((ext) => ext !== "svg"), "wasm"],
   sourceExts: [...config.resolver.sourceExts, "svg"],
 };
 
