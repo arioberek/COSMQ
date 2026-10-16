@@ -1,0 +1,34 @@
+{
+  "name": "cosmq-explainer",
+  "version": "1.0.0",
+  "description": "Motion explainer video for COSMQ, built with Remotion",
+  "license": "MIT",
+  "private": true,
+  "dependencies": {
+    "@remotion/cli": "4.0.535",
+    "@remotion/google-fonts": "4.0.535",
+    "@remotion/transitions": "4.0.535",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "remotion": "4.0.535"
+  },
+  "devDependencies": {
+    "@remotion/bundler": "4.0.535",
+    "@remotion/eslint-config-flat": "4.0.535",
+    "@remotion/renderer": "4.0.535",
+    "@types/react": "19.2.7",
+    "@types/web": "0.0.166",
+    "eslint": "9.39.5",
+    "prettier": "3.8.1",
+    "typescript": "5.9.3"
+  },
+  "scripts": {
+    "dev": "remotion studio",
+    "lint": "eslint src && tsc",
+    "render:explainer": "remotion render Explainer out/cosmq-explainer.mp4 --codec=h264 --crf=18 --pixel-format=yuv420p",
+    "render:poster": "remotion still Poster out/poster.png",
+    "render:teaser": "remotion render Teaser renders/teaser-960.mp4 --codec=h264 --crf=14 --scale=0.5 && sh scripts/export-teaser.sh",
+    "render:all": "npm run render:explainer && npm run render:poster && npm run render:teaser",
+    "upgrade": "remotion upgrade"
+  }
+}

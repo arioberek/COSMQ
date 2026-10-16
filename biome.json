@@ -81,6 +81,16 @@
   },
   "overrides": [
     {
+      "includes": ["media/**"],
+      "linter": {
+        "rules": {
+          "a11y": {
+            "noSvgWithoutTitle": "off"
+          }
+        }
+      }
+    },
+    {
       "includes": ["apps/landing/**"],
       "formatter": {
         "indentStyle": "tab"
