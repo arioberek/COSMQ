@@ -132,6 +132,7 @@ function HeaderButton({
 }
 
 export default function HomeScreen() {
+  const theme = useTheme();
   const queryClient = useQueryClient();
   const { activeConnections } = useConnectionStore();
 
@@ -202,7 +203,7 @@ export default function HomeScreen() {
         {isLoading ? null : connections.length === 0 ? (
           <YStack flex={1} justifyContent="center" paddingBottom="$xxl">
             <EmptyState
-              icon={<AlienLogo width={72} height={72} />}
+              icon={<AlienLogo width={88} height={88} color={theme.accent.val} />}
               title="No Connections"
               message="Add a PostgreSQL, MySQL, MariaDB, CockroachDB, MongoDB or SQLite database to start querying."
               action={<Button onPress={addConnection}>Add Connection</Button>}
