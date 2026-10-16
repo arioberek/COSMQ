@@ -2,9 +2,11 @@ import { Ionicons } from "@expo/vector-icons";
 import * as Clipboard from "expo-clipboard";
 import { memo, useCallback, useMemo, useState } from "react";
 import { FlatList, Pressable } from "react-native";
-import { Text, useTheme as useTamaguiTheme, XStack, YStack } from "tamagui";
+import { useTheme as useTamaguiTheme, XStack, YStack } from "tamagui";
 import { useHaptic } from "../../lib/haptics";
 import type { ColumnInfo } from "../../lib/types";
+import { EmptyState } from "../ui/EmptyState";
+import { AppText } from "../ui/Text";
 import { CellValue } from "./CellValue";
 import type { ResolvedColumns } from "./columnPriority";
 import { previewString, stringifyCell } from "./format";
@@ -54,6 +56,9 @@ const titleFromRow = (
   return `Row ${index + 1}`;
 };
 
+/** Inset hairline between rows of a section, aligned with the row text. */
+const Separator = () => <YStack height={0.5} marginLeft="$md" backgroundColor="$borderColor" />;
+
 const FieldRow = memo(function FieldRow({
   column,
   row,
@@ -64,28 +69,39 @@ const FieldRow = memo(function FieldRow({
   onOpenDetail: (row: Record<string, unknown>) => void;
 }) {
   return (
-    <XStack alignItems="flex-start" justifyContent="space-between" gap="$sm">
-      <Text
-        color="$placeholderColor"
-        fontSize={11}
-        fontFamily="$mono"
-        textTransform="uppercase"
-        letterSpacing={0.4}
-        flexShrink={0}
-        maxWidth="40%"
-        numberOfLines={1}
-      >
-        {column.name}
-      </Text>
-      <YStack flex={1} alignItems="flex-end">
-        <CellValue
-          column={column}
-          value={row[column.name]}
-          numberOfLines={2}
-          onJsonPress={() => onOpenDetail(row)}
-        />
-      </YStack>
-    </XStack>
+    <Pressable onPress={() => onOpenDetail(row)} accessibilityRole="button">
+      {({ pressed }) => (
+        <XStack
+          alignItems="flex-start"
+          justifyContent="space-between"
+          gap="$md"
+          paddingHorizontal="$md"
+          paddingVertical={11}
+          minHeight={44}
+          backgroundColor={pressed ? "$surfaceMuted" : "transparent"}
+        >
+          <AppText
+            variant="footnote"
+            tone="secondary"
+            flexShrink={0}
+            maxWidth="40%"
+            numberOfLines={1}
+            paddingTop={1}
+          >
+            {column.name}
+          </AppText>
+          <YStack flex={1} minWidth={0} alignItems="flex-end">
+            <CellValue
+              column={column}
+              value={row[column.name]}
+              numberOfLines={2}
+              textAlign="right"
+              onJsonPress={() => onOpenDetail(row)}
+            />
+          </YStack>
+        </XStack>
+      )}
+    </Pressable>
   );
 });
 
@@ -112,101 +128,107 @@ const CardItem = memo(function CardItem({
     haptic.light();
   }, [resolved.visible, row, haptic]);
 
+  const fields = expanded ? [...resolved.preview, ...resolved.rest] : resolved.preview;
+
   return (
     <YStack
       backgroundColor="$surface"
-      borderWidth={1}
-      borderColor="$borderColor"
       borderRadius="$md"
-      padding="$md"
-      gap="$sm"
+      overflow="hidden"
       style={{ borderCurve: "continuous" }}
     >
-      <XStack alignItems="center" justifyContent="space-between" gap="$sm">
-        <XStack
-          backgroundColor="$primaryMuted"
-          borderRadius={999}
-          paddingHorizontal={10}
-          paddingVertical={4}
-          maxWidth="65%"
+      <XStack alignItems="center" minHeight={44}>
+        <Pressable
+          style={{ flex: 1 }}
+          onPress={() => onOpenDetail(row)}
+          accessibilityRole="button"
+          accessibilityLabel={`${title}, open row details`}
         >
-          <Text
-            color="$primary"
-            fontSize={12}
-            fontWeight="600"
-            fontFamily="$mono"
-            numberOfLines={1}
-          >
-            {title}
-          </Text>
-        </XStack>
-        <XStack gap={6}>
-          <Pressable hitSlop={8} onPress={handleCopy}>
-            <YStack
-              width={32}
-              height={32}
-              borderRadius={16}
-              backgroundColor="$surfaceMuted"
+          {({ pressed }) => (
+            <XStack
               alignItems="center"
-              justifyContent="center"
+              gap="$sm"
+              paddingLeft="$md"
+              paddingVertical={11}
+              backgroundColor={pressed ? "$surfaceMuted" : "transparent"}
             >
-              <Ionicons name="copy-outline" size={15} color={tamagui.placeholderColor.val} />
-            </YStack>
-          </Pressable>
-          <Pressable hitSlop={8} onPress={() => onOpenDetail(row)}>
-            <YStack
-              width={32}
-              height={32}
-              borderRadius={16}
-              backgroundColor="$surfaceMuted"
-              alignItems="center"
-              justifyContent="center"
-            >
-              <Ionicons name="expand-outline" size={15} color={tamagui.placeholderColor.val} />
-            </YStack>
-          </Pressable>
-        </XStack>
+              {resolved.primary ? (
+                <AppText variant="footnote" tone="secondary" numberOfLines={1}>
+                  {resolved.primary.name}
+                </AppText>
+              ) : null}
+              <AppText variant="headline" numberOfLines={1} flexShrink={1}>
+                {title}
+              </AppText>
+            </XStack>
+          )}
+        </Pressable>
+        <Pressable
+          hitSlop={6}
+          onPress={handleCopy}
+          accessibilityRole="button"
+          accessibilityLabel="Copy row as JSON"
+          style={({ pressed }) => ({
+            width: 44,
+            height: 44,
+            alignItems: "center",
+            justifyContent: "center",
+            opacity: pressed ? 0.5 : 1,
+          })}
+        >
+          <Ionicons name="copy-outline" size={18} color={tamagui.accent.val} />
+        </Pressable>
       </XStack>
 
-      <Pressable onPress={() => onOpenDetail(row)}>
-        <YStack gap="$sm" paddingTop={4}>
-          {resolved.preview.length === 0 ? (
-            <Text color="$placeholderColor" fontSize={12}>
+      {fields.length === 0 ? (
+        <>
+          <Separator />
+          <YStack paddingHorizontal="$md" paddingVertical={11}>
+            <AppText variant="footnote" tone="secondary">
               No additional fields.
-            </Text>
-          ) : (
-            resolved.preview.map((col) => (
-              <FieldRow key={col.name} column={col} row={row} onOpenDetail={onOpenDetail} />
-            ))
-          )}
-        </YStack>
-      </Pressable>
+            </AppText>
+          </YStack>
+        </>
+      ) : (
+        fields.map((col) => (
+          <YStack key={col.name}>
+            <Separator />
+            <FieldRow column={col} row={row} onOpenDetail={onOpenDetail} />
+          </YStack>
+        ))
+      )}
 
       {restCount > 0 ? (
         <>
-          {expanded ? (
-            <YStack gap="$sm" paddingTop={4}>
-              {resolved.rest.map((col) => (
-                <FieldRow key={col.name} column={col} row={row} onOpenDetail={onOpenDetail} />
-              ))}
-            </YStack>
-          ) : null}
+          <Separator />
           <Pressable
             onPress={() => {
               setExpanded((v) => !v);
               haptic.light();
             }}
+            accessibilityRole="button"
+            accessibilityState={{ expanded }}
           >
-            <XStack alignItems="center" gap={4} paddingTop={4}>
-              <Text color="$primary" fontSize={12} fontWeight="600">
-                {expanded ? "View less" : `View more (${restCount})`}
-              </Text>
-              <Ionicons
-                name={expanded ? "chevron-up" : "chevron-down"}
-                size={14}
-                color={tamagui.primary.val}
-              />
-            </XStack>
+            {({ pressed }) => (
+              <XStack
+                alignItems="center"
+                gap={6}
+                paddingHorizontal="$md"
+                minHeight={44}
+                backgroundColor={pressed ? "$surfaceMuted" : "transparent"}
+              >
+                <AppText variant="subhead" tone="accent" flex={1}>
+                  {expanded
+                    ? "Show Fewer Fields"
+                    : `Show ${restCount} More Field${restCount === 1 ? "" : "s"}`}
+                </AppText>
+                <Ionicons
+                  name={expanded ? "chevron-up" : "chevron-down"}
+                  size={15}
+                  color={tamagui.accent.val}
+                />
+              </XStack>
+            )}
           </Pressable>
         </>
       ) : null}
@@ -215,6 +237,7 @@ const CardItem = memo(function CardItem({
 });
 
 export const CardsView = memo(function CardsView({ rows, resolved, onOpenDetail }: CardsViewProps) {
+  const tamagui = useTamaguiTheme();
   const data = useMemo(
     () =>
       rows.map(
@@ -229,11 +252,12 @@ export const CardsView = memo(function CardsView({ rows, resolved, onOpenDetail 
 
   if (rows.length === 0) {
     return (
-      <YStack flex={1} alignItems="center" justifyContent="center" padding="$lg" gap="$sm">
-        <Ionicons name="albums-outline" size={28} color="#8a8aa0" />
-        <Text color="$placeholderColor" fontSize={14}>
-          No rows match the current view.
-        </Text>
+      <YStack flex={1} alignItems="center" justifyContent="center" paddingVertical="$xl">
+        <EmptyState
+          icon={<Ionicons name="albums-outline" size={40} color={tamagui.textSubtle.val} />}
+          title="No Matching Rows"
+          message="No rows match the current filter."
+        />
       </YStack>
     );
   }
@@ -242,7 +266,7 @@ export const CardsView = memo(function CardsView({ rows, resolved, onOpenDetail 
     <FlatList
       data={data}
       keyExtractor={(item) => item.key}
-      contentContainerStyle={{ gap: 10, paddingBottom: 24 }}
+      contentContainerStyle={{ gap: 16, paddingBottom: 24 }}
       renderItem={({ item }) => (
         <CardItem item={item} resolved={resolved} onOpenDetail={onOpenDetail} />
       )}

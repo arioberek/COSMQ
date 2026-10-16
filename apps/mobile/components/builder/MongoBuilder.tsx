@@ -1,10 +1,9 @@
-import { Ionicons } from "@expo/vector-icons";
 import { memo, useCallback, useState } from "react";
-import { Pressable, TextInput } from "react-native";
-import { Text, useTheme as useTamaguiTheme, XStack, YStack } from "tamagui";
+import { YStack } from "tamagui";
 import { useHaptic } from "../../lib/haptics";
 import type { ColumnInfo, TableInfo } from "../../lib/types";
-import { BuilderSection } from "./BuilderSection";
+import { ListRow } from "../ui/List";
+import { BuilderSection, ChipListRow, LimitRow } from "./BuilderSection";
 import {
   MONGO_OPERATORS,
   type MongoBuilderState,
@@ -48,7 +47,6 @@ export const MongoBuilder = memo(function MongoBuilder({
   collections,
   onPickCollection,
 }: MongoBuilderProps) {
-  const tamagui = useTamaguiTheme();
   const haptic = useHaptic();
   const [showProjection, setShowProjection] = useState(false);
 
@@ -115,207 +113,98 @@ export const MongoBuilder = memo(function MongoBuilder({
   const collectionsEmpty = collections.length === 0 && !loadingCollections;
 
   return (
-    <YStack gap="$md">
-      <BuilderSection title="Collection">
-        <Pressable onPress={onPickCollection}>
-          <XStack
-            alignItems="center"
-            backgroundColor="$surface"
-            borderWidth={1}
-            borderColor="$borderColor"
-            borderRadius="$sm"
-            paddingHorizontal="$sm"
-            paddingVertical="$sm"
-            gap="$sm"
-          >
-            <Ionicons name="folder-outline" size={14} color={tamagui.placeholderColor.val} />
-            <Text
-              color={state.collection ? "$color" : "$placeholderColor"}
-              fontSize={14}
-              fontFamily="$mono"
-              flex={1}
-              numberOfLines={1}
-            >
-              {collectionsEmpty
-                ? "Tap Refresh in the editor to load collections"
-                : (state.collection ?? "Pick a collection…")}
-            </Text>
-            <Ionicons name="chevron-forward" size={13} color={tamagui.placeholderColor.val} />
-          </XStack>
-        </Pressable>
+    <YStack gap={28}>
+      <BuilderSection
+        title="Collection"
+        footer={
+          collectionsEmpty ? "No collections loaded yet. Tap Refresh to load them." : undefined
+        }
+      >
+        <ListRow
+          title="Collection"
+          value={state.collection ?? "None"}
+          accessory="chevron"
+          onPress={onPickCollection}
+        />
+      </BuilderSection>
+
+      <BuilderSection title="Projection">
+        <ListRow
+          title="Fields"
+          value={state.projection.length === 0 ? "All" : `${state.projection.length} Kept`}
+          accessory="chevron"
+          onPress={() => setShowProjection(true)}
+        />
+        {state.projection.length > 0 ? (
+          <ChipListRow
+            items={state.projection}
+            onRemove={(f) =>
+              onChange({ ...state, projection: state.projection.filter((n) => n !== f) })
+            }
+          />
+        ) : null}
       </BuilderSection>
 
       <BuilderSection
-        title="Projection"
-        hint={state.projection.length === 0 ? "all fields" : `${state.projection.length} kept`}
-        onAdd={() => setShowProjection(true)}
-        addLabel="Pick"
+        title="Filter"
+        onAdd={addFilter}
+        addLabel="Add Condition"
+        footer={state.filters.length === 0 ? "No filters. Returns all documents." : undefined}
       >
-        <Pressable onPress={() => setShowProjection(true)}>
-          <XStack
-            flexWrap="wrap"
-            gap={6}
-            backgroundColor="$surface"
-            borderWidth={1}
-            borderColor="$borderColor"
-            borderRadius="$sm"
-            paddingHorizontal="$sm"
-            paddingVertical="$sm"
-            minHeight={40}
-            alignItems="center"
-          >
-            {state.projection.length === 0 ? (
-              <XStack
-                paddingHorizontal={10}
-                paddingVertical={4}
-                borderRadius={999}
-                backgroundColor="$primaryMuted"
-              >
-                <Text color="$primary" fontSize={12} fontWeight="600" fontFamily="$mono">
-                  all fields
-                </Text>
-              </XStack>
-            ) : (
-              state.projection.map((f) => (
-                <XStack
-                  key={f}
-                  paddingHorizontal={10}
-                  paddingVertical={4}
-                  borderRadius={999}
-                  backgroundColor="$surfaceMuted"
-                  alignItems="center"
-                  gap={4}
-                >
-                  <Text color="$color" fontSize={12} fontFamily="$mono">
-                    {f}
-                  </Text>
-                  <Pressable
-                    hitSlop={6}
-                    onPress={(e) => {
-                      e.stopPropagation();
-                      onChange({ ...state, projection: state.projection.filter((n) => n !== f) });
-                    }}
-                  >
-                    <Ionicons name="close" size={12} color={tamagui.placeholderColor.val} />
-                  </Pressable>
-                </XStack>
-              ))
-            )}
-          </XStack>
-        </Pressable>
+        {state.filters.map((f, idx) => (
+          <ConditionRow
+            key={f.id}
+            index={idx}
+            column={f.field}
+            onColumnChange={(c) => updateFilter(f.id, { field: c })}
+            columns={fields}
+            operator={f.operator}
+            onOperatorChange={(o) => updateFilter(f.id, { operator: o as MongoOperator })}
+            operators={[...MONGO_OPERATORS]}
+            value={f.value}
+            onValueChange={(v) => updateFilter(f.id, { value: v })}
+            hideValue={false}
+            valuePlaceholder={placeholderForOperator(f.operator)}
+            onRemove={() => removeFilter(f.id)}
+          />
+        ))}
       </BuilderSection>
 
-      <BuilderSection title="Filter" hint="conditions" onAdd={addFilter}>
-        {state.filters.length === 0 ? (
-          <XStack
-            paddingHorizontal="$sm"
-            paddingVertical="$sm"
-            borderRadius="$sm"
-            backgroundColor="$surfaceMuted"
-            borderWidth={1}
-            borderColor="$borderColor"
-            borderStyle="dashed"
-          >
-            <Text color="$placeholderColor" fontSize={12}>
-              No filters. Returns all documents.
-            </Text>
-          </XStack>
-        ) : (
-          <YStack gap={6}>
-            {state.filters.map((f, idx) => (
-              <ConditionRow
-                key={f.id}
-                index={idx}
-                column={f.field}
-                onColumnChange={(c) => updateFilter(f.id, { field: c })}
-                columns={fields}
-                operator={f.operator}
-                onOperatorChange={(o) => updateFilter(f.id, { operator: o as MongoOperator })}
-                operators={[...MONGO_OPERATORS]}
-                value={f.value}
-                onValueChange={(v) => updateFilter(f.id, { value: v })}
-                hideValue={false}
-                valuePlaceholder={placeholderForOperator(f.operator)}
-                onRemove={() => removeFilter(f.id)}
-              />
-            ))}
-          </YStack>
-        )}
-      </BuilderSection>
-
-      <BuilderSection title="Sort" onAdd={addSort}>
-        {state.sort.length === 0 ? (
-          <XStack
-            paddingHorizontal="$sm"
-            paddingVertical="$sm"
-            borderRadius="$sm"
-            backgroundColor="$surfaceMuted"
-            borderWidth={1}
-            borderColor="$borderColor"
-            borderStyle="dashed"
-          >
-            <Text color="$placeholderColor" fontSize={12}>
-              Server-default order.
-            </Text>
-          </XStack>
-        ) : (
-          <YStack gap={6}>
-            {state.sort.map((s) => (
-              <SortRow
-                key={s.id}
-                column={s.field}
-                onColumnChange={(c) => updateSort(s.id, { field: c })}
-                columns={fields}
-                dir={s.dir}
-                ascValue={1 as 1 | -1}
-                descValue={-1 as 1 | -1}
-                ascLabel="ASC"
-                descLabel="DESC"
-                onDirChange={(d) => updateSort(s.id, { dir: d })}
-                onRemove={() => removeSort(s.id)}
-              />
-            ))}
-          </YStack>
-        )}
+      <BuilderSection
+        title="Sort"
+        onAdd={addSort}
+        addLabel="Add Sort"
+        footer={state.sort.length === 0 ? "Server-default order." : undefined}
+      >
+        {state.sort.map((s) => (
+          <SortRow
+            key={s.id}
+            column={s.field}
+            onColumnChange={(c) => updateSort(s.id, { field: c })}
+            columns={fields}
+            dir={s.dir}
+            ascValue={1 as 1 | -1}
+            descValue={-1 as 1 | -1}
+            ascLabel="ASC"
+            descLabel="DESC"
+            onDirChange={(d) => updateSort(s.id, { dir: d })}
+            onRemove={() => removeSort(s.id)}
+          />
+        ))}
       </BuilderSection>
 
       <BuilderSection title="Limit">
-        <XStack
-          alignItems="center"
-          backgroundColor="$surface"
-          borderWidth={1}
-          borderColor="$borderColor"
-          borderRadius="$sm"
-          paddingHorizontal="$sm"
-          paddingVertical={4}
-          gap="$sm"
-        >
-          <TextInput
-            value={state.limit ? String(state.limit) : ""}
-            onChangeText={updateLimit}
-            placeholder="No limit"
-            placeholderTextColor={tamagui.placeholderColor.val}
-            keyboardType="number-pad"
-            style={{
-              flex: 1,
-              color: tamagui.color.val,
-              fontSize: 14,
-              fontFamily: "JetBrainsMono",
-              paddingVertical: 6,
-            }}
-          />
-          {state.limit ? (
-            <Pressable hitSlop={6} onPress={() => onChange({ ...state, limit: null })}>
-              <Ionicons name="close-circle" size={14} color={tamagui.placeholderColor.val} />
-            </Pressable>
-          ) : null}
-        </XStack>
+        <LimitRow
+          value={state.limit}
+          onChangeText={updateLimit}
+          onClear={() => onChange({ ...state, limit: null })}
+        />
       </BuilderSection>
 
       <PickerSheet
         open={showProjection}
         onOpenChange={setShowProjection}
-        title="Project fields"
+        title="Fields"
         multi
         options={fields.map((c) => ({ id: c.name, label: c.name, sublabel: c.type }))}
         selected={state.projection}

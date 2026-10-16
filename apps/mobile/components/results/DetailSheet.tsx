@@ -1,12 +1,15 @@
 import { Ionicons } from "@expo/vector-icons";
 import * as Clipboard from "expo-clipboard";
 import { memo, useCallback } from "react";
-import { Pressable, ScrollView } from "react-native";
-import { Sheet, Text, useTheme as useTamaguiTheme, XStack, YStack } from "tamagui";
+import { Pressable } from "react-native";
+import { useTheme as useTamaguiTheme, XStack, YStack } from "tamagui";
 import { useHaptic } from "../../lib/haptics";
 import type { ColumnInfo } from "../../lib/types";
-import { CellValue } from "./CellValue";
-import { stringifyCell } from "./format";
+import { ModalSheet } from "../ui/Dialog";
+import { ListRow, ListSection } from "../ui/List";
+import { AppText } from "../ui/Text";
+import { CellValue, NullValue } from "./CellValue";
+import { isNullish, stringifyCell } from "./format";
 
 type DetailSheetProps = {
   open: boolean;
@@ -34,96 +37,78 @@ export const DetailSheet = memo(function DetailSheet({
     [haptic],
   );
 
+  const copyRow = useCallback(async () => {
+    if (!row) return;
+    const obj: Record<string, unknown> = {};
+    for (const c of columns) obj[c.name] = row[c.name];
+    await Clipboard.setStringAsync(stringifyCell(obj));
+    haptic.light();
+  }, [row, columns, haptic]);
+
   return (
-    <Sheet
-      modal
+    <ModalSheet
       open={open}
       onOpenChange={onOpenChange}
-      animation="medium"
-      zIndex={200000}
-      dismissOnSnapToBottom
+      title={title ?? "Row Details"}
+      subtitle={`${columns.length} field${columns.length === 1 ? "" : "s"}`}
       snapPoints={[88, 60]}
     >
-      <Sheet.Overlay
-        animation="lazy"
-        enterStyle={{ opacity: 0 }}
-        exitStyle={{ opacity: 0 }}
-        backgroundColor="$dialogOverlay"
-      />
-      <Sheet.Frame
-        backgroundColor="$surfaceElevated"
-        borderTopLeftRadius={20}
-        borderTopRightRadius={20}
-        padding="$lg"
-        gap="$md"
-      >
-        <Sheet.Handle backgroundColor="$dialogHandle" alignSelf="center" />
-        <XStack alignItems="center" justifyContent="space-between">
-          <Text fontSize={17} fontWeight="600" color="$color" letterSpacing={-0.2}>
-            {title ?? "Row details"}
-          </Text>
-          <Pressable hitSlop={10} onPress={() => onOpenChange(false)}>
-            <Ionicons name="close" size={22} color={tamagui.placeholderColor.val} />
-          </Pressable>
-        </XStack>
-
-        <ScrollView showsVerticalScrollIndicator={false}>
-          <YStack gap="$sm" paddingBottom={32}>
-            {row === null ? (
-              <Text color="$placeholderColor" fontSize={14}>
-                No row selected.
-              </Text>
-            ) : (
-              columns.map((col) => {
-                const value = row[col.name];
-                return (
-                  <YStack
-                    key={col.name}
-                    gap={4}
-                    paddingVertical="$sm"
-                    paddingHorizontal="$sm"
-                    backgroundColor="$surface"
-                    borderRadius="$sm"
-                    borderWidth={1}
-                    borderColor="$borderColor"
-                  >
-                    <XStack alignItems="center" justifyContent="space-between" gap="$sm">
-                      <YStack flex={1} gap={2}>
-                        <Text
-                          color="$placeholderColor"
-                          fontSize={11}
-                          fontFamily="$mono"
-                          textTransform="uppercase"
-                          letterSpacing={0.4}
-                        >
+      {row === null ? (
+        <AppText variant="footnote" tone="secondary" style={{ textAlign: "center" }}>
+          No row selected.
+        </AppText>
+      ) : (
+        <>
+          <ListSection>
+            {columns.map((col, idx) => {
+              const value = row[col.name];
+              return (
+                <ListRow
+                  // biome-ignore lint/suspicious/noArrayIndexKey: unaliased joins can repeat column names
+                  key={`${col.name}-${idx}`}
+                  title={
+                    <YStack gap={2}>
+                      <XStack alignItems="baseline" gap={6}>
+                        <AppText variant="footnote" tone="secondary" numberOfLines={1}>
                           {col.name}
-                          {col.type ? `  ·  ${col.type.toLowerCase()}` : ""}
-                        </Text>
-                      </YStack>
-                      <Pressable hitSlop={8} onPress={() => copyValue(value)}>
-                        <Ionicons
-                          name="copy-outline"
-                          size={16}
-                          color={tamagui.placeholderColor.val}
-                        />
-                      </Pressable>
-                    </XStack>
-                    <YStack>
-                      {value !== null && value !== undefined && typeof value === "object" ? (
-                        <Text color="$color" fontSize={12} fontFamily="$mono" selectable>
+                        </AppText>
+                        {col.type ? (
+                          <AppText variant="caption2" tone="tertiary" numberOfLines={1}>
+                            {col.type.toLowerCase()}
+                          </AppText>
+                        ) : null}
+                      </XStack>
+                      {isNullish(value) ? (
+                        <NullValue />
+                      ) : typeof value === "object" ? (
+                        <AppText variant="code" selectable>
                           {stringifyCell(value)}
-                        </Text>
+                        </AppText>
                       ) : (
                         <CellValue column={col} value={value} numberOfLines={6} />
                       )}
                     </YStack>
-                  </YStack>
-                );
-              })
-            )}
-          </YStack>
-        </ScrollView>
-      </Sheet.Frame>
-    </Sheet>
+                  }
+                  accessory={
+                    <Pressable
+                      hitSlop={8}
+                      onPress={() => copyValue(value)}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Copy ${col.name}`}
+                      style={({ pressed }) => ({ opacity: pressed ? 0.5 : 1 })}
+                    >
+                      <Ionicons name="copy-outline" size={18} color={tamagui.accent.val} />
+                    </Pressable>
+                  }
+                />
+              );
+            })}
+          </ListSection>
+          <ListSection>
+            <ListRow title="Copy Row as JSON" tint onPress={copyRow} />
+          </ListSection>
+        </>
+      )}
+    </ModalSheet>
   );
 });

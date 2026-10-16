@@ -1,8 +1,8 @@
-import { Ionicons } from "@expo/vector-icons";
-import { memo } from "react";
-import { Pressable, ScrollView } from "react-native";
-import { Sheet, Text, useTheme as useTamaguiTheme, XStack, YStack } from "tamagui";
+import { memo, useEffect, useState } from "react";
 import type { ColumnInfo } from "../../lib/types";
+import { ModalSheet } from "../ui/Dialog";
+import { ListRow, ListSection } from "../ui/List";
+import { Segmented } from "./Segmented";
 
 export type SortDir = "asc" | "desc" | null;
 
@@ -16,6 +16,8 @@ type SortSheetProps = {
   onClear: () => void;
 };
 
+const DIRECTIONS = ["Ascending", "Descending"];
+
 export const SortSheet = memo(function SortSheet({
   open,
   onOpenChange,
@@ -25,143 +27,49 @@ export const SortSheet = memo(function SortSheet({
   onSelect,
   onClear,
 }: SortSheetProps) {
-  const tamagui = useTamaguiTheme();
+  // Direction chosen before a column is picked; mirrors the active sort.
+  const [dir, setDir] = useState<"asc" | "desc">(sortDir ?? "asc");
+  useEffect(() => {
+    if (sortDir) setDir(sortDir);
+  }, [sortDir]);
+
+  const handleDirChange = (index: number) => {
+    const next = index === 1 ? "desc" : "asc";
+    setDir(next);
+    if (sortColumn) onSelect(sortColumn, next);
+  };
 
   return (
-    <Sheet
-      modal
-      open={open}
-      onOpenChange={onOpenChange}
-      animation="medium"
-      zIndex={200000}
-      dismissOnSnapToBottom
-      snapPoints={[70]}
-    >
-      <Sheet.Overlay
-        animation="lazy"
-        enterStyle={{ opacity: 0 }}
-        exitStyle={{ opacity: 0 }}
-        backgroundColor="$dialogOverlay"
+    <ModalSheet open={open} onOpenChange={onOpenChange} title="Sort By" snapPoints={[70]}>
+      <Segmented
+        values={DIRECTIONS}
+        selectedIndex={dir === "desc" ? 1 : 0}
+        onChange={handleDirChange}
+        accessibilityLabel="Sort direction"
       />
-      <Sheet.Frame
-        backgroundColor="$surfaceElevated"
-        borderTopLeftRadius={20}
-        borderTopRightRadius={20}
-        padding="$lg"
-        gap="$md"
-      >
-        <Sheet.Handle backgroundColor="$dialogHandle" alignSelf="center" />
-        <XStack alignItems="center" justifyContent="space-between">
-          <Text fontSize={17} fontWeight="600" color="$color" letterSpacing={-0.2}>
-            Sort by
-          </Text>
-          <Pressable hitSlop={10} onPress={onClear}>
-            <Text color="$primary" fontSize={13} fontWeight="600">
-              Clear
-            </Text>
-          </Pressable>
-        </XStack>
 
-        <ScrollView showsVerticalScrollIndicator={false}>
-          <YStack gap={6} paddingBottom={32}>
-            {columns.map((col) => {
-              const isSorted = sortColumn === col.name;
-              return (
-                <XStack
-                  key={col.name}
-                  alignItems="center"
-                  justifyContent="space-between"
-                  paddingHorizontal="$sm"
-                  paddingVertical="$sm"
-                  backgroundColor="$surface"
-                  borderRadius="$sm"
-                  borderWidth={1}
-                  borderColor={isSorted ? "$primary" : "$borderColor"}
-                  gap="$sm"
-                >
-                  <YStack flex={1}>
-                    <Text color="$color" fontSize={14} fontWeight="500" numberOfLines={1}>
-                      {col.name}
-                    </Text>
-                  </YStack>
-                  <XStack gap={6}>
-                    <Pressable
-                      hitSlop={6}
-                      onPress={() =>
-                        onSelect(col.name, isSorted && sortDir === "asc" ? null : "asc")
-                      }
-                    >
-                      <XStack
-                        width={64}
-                        height={32}
-                        borderRadius={8}
-                        backgroundColor={
-                          isSorted && sortDir === "asc" ? "$primaryMuted" : "$surfaceMuted"
-                        }
-                        alignItems="center"
-                        justifyContent="center"
-                        gap={4}
-                      >
-                        <Ionicons
-                          name="arrow-up"
-                          size={12}
-                          color={
-                            isSorted && sortDir === "asc"
-                              ? tamagui.primary.val
-                              : tamagui.placeholderColor.val
-                          }
-                        />
-                        <Text
-                          color={isSorted && sortDir === "asc" ? "$primary" : "$placeholderColor"}
-                          fontSize={11}
-                          fontWeight="600"
-                        >
-                          ASC
-                        </Text>
-                      </XStack>
-                    </Pressable>
-                    <Pressable
-                      hitSlop={6}
-                      onPress={() =>
-                        onSelect(col.name, isSorted && sortDir === "desc" ? null : "desc")
-                      }
-                    >
-                      <XStack
-                        width={64}
-                        height={32}
-                        borderRadius={8}
-                        backgroundColor={
-                          isSorted && sortDir === "desc" ? "$primaryMuted" : "$surfaceMuted"
-                        }
-                        alignItems="center"
-                        justifyContent="center"
-                        gap={4}
-                      >
-                        <Ionicons
-                          name="arrow-down"
-                          size={12}
-                          color={
-                            isSorted && sortDir === "desc"
-                              ? tamagui.primary.val
-                              : tamagui.placeholderColor.val
-                          }
-                        />
-                        <Text
-                          color={isSorted && sortDir === "desc" ? "$primary" : "$placeholderColor"}
-                          fontSize={11}
-                          fontWeight="600"
-                        >
-                          DESC
-                        </Text>
-                      </XStack>
-                    </Pressable>
-                  </XStack>
-                </XStack>
-              );
-            })}
-          </YStack>
-        </ScrollView>
-      </Sheet.Frame>
-    </Sheet>
+      <ListSection title="Column">
+        {columns.map((col, idx) => {
+          const isSorted = sortColumn === col.name;
+          return (
+            <ListRow
+              // biome-ignore lint/suspicious/noArrayIndexKey: unaliased joins can repeat column names
+              key={`${col.name}-${idx}`}
+              title={col.name}
+              subtitle={col.type ? col.type.toLowerCase() : undefined}
+              accessory={isSorted ? "check" : undefined}
+              // Tapping the active column clears the sort, like the old ASC/DESC toggles.
+              onPress={() => onSelect(col.name, isSorted ? null : dir)}
+            />
+          );
+        })}
+      </ListSection>
+
+      {sortColumn ? (
+        <ListSection>
+          <ListRow title="Clear Sort" tint onPress={onClear} />
+        </ListSection>
+      ) : null}
+    </ModalSheet>
   );
 });

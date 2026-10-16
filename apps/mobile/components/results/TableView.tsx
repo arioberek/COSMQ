@@ -5,16 +5,19 @@ import {
   FlatList,
   type NativeScrollEvent,
   type NativeSyntheticEvent,
-  PanResponder,
   Pressable,
   ScrollView,
   View,
 } from "react-native";
-import { Text, useTheme as useTamaguiTheme, XStack, YStack } from "tamagui";
+import { Gesture, GestureDetector } from "react-native-gesture-handler";
+import { useTheme as useTamaguiTheme, XStack, YStack } from "tamagui";
 import { useHaptic } from "../../lib/haptics";
 import type { ColumnInfo } from "../../lib/types";
+import { EmptyState } from "../ui/EmptyState";
+import { AppText } from "../ui/Text";
+import { NullValue } from "./CellValue";
 import type { ResolvedColumns } from "./columnPriority";
-import { previewString, stringifyCell } from "./format";
+import { isNullish, isNumericType, previewString, stringifyCell } from "./format";
 
 type SortDir = "asc" | "desc" | null;
 
@@ -26,36 +29,40 @@ type TableViewProps = {
   onSortChange: (column: string, dir: SortDir) => void;
 };
 
-const COL_CHAR_PX = 8.2;
-const COL_PAD = 28;
+const COL_CHAR_PX = 8;
+const COL_PAD = 24;
 const COL_MIN = 80;
 const COL_MAX = 240;
 const PK_WIDTH = 132;
+// Fixed heights keep the overlaid sticky column aligned with the main grid.
+const HEADER_HEIGHT = 44;
+const ROW_HEIGHT = 36;
+const CELL_PAD_X = 10;
 
 const computeColumnWidth = (col: ColumnInfo, rows: Record<string, unknown>[]): number => {
-  const headerPx = Math.max(col.name.length, (col.type ?? "").length) * COL_CHAR_PX + COL_PAD;
+  const headerPx = Math.max(col.name.length, (col.type ?? "").length) * 7 + COL_PAD + 14;
   const maxContent = rows.slice(0, 40).reduce((mx, row) => {
     const v = row[col.name];
     const s =
-      v === null || v === undefined ? "" : typeof v === "object" ? JSON.stringify(v) : String(v);
+      v === null || v === undefined
+        ? "NULL"
+        : typeof v === "object"
+          ? JSON.stringify(v)
+          : String(v);
     return Math.max(mx, Math.min(s.length, 36));
   }, 0);
   const contentPx = maxContent * COL_CHAR_PX + COL_PAD;
   return Math.min(Math.max(Math.max(headerPx, contentPx), COL_MIN), COL_MAX);
 };
 
-const SortIndicator = ({ dir }: { dir: SortDir }) => {
-  const tamagui = useTamaguiTheme();
-  const muted = tamagui.placeholderColor.val;
-  const active = tamagui.primary.val;
-  return (
-    <YStack alignItems="center" justifyContent="center">
-      <Ionicons name="caret-up" size={9} color={dir === "asc" ? active : muted} />
-      <YStack marginTop={-2}>
-        <Ionicons name="caret-down" size={9} color={dir === "desc" ? active : muted} />
-      </YStack>
-    </YStack>
-  );
+/** A column is numeric when its declared type is, or its first non-null sample is a number. */
+const isNumericColumn = (col: ColumnInfo, rows: Record<string, unknown>[]): boolean => {
+  if (isNumericType(col.type)) return true;
+  for (let i = 0; i < Math.min(rows.length, 20); i++) {
+    const v = rows[i][col.name];
+    if (!isNullish(v)) return typeof v === "number";
+  }
+  return false;
 };
 
 const ResizeHandle = ({
@@ -65,116 +72,210 @@ const ResizeHandle = ({
   onChange: (delta: number) => void;
   onCommit: () => void;
 }) => {
-  const startedRef = useRef(0);
-  const responder = useMemo(
+  const tamagui = useTamaguiTheme();
+  // Callbacks live in refs so the gesture object stays stable for the whole
+  // drag; recreating it mid-gesture would re-register the handler.
+  const onChangeRef = useRef(onChange);
+  const onCommitRef = useRef(onCommit);
+  onChangeRef.current = onChange;
+  onCommitRef.current = onCommit;
+  const lastRef = useRef(0);
+
+  // Width is a layout property every cell in the column depends on, so the
+  // drag has to go through React state; runOnJS keeps the callbacks on the JS
+  // thread (this is a rare, deliberate edit, not a per-frame animation).
+  const gesture = useMemo(
     () =>
-      PanResponder.create({
-        onStartShouldSetPanResponder: () => true,
-        onMoveShouldSetPanResponder: () => true,
-        onPanResponderGrant: () => {
-          startedRef.current = 0;
-        },
-        onPanResponderMove: (_, gs) => {
-          onChange(gs.dx - startedRef.current);
-          startedRef.current = gs.dx;
-        },
-        onPanResponderRelease: () => {
-          onCommit();
-        },
-        onPanResponderTerminate: () => {
-          onCommit();
-        },
-      }),
-    [onChange, onCommit],
+      Gesture.Pan()
+        .runOnJS(true)
+        .minDistance(0)
+        .onBegin(() => {
+          lastRef.current = 0;
+        })
+        .onUpdate((e) => {
+          onChangeRef.current(e.translationX - lastRef.current);
+          lastRef.current = e.translationX;
+        })
+        .onFinalize(() => {
+          onCommitRef.current();
+        }),
+    [],
   );
+
   return (
-    <View
-      {...responder.panHandlers}
-      style={{
-        position: "absolute",
-        right: 0,
-        top: 0,
-        bottom: 0,
-        width: 18,
-        alignItems: "center",
-        justifyContent: "center",
-      }}
-    >
+    <GestureDetector gesture={gesture}>
       <View
+        accessibilityLabel="Drag to resize column"
         style={{
-          width: 3,
-          height: 22,
-          borderRadius: 2,
-          backgroundColor: "rgba(124,92,255,0.85)",
+          position: "absolute",
+          right: 0,
+          top: 0,
+          bottom: 0,
+          width: 22,
+          alignItems: "center",
+          justifyContent: "center",
         }}
-      />
-    </View>
+      >
+        <View
+          style={{
+            width: 4,
+            height: 22,
+            borderRadius: 2,
+            backgroundColor: tamagui.accent.val,
+          }}
+        />
+      </View>
+    </GestureDetector>
   );
 };
 
 const HeaderCell = memo(function HeaderCell({
   column,
   width,
+  numeric,
   isSorted,
   sortDir,
   onPress,
   onLongPress,
   resizing,
+  isSticky,
   onResizeChange,
   onResizeCommit,
 }: {
   column: ColumnInfo;
   width: number;
+  numeric: boolean;
   isSorted: boolean;
   sortDir: SortDir;
   onPress: () => void;
   onLongPress: () => void;
   resizing: boolean;
+  isSticky: boolean;
   onResizeChange: (delta: number) => void;
   onResizeCommit: () => void;
 }) {
+  const tamagui = useTamaguiTheme();
+  const sorted = isSorted && sortDir !== null;
   return (
-    <Pressable onPress={onPress} onLongPress={onLongPress} delayLongPress={350}>
-      <XStack
-        width={width}
-        paddingHorizontal="$sm"
-        paddingVertical={9}
-        alignItems="center"
-        gap={6}
-        backgroundColor={resizing ? "$primaryMuted" : "$surfaceAlt"}
-        borderRightWidth={1}
-        borderRightColor="$borderColor"
-      >
-        <YStack flex={1} gap={2}>
-          <Text color="$color" fontSize={12} fontWeight="600" fontFamily="$mono" numberOfLines={1}>
-            {column.name}
-          </Text>
-          {column.type ? (
-            <Text color="$placeholderColor" fontSize={10} fontFamily="$mono" numberOfLines={1}>
-              {column.type.toLowerCase()}
-            </Text>
+    <Pressable
+      onPress={onPress}
+      onLongPress={onLongPress}
+      delayLongPress={350}
+      accessibilityRole="button"
+      accessibilityLabel={`${column.name}${sorted ? `, sorted ${sortDir === "asc" ? "ascending" : "descending"}` : ""}`}
+      accessibilityHint="Tap to sort. Long-press to resize."
+    >
+      {({ pressed }) => (
+        <XStack
+          width={width}
+          height={HEADER_HEIGHT}
+          paddingHorizontal={CELL_PAD_X}
+          alignItems="center"
+          gap={4}
+          backgroundColor={resizing ? "$accentMuted" : pressed ? "$surfaceMuted" : "$surfaceAlt"}
+          borderRightWidth={0.5}
+          borderRightColor={isSticky ? "$borderColor" : "$borderSubtle"}
+          borderBottomWidth={0.5}
+          borderBottomColor="$borderColor"
+        >
+          <YStack flex={1} minWidth={0} alignItems={numeric ? "flex-end" : "flex-start"}>
+            <AppText
+              variant="caption2"
+              tone={sorted ? "accent" : "secondary"}
+              emphasized
+              textTransform="uppercase"
+              numberOfLines={1}
+            >
+              {column.name}
+            </AppText>
+            {column.type ? (
+              <AppText variant="caption2" tone="tertiary" numberOfLines={1}>
+                {column.type.toLowerCase()}
+              </AppText>
+            ) : null}
+          </YStack>
+          {sorted ? (
+            <Ionicons
+              name={sortDir === "asc" ? "chevron-up" : "chevron-down"}
+              size={12}
+              color={tamagui.accent.val}
+            />
           ) : null}
-        </YStack>
-        <SortIndicator dir={isSorted ? sortDir : null} />
-        {resizing ? <ResizeHandle onChange={onResizeChange} onCommit={onResizeCommit} /> : null}
-      </XStack>
+          {resizing ? <ResizeHandle onChange={onResizeChange} onCommit={onResizeCommit} /> : null}
+        </XStack>
+      )}
+    </Pressable>
+  );
+});
+
+const DataCell = memo(function DataCell({
+  value,
+  width,
+  numeric,
+  isSticky,
+  onCopy,
+}: {
+  value: unknown;
+  width: number;
+  numeric: boolean;
+  isSticky?: boolean;
+  onCopy: (v: unknown) => void;
+}) {
+  const text = isNullish(value)
+    ? null
+    : typeof value === "object"
+      ? previewString(stringifyCell(value), 200)
+      : previewString(String(value), 200);
+  return (
+    <Pressable
+      onPress={() => onCopy(value)}
+      accessibilityRole="button"
+      accessibilityLabel={text ?? "NULL"}
+      accessibilityHint="Copies the value"
+    >
+      {({ pressed }) => (
+        <XStack
+          width={width}
+          height={ROW_HEIGHT}
+          paddingHorizontal={CELL_PAD_X}
+          alignItems="center"
+          justifyContent={numeric ? "flex-end" : "flex-start"}
+          backgroundColor={pressed ? "$surfaceMuted" : "$surface"}
+          borderRightWidth={0.5}
+          borderRightColor={isSticky ? "$borderColor" : "$borderSubtle"}
+          borderBottomWidth={0.5}
+          borderBottomColor="$borderSubtle"
+        >
+          {text === null ? (
+            <NullValue />
+          ) : (
+            <AppText
+              variant="code"
+              numberOfLines={1}
+              fontVariant={numeric ? ["tabular-nums"] : undefined}
+            >
+              {text}
+            </AppText>
+          )}
+        </XStack>
+      )}
     </Pressable>
   );
 });
 
 const DataRow = memo(function DataRow({
   row,
-  index,
   stickyWidth,
   dataCols,
   widths,
+  numericCols,
   onCopy,
 }: {
   row: Record<string, unknown>;
-  index: number;
   stickyWidth: number;
   dataCols: ColumnInfo[];
   widths: Record<string, number>;
+  numericCols: Set<string>;
   onCopy: (v: unknown) => void;
 }) {
   return (
@@ -183,56 +284,13 @@ const DataRow = memo(function DataRow({
       {dataCols.map((col) => (
         <DataCell
           key={`c-${col.name}`}
-          column={col}
           value={row[col.name]}
           width={widths[col.name] ?? COL_MIN}
-          alt={index % 2 === 1}
+          numeric={numericCols.has(col.name)}
           onCopy={onCopy}
         />
       ))}
     </XStack>
-  );
-});
-
-const DataCell = memo(function DataCell({
-  column,
-  value,
-  width,
-  alt,
-  onCopy,
-}: {
-  column: ColumnInfo;
-  value: unknown;
-  width: number;
-  alt: boolean;
-  onCopy: (v: unknown) => void;
-}) {
-  return (
-    <Pressable onPress={() => onCopy(value)}>
-      <XStack
-        width={width}
-        paddingHorizontal="$sm"
-        paddingVertical={10}
-        backgroundColor={alt ? "$surfaceAlt" : "$surface"}
-        borderRightWidth={1}
-        borderRightColor="$borderColor"
-        borderBottomWidth={1}
-        borderBottomColor="$borderColor"
-        alignItems="flex-start"
-      >
-        {value === null || value === undefined ? (
-          <Text color="$placeholderColor" fontSize={12} fontFamily="$mono" fontStyle="italic">
-            null
-          </Text>
-        ) : (
-          <Text color="$textMuted" fontSize={13} fontFamily="$mono" numberOfLines={3}>
-            {typeof value === "object"
-              ? previewString(stringifyCell(value), 200)
-              : previewString(String(value), 200)}
-          </Text>
-        )}
-      </XStack>
-    </Pressable>
   );
 });
 
@@ -243,6 +301,7 @@ export const TableView = memo(function TableView({
   sortDir,
   onSortChange,
 }: TableViewProps) {
+  const tamagui = useTamaguiTheme();
   const haptic = useHaptic();
   const [widthOverrides, setWidthOverrides] = useState<Record<string, number>>({});
   const [resizingCol, setResizingCol] = useState<string | null>(null);
@@ -260,6 +319,7 @@ export const TableView = memo(function TableView({
     () => resolved.visible.map((c) => c.name).join("|"),
     [resolved.visible],
   );
+  // biome-ignore lint/correctness/useExhaustiveDependencies: the signature is the trigger
   useEffect(() => {
     setWidthOverrides({});
     setResizingCol(null);
@@ -272,6 +332,12 @@ export const TableView = memo(function TableView({
     }
     return map;
   }, [dataCols, rows, widthOverrides]);
+
+  const numericCols = useMemo(() => {
+    const set = new Set<string>();
+    for (const col of resolved.visible) if (isNumericColumn(col, rows)) set.add(col.name);
+    return set;
+  }, [resolved.visible, rows]);
 
   const totalDataWidth = useMemo(
     () => dataCols.reduce((sum, c) => sum + (widths[c.name] ?? COL_MIN), 0),
@@ -348,11 +414,13 @@ export const TableView = memo(function TableView({
       key={`h-${col.name}`}
       column={col}
       width={width}
+      numeric={numericCols.has(col.name)}
       isSorted={sortColumn === col.name}
       sortDir={sortDir}
       onPress={() => handleHeaderTap(col.name)}
       onLongPress={isSticky ? () => {} : () => onLongPressHeader(col.name)}
       resizing={resizingCol === col.name}
+      isSticky={isSticky}
       onResizeChange={(d) => handleResizeChange(col.name, d)}
       onResizeCommit={handleResizeCommit}
     />
@@ -360,11 +428,12 @@ export const TableView = memo(function TableView({
 
   if (rows.length === 0) {
     return (
-      <YStack flex={1} alignItems="center" justifyContent="center" padding="$lg" gap="$sm">
-        <Ionicons name="grid-outline" size={28} color="#8a8aa0" />
-        <Text color="$placeholderColor" fontSize={14}>
-          No rows match the current view.
-        </Text>
+      <YStack flex={1} alignItems="center" justifyContent="center" paddingVertical="$xl">
+        <EmptyState
+          icon={<Ionicons name="grid-outline" size={40} color={tamagui.textSubtle.val} />}
+          title="No Matching Rows"
+          message="No rows match the current filter."
+        />
       </YStack>
     );
   }
@@ -372,9 +441,8 @@ export const TableView = memo(function TableView({
   return (
     <YStack
       flex={1}
+      backgroundColor="$surface"
       borderRadius="$md"
-      borderWidth={1}
-      borderColor="$borderColor"
       overflow="hidden"
       style={{ borderCurve: "continuous" }}
     >
@@ -383,6 +451,8 @@ export const TableView = memo(function TableView({
           horizontal
           showsHorizontalScrollIndicator={false}
           bounces={false}
+          // A resize drag must not also scroll the grid sideways.
+          scrollEnabled={resizingCol === null}
           contentContainerStyle={{ minWidth: totalDataWidth + (stickyCol ? PK_WIDTH : 0) }}
         >
           <FlatList
@@ -395,7 +465,7 @@ export const TableView = memo(function TableView({
             stickyHeaderIndices={[0]}
             nestedScrollEnabled
             removeClippedSubviews
-            initialNumToRender={20}
+            initialNumToRender={24}
             windowSize={9}
             maxToRenderPerBatch={20}
             ListHeaderComponent={
@@ -404,13 +474,13 @@ export const TableView = memo(function TableView({
                 {dataCols.map((col) => renderHeader(col, widths[col.name] ?? COL_MIN, false))}
               </XStack>
             }
-            renderItem={({ item, index }) => (
+            renderItem={({ item }) => (
               <DataRow
                 row={item}
-                index={index}
                 stickyWidth={stickyCol ? PK_WIDTH : 0}
                 dataCols={dataCols}
                 widths={widths}
+                numericCols={numericCols}
                 onCopy={copyCell}
               />
             )}
@@ -436,7 +506,7 @@ export const TableView = memo(function TableView({
               scrollEnabled={false}
               stickyHeaderIndices={[0]}
               removeClippedSubviews
-              initialNumToRender={20}
+              initialNumToRender={24}
               windowSize={9}
               maxToRenderPerBatch={20}
               ListHeaderComponent={
@@ -444,12 +514,12 @@ export const TableView = memo(function TableView({
                   {renderHeader(stickyCol, PK_WIDTH, true)}
                 </XStack>
               }
-              renderItem={({ item, index }) => (
+              renderItem={({ item }) => (
                 <DataCell
-                  column={stickyCol}
                   value={item[stickyCol.name]}
                   width={PK_WIDTH}
-                  alt={index % 2 === 1}
+                  numeric={numericCols.has(stickyCol.name)}
+                  isSticky
                   onCopy={copyCell}
                 />
               )}

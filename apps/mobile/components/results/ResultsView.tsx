@@ -1,7 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { memo, useCallback, useEffect, useMemo, useState } from "react";
-import { Pressable, TextInput } from "react-native";
-import { Text, useTheme as useTamaguiTheme, XStack, YStack } from "tamagui";
+import { Pressable } from "react-native";
+import { useTheme as useTamaguiTheme, XStack, YStack } from "tamagui";
 import { useHaptic } from "../../lib/haptics";
 import {
   buildPrefsKey,
@@ -13,12 +13,16 @@ import {
   setResultsViewMode,
 } from "../../lib/storage/results-prefs";
 import type { QueryResult } from "../../lib/types";
+import { EmptyState } from "../ui/EmptyState";
+import { AppText } from "../ui/Text";
 import { CardsView } from "./CardsView";
 import { ColumnCustomizeSheet } from "./ColumnCustomizeSheet";
 import { resolveColumns } from "./columnPriority";
 import { DetailSheet } from "./DetailSheet";
 import { isNullish, stringifyCell } from "./format";
 import { JsonView } from "./JsonView";
+import { SearchField } from "./SearchField";
+import { Segmented } from "./Segmented";
 import { type SortDir, SortSheet } from "./SortSheet";
 import { TableView } from "./TableView";
 
@@ -52,58 +56,44 @@ const compareValues = (a: unknown, b: unknown): number => {
   return as.localeCompare(bs, undefined, { numeric: true, sensitivity: "base" });
 };
 
-const VIEW_ITEMS: {
-  id: ResultsViewMode;
-  active: "albums" | "grid" | "code-slash";
-  inactive: "albums-outline" | "grid-outline" | "code-slash-outline";
-  label: string;
-}[] = [
-  { id: "cards", active: "albums", inactive: "albums-outline", label: "Cards" },
-  { id: "table", active: "grid", inactive: "grid-outline", label: "Table" },
-  { id: "json", active: "code-slash", inactive: "code-slash-outline", label: "JSON" },
-];
+const MODES: ResultsViewMode[] = ["cards", "table", "json"];
+const MODE_LABELS = ["Cards", "Table", "JSON"];
 
-const ViewSwitcher = memo(function ViewSwitcher({
-  mode,
-  onChange,
+/** Gray circular toolbar button with an accent glyph; tinted when its feature is active. */
+const ToolbarButton = memo(function ToolbarButton({
+  icon,
+  label,
+  active,
+  onPress,
 }: {
-  mode: ResultsViewMode;
-  onChange: (mode: ResultsViewMode) => void;
+  icon: keyof typeof Ionicons.glyphMap;
+  label: string;
+  active?: boolean;
+  onPress: () => void;
 }) {
   const tamagui = useTamaguiTheme();
   return (
-    <XStack
-      backgroundColor="$surfaceMuted"
-      borderRadius={10}
-      padding={3}
-      gap={2}
-      style={{ borderCurve: "continuous" }}
+    <Pressable
+      hitSlop={4}
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      accessibilityState={{ selected: !!active }}
     >
-      {VIEW_ITEMS.map((item) => {
-        const active = mode === item.id;
-        return (
-          <Pressable key={item.id} onPress={() => onChange(item.id)} hitSlop={4}>
-            <XStack
-              paddingHorizontal={10}
-              paddingVertical={6}
-              borderRadius={8}
-              backgroundColor={active ? "$surface" : "transparent"}
-              alignItems="center"
-              gap={4}
-            >
-              <Ionicons
-                name={active ? item.active : item.inactive}
-                size={13}
-                color={active ? tamagui.color.val : tamagui.placeholderColor.val}
-              />
-              <Text color={active ? "$color" : "$placeholderColor"} fontSize={11} fontWeight="600">
-                {item.label}
-              </Text>
-            </XStack>
-          </Pressable>
-        );
-      })}
-    </XStack>
+      {({ pressed }) => (
+        <YStack
+          width={36}
+          height={36}
+          borderRadius="$full"
+          backgroundColor={active ? "$accentMuted" : "$fill"}
+          alignItems="center"
+          justifyContent="center"
+          opacity={pressed ? 0.6 : 1}
+        >
+          <Ionicons name={icon} size={17} color={tamagui.accent.val} />
+        </YStack>
+      )}
+    </Pressable>
   );
 });
 
@@ -218,152 +208,91 @@ export const ResultsView = memo(function ResultsView({
     setDetailOpen(true);
   }, []);
 
-  const command = result.command.trim().toUpperCase().split(" ")[0] ?? "";
+  const rowCountLabel = `${result.rowCount.toLocaleString()} row${result.rowCount === 1 ? "" : "s"}`;
+  const summary = search.trim()
+    ? `${displayRows.length.toLocaleString()} of ${rowCountLabel} · ${result.executionTime} ms`
+    : `${rowCountLabel} · ${result.executionTime} ms`;
 
   if (result.columns.length === 0) {
     return (
-      <XStack alignItems="center" gap="$sm" paddingVertical="$lg" paddingHorizontal="$xs">
-        <Text color="$success" fontSize={18} fontWeight="600">
-          ✓
-        </Text>
-        <Text color="$textMuted" fontSize={14}>
+      <XStack
+        alignItems="center"
+        gap={12}
+        minHeight={44}
+        paddingHorizontal="$md"
+        paddingVertical={11}
+        backgroundColor="$surface"
+        borderRadius="$md"
+        style={{ borderCurve: "continuous" }}
+      >
+        <Ionicons name="checkmark-circle" size={22} color={tamagui.success.val} />
+        <AppText variant="body" flex={1}>
           {result.rowCount > 0
-            ? `${result.rowCount.toLocaleString()} row${result.rowCount === 1 ? "" : "s"} affected`
-            : "Query executed successfully"}
-        </Text>
+            ? `${result.rowCount.toLocaleString()} Row${result.rowCount === 1 ? "" : "s"} Affected`
+            : "Query Executed"}
+        </AppText>
+        <AppText variant="footnote" tone="secondary" fontVariant={["tabular-nums"]}>
+          {result.executionTime} ms
+        </AppText>
       </XStack>
     );
   }
 
-  return (
-    <YStack flex={1} gap="$sm">
-      <YStack gap="$sm">
-        <XStack alignItems="center" justifyContent="space-between" gap="$sm">
-          <XStack alignItems="baseline" gap={4} flex={1}>
-            <Text color="$color" fontSize={14} fontWeight="600" fontFamily="$mono">
-              {result.rowCount.toLocaleString()}
-            </Text>
-            <Text color="$placeholderColor" fontSize={12}>
-              rows
-            </Text>
-            <Text color="$placeholderColor" fontSize={12}>
-              {" · "}
-            </Text>
-            <Text color="$placeholderColor" fontSize={12} fontFamily="$mono">
-              {result.executionTime}ms
-            </Text>
-            <Text color="$placeholderColor" fontSize={12}>
-              {" · "}
-            </Text>
-            <Text
-              color="$placeholderColor"
-              fontSize={10}
-              fontFamily="$mono"
-              fontWeight="600"
-              letterSpacing={0.4}
-            >
-              {command}
-            </Text>
-          </XStack>
-          <ViewSwitcher mode={mode} onChange={handleModeChange} />
-        </XStack>
+  const customized = prefs.pinned.length + prefs.hidden.length > 0;
 
-        <XStack alignItems="center" gap="$sm">
-          <XStack
-            flex={1}
-            alignItems="center"
-            backgroundColor="$surface"
-            borderRadius="$sm"
-            borderWidth={1}
-            borderColor="$borderColor"
-            paddingHorizontal="$sm"
-            gap={6}
-            height={34}
+  return (
+    <YStack flex={1} gap={12}>
+      <XStack alignItems="center" justifyContent="space-between" gap="$sm">
+        <XStack alignItems="center" gap={6} flex={1} minWidth={0}>
+          <Ionicons name="checkmark-circle" size={16} color={tamagui.success.val} />
+          <AppText
+            variant="footnote"
+            tone="secondary"
+            numberOfLines={1}
+            flexShrink={1}
+            fontVariant={["tabular-nums"]}
           >
-            <Ionicons name="search" size={13} color={tamagui.placeholderColor.val} />
-            <TextInput
-              value={search}
-              onChangeText={setSearch}
-              placeholder="Filter rows…"
-              placeholderTextColor={tamagui.placeholderColor.val}
-              autoCapitalize="none"
-              autoCorrect={false}
-              style={{
-                flex: 1,
-                color: tamagui.color.val,
-                fontSize: 13,
-                paddingVertical: 0,
-              }}
-            />
-            {search ? (
-              <Pressable hitSlop={6} onPress={() => setSearch("")}>
-                <Ionicons name="close-circle" size={14} color={tamagui.placeholderColor.val} />
-              </Pressable>
-            ) : null}
-          </XStack>
-          <Pressable hitSlop={6} onPress={() => setShowSort(true)}>
-            <YStack
-              width={34}
-              height={34}
-              borderRadius={8}
-              backgroundColor={sortColumn ? "$primaryMuted" : "$surfaceMuted"}
-              alignItems="center"
-              justifyContent="center"
-            >
-              <Ionicons
-                name="swap-vertical"
-                size={15}
-                color={sortColumn ? tamagui.primary.val : tamagui.placeholderColor.val}
-              />
-            </YStack>
-          </Pressable>
-          <Pressable hitSlop={6} onPress={() => setShowCustomize(true)}>
-            <YStack
-              width={34}
-              height={34}
-              borderRadius={8}
-              backgroundColor={
-                prefs.pinned.length + prefs.hidden.length > 0 ? "$primaryMuted" : "$surfaceMuted"
-              }
-              alignItems="center"
-              justifyContent="center"
-            >
-              <Ionicons
-                name="options-outline"
-                size={16}
-                color={
-                  prefs.pinned.length + prefs.hidden.length > 0
-                    ? tamagui.primary.val
-                    : tamagui.placeholderColor.val
-                }
-              />
-            </YStack>
-          </Pressable>
-          <Pressable hitSlop={6} onPress={onCopyAll}>
-            <YStack
-              width={34}
-              height={34}
-              borderRadius={8}
-              backgroundColor="$surfaceMuted"
-              alignItems="center"
-              justifyContent="center"
-            >
-              <Ionicons name="copy-outline" size={15} color={tamagui.placeholderColor.val} />
-            </YStack>
-          </Pressable>
+            {summary}
+          </AppText>
         </XStack>
-      </YStack>
+        {/* Mode switches are frequent and peer-level, so they don't animate. */}
+        <Segmented
+          values={MODE_LABELS}
+          selectedIndex={Math.max(0, MODES.indexOf(mode))}
+          onChange={(index) => {
+            const next = MODES[index];
+            if (next) handleModeChange(next);
+          }}
+          style={{ width: 186 }}
+          accessibilityLabel="Results view"
+        />
+      </XStack>
+
+      <XStack alignItems="center" gap="$sm">
+        <SearchField value={search} onChangeText={setSearch} placeholder="Filter Rows" />
+        <ToolbarButton
+          icon="swap-vertical"
+          label="Sort"
+          active={!!sortColumn}
+          onPress={() => setShowSort(true)}
+        />
+        <ToolbarButton
+          icon="options-outline"
+          label="Customize fields"
+          active={customized}
+          onPress={() => setShowCustomize(true)}
+        />
+        <ToolbarButton icon="copy-outline" label="Copy all rows" onPress={onCopyAll} />
+      </XStack>
 
       <YStack flex={1}>
         {result.rows.length === 0 ? (
-          <YStack flex={1} alignItems="center" justifyContent="center" padding="$lg" gap="$sm">
-            <Ionicons name="leaf-outline" size={28} color={tamagui.placeholderColor.val} />
-            <Text color="$color" fontSize={15} fontWeight="600">
-              No rows returned
-            </Text>
-            <Text color="$placeholderColor" fontSize={13} textAlign="center">
-              The query ran fine — it just didn't match any rows.
-            </Text>
+          <YStack flex={1} alignItems="center" justifyContent="center" paddingVertical="$xl">
+            <EmptyState
+              icon={<Ionicons name="leaf-outline" size={40} color={tamagui.textSubtle.val} />}
+              title="No Rows Returned"
+              message="The query ran fine. It just didn't match any rows."
+            />
           </YStack>
         ) : mode === "cards" ? (
           <CardsView rows={displayRows} resolved={resolved} onOpenDetail={handleOpenDetail} />
@@ -387,8 +316,8 @@ export const ResultsView = memo(function ResultsView({
         row={detailRow}
         title={
           resolved.primary && detailRow
-            ? String(detailRow[resolved.primary.name] ?? "Row details")
-            : "Row details"
+            ? String(detailRow[resolved.primary.name] ?? "Row Details")
+            : "Row Details"
         }
       />
 
