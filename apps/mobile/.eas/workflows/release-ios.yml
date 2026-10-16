@@ -1,0 +1,29 @@
+# Runs on EAS servers via the Expo GitHub app; no Expo token is stored in GitHub.
+# Manual only: trigger from expo.dev (Workflows) or `eas workflow:run release-ios.yml`.
+# EAS never runs workflows for pull requests opened from forks.
+name: Release iOS
+
+on:
+  workflow_dispatch:
+    inputs:
+      submit:
+        type: boolean
+        description: Submit to App Store Connect (TestFlight) after the build
+        default: true
+
+jobs:
+  build_ios:
+    name: Build iOS
+    type: build
+    params:
+      platform: ios
+      profile: production
+
+  submit_ios:
+    name: Submit to App Store Connect
+    needs: [build_ios]
+    if: ${{ inputs.submit }}
+    type: submit
+    params:
+      build_id: ${{ needs.build_ios.outputs.build_id }}
+      profile: production
