@@ -1,5 +1,9 @@
-name: Mobile release
+name: Mobile release (GitHub macOS fallback)
 
+# Normal releases use the EAS workflow in apps/mobile/.eas/workflows/release-ios.yml,
+# which needs no token in GitHub. Use this only when the EAS build quota is used up;
+# it requires an EXPO_TOKEN secret in the `app-store` environment.
+#
 # Manual only. Fork PRs can never reach this workflow or its secrets:
 # - no pull_request / pull_request_target triggers
 # - EXPO_TOKEN lives in the `app-store` environment, which only deploys from
@@ -7,13 +11,6 @@ name: Mobile release
 on:
   workflow_dispatch:
     inputs:
-      runner:
-        description: Where to build
-        type: choice
-        default: eas-cloud
-        options:
-          - eas-cloud
-          - github-macos
       submit:
         description: Submit to App Store Connect (TestFlight) after the build
         type: boolean
@@ -30,46 +27,12 @@ env:
   EAS_CLI: eas-cli@25.0.0
 
 jobs:
-  # Default path. The build runs on Expo's servers, so build logs and signing
-  # stay private to the Expo account; this job only queues it.
-  eas-cloud:
-    name: iOS build (EAS cloud)
-    if: inputs.runner == 'eas-cloud' && github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
-    environment: app-store
-    timeout-minutes: 15
-    defaults:
-      run:
-        working-directory: apps/mobile
-    steps:
-      - name: Checkout
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
-        with:
-          bun-version: 1.2.0
-
-      - name: Install dependencies
-        run: bun install --frozen-lockfile
-
-      - name: Queue EAS build
-        env:
-          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
-          SUBMIT: ${{ inputs.submit }}
-        run: |
-          args=(--platform ios --profile production --non-interactive --no-wait)
-          if [ "$SUBMIT" = "true" ]; then args+=(--auto-submit); fi
-          bunx "$EAS_CLI" build "${args[@]}"
-
   # Fallback when the EAS free quota (15 iOS builds/month) is used up.
   # Standard macOS runners are free on public repos, but these logs are PUBLIC:
   # never add steps that echo env, decode secrets, or upload the .ipa as an artifact.
   github-macos:
     name: iOS build (GitHub macOS, local)
-    if: inputs.runner == 'github-macos' && github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/main'
     runs-on: macos-15
     environment: app-store
     timeout-minutes: 60

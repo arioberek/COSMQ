@@ -4,13 +4,15 @@ COSMQ is public, so every secret used for releases lives **outside the repo**:
 
 | Secret | Where it lives | Who can use it |
 | --- | --- | --- |
-| Apple distribution certificate + provisioning profile | EAS (Expo servers), created by `eas credentials` | EAS builds for this project |
-| App Store Connect API key (`.p8`) | EAS, uploaded once via `eas credentials` | EAS Submit |
-| `EXPO_TOKEN` (Expo robot token) | GitHub environment secret `app-store` | Only `mobile-release.yml` on `main`, after maintainer approval |
+| Apple distribution certificate + provisioning profile | EAS (Expo servers) | EAS builds for `@obereks-team/cosmq` |
+| App Store Connect API key `6KA27WZ2JC` ("COSMQ EAS", App Manager) | EAS | EAS Submit for this project |
+| `EXPO_TOKEN` (optional, fallback only) | GitHub environment secret `app-store` | Only `mobile-release.yml` on `main`, after maintainer approval |
 
-Nothing else is needed in GitHub. The repo only contains non-secret identifiers
-(bundle ID, EAS project ID, App Store Connect app ID), which are visible in the
-shipped app or its App Store URL anyway.
+Normal releases need **no secret in GitHub**: they run as an EAS Workflow,
+connected to this repo through the Expo GitHub app (base directory `/apps/mobile`).
+The repo only contains non-secret identifiers (bundle ID, EAS project ID,
+App Store Connect app ID), which are visible in the shipped app or its App
+Store URL anyway.
 
 ## Pipeline
 
@@ -18,7 +20,7 @@ shipped app or its App Store URL anyway.
 changeset PR ─► merge ─► "Version packages" PR bumps apps/mobile/package.json
                                    │
                                    ▼  (merge)
-Actions ▸ Mobile release ▸ Run workflow (main) ─► approve `app-store` environment
+expo.dev ▸ cosmq ▸ Workflows ▸ Release iOS ▸ Run (main)
                                    │
                                    ▼
 EAS Build (production, build number auto-incremented) ─► EAS Submit ─► TestFlight
@@ -27,6 +29,8 @@ EAS Build (production, build number auto-incremented) ─► EAS Submit ─► T
 App Store Connect: add release notes, submit for review (manual)
 ```
 
+- **Workflow file**: `apps/mobile/.eas/workflows/release-ios.yml`. Manual trigger
+  only. EAS never runs workflows for pull requests from forks.
 - **Marketing version** (`1.2.3`) comes from `apps/mobile/package.json` through
   `app.config.ts`, so changesets drives it.
 - **Build number** is stored remotely by EAS (`appVersionSource: remote`) and
@@ -37,88 +41,61 @@ App Store Connect: add release notes, submit for review (manual)
 
 ### Build runners
 
-| Runner input | Cost | Logs | When |
+| Path | Cost | Logs | When |
 | --- | --- | --- | --- |
-| `eas-cloud` (default) | Free tier: 15 iOS builds/month, low-priority queue | Private (Expo dashboard) | Normal releases |
-| `github-macos` | Free on public repos | **Public** | EAS quota exhausted |
+| EAS Workflow `Release iOS` | Free tier: 15 iOS builds/month, low-priority queue | Private (Expo dashboard) | Normal releases |
+| GitHub Actions `Mobile release (GitHub macOS fallback)` | Free on public repos | **Public** | EAS quota exhausted |
 
-The `github-macos` job still signs with the EAS-stored credentials; it just
-compiles on GitHub's macOS runner. Since its logs are public, do not add steps
-that print env vars, decode secrets, or upload the `.ipa` as an artifact.
+The fallback still signs with the EAS-stored credentials; it just compiles on
+GitHub's macOS runner. It needs `EXPO_TOKEN` (see below). Since its logs are
+public, do not add steps that print env vars, decode secrets, or upload the
+`.ipa` as an artifact.
 
-## One-time setup
+## Current setup (done)
 
-Run these on your machine, from `apps/mobile`. They are interactive and use
-your own Apple/Expo logins; none of the output belongs in git.
+- EAS project `@obereks-team/cosmq`, linked to GitHub `arioberek/COSMQ`.
+- App Store Connect app `6823423568` (`com.cosmq.app`, SKU `COSMQ-IOS-001`),
+  team `YZY9BZL596`.
+- Distribution certificate, provisioning profile and the submit API key are
+  stored on EAS. Check them with `bunx eas-cli@25.0.0 credentials -p ios`.
+- GitHub environment `app-store`: required reviewer `arioberek`, deploys from
+  `main` only.
 
-1. **Link the EAS project**
+To redo any of this from scratch: `eas init`, create the app in App Store
+Connect, then `eas credentials -p ios` ▸ `production` ▸ generate the
+certificate and profile ▸ `App Store Connect: Manage your API Key` ▸ add a
+**dedicated App Manager** key (never reuse keys that belong to other services,
+and never let EAS generate an Admin key). Keep downloaded `.p8`/`.p12` files in
+a password manager, not in `~/Downloads` or the repo.
 
-   ```sh
-   bunx eas-cli@25.0.0 login
-   bunx eas-cli@25.0.0 init
-   ```
+### Optional: token for the GitHub fallback
 
-   This adds `owner` and `extra.eas.projectId` to `app.json`. Commit that change;
-   both values are public by design.
+Only needed if you want the GitHub macOS fallback. Create a token on the
+**Access tokens** page of the `obereks-team` account settings on expo.dev
+(`https://expo.dev/accounts/obereks-team/settings/access-tokens`). Prefer a
+robot user with the **Developer** role over a personal token. Then:
 
-2. **Create the App Store Connect app record**: in App Store Connect ▸ Apps ▸ +,
-   pick bundle ID `com.cosmq.app` (register it under Certificates, IDs & Profiles
-   first if it is not listed). Note the numeric **Apple ID** of the app record.
+```sh
+GH_TOKEN=$(gh auth token --user arioberek) gh secret set EXPO_TOKEN --env app-store --repo arioberek/COSMQ
+```
 
-3. **Create signing credentials and the submit API key on EAS**
-
-   ```sh
-   bunx eas-cli@25.0.0 credentials --platform ios
-   ```
-
-   - Profile `production` ▸ log in with your Apple account ▸ let EAS generate the
-     Distribution Certificate and Provisioning Profile.
-   - `App Store Connect: Manage your API Key` ▸ `Set up your project to use an API
-     Key for EAS Submit` ▸ let EAS create it (role: App Manager).
-
-   If you download a `.p8` or `.p12` yourself, keep it outside the repo
-   (a password manager is best). `.gitignore` blocks these files, but only for
-   paths inside the repo.
-
-4. **Set the app ID for non-interactive submits**: in `apps/mobile/eas.json`:
-
-   ```json
-   "submit": { "production": { "ios": { "ascAppId": "1234567890" } } }
-   ```
-
-   Do not add `appleId` (your email) or an API key path here.
-
-5. **Create a least-privilege Expo token**: expo.dev ▸ `obereks-team` settings ▸
-   Robot users ▸ create `cosmq-github-actions` with the **Developer** role
-   (enough to build and submit) ▸ create an access token for it. Prefer this
-   over a personal token: it can be revoked without touching your login.
-
-6. **Store the token in the gated GitHub environment**
-
-   ```sh
-   gh secret set EXPO_TOKEN --env app-store --repo arioberek/COSMQ
-   ```
-
-   Paste the token at the prompt so it never lands in shell history.
-   The `app-store` environment must have:
-   - Required reviewers: `arioberek`
-   - Deployment branches: `main` only
+Paste the token at the prompt so it never lands in shell history.
 
 ## Cutting a release
 
 1. Merge the "Version packages" PR (or bump `apps/mobile/package.json`).
-2. Actions ▸ **Mobile release** ▸ Run workflow on `main` (runner `eas-cloud`,
-   submit ✓) ▸ approve the `app-store` deployment.
-3. Follow the build at expo.dev; when processing finishes it appears in TestFlight.
+2. expo.dev ▸ `obereks-team/cosmq` ▸ Workflows ▸ **Release iOS** ▸ run on `main`
+   (or `bunx eas-cli@25.0.0 workflow:run release-ios.yml` from `apps/mobile`).
+3. When processing finishes, the build appears in TestFlight.
 4. In App Store Connect, attach the build to the version, fill in "What's New",
    and submit for review.
 
 ## If something leaks
 
-- `EXPO_TOKEN`: revoke it in expo.dev ▸ Robot users, create a new one, and
-  `gh secret set` again.
+- `EXPO_TOKEN`: revoke it on the expo.dev access tokens page, create a new one,
+  and `gh secret set` again.
 - App Store Connect API key: revoke it in App Store Connect ▸ Users and Access ▸
-  Integrations, then rerun step 3.
+  Integrations, create a new App Manager key, and add it via `eas credentials`.
 - Distribution certificate: `eas credentials` ▸ remove/revoke, then rebuild.
 - If it was committed, rotating it is mandatory. Rewriting git history is
   not enough, because forks and caches keep the old commits.
