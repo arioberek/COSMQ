@@ -16,14 +16,15 @@
 		--secondary: 240 10% 10%;
 		--secondary-foreground: 240 20% 95%;
 		--muted: 240 10% 10%;
-		--muted-foreground: 220 9% 65%;
-		--accent: 252 100% 68%;
+		--muted-foreground: 240 8% 64%;
+		/* Matches the app's primary (#7559ec), lifted slightly for dark surfaces */
+		--accent: 251 76% 68%;
 		--accent-foreground: 0 0% 100%;
 		--destructive: 0 62% 30%;
 		--destructive-foreground: 0 0% 98%;
 		--border: 240 10% 14%;
 		--input: 240 10% 14%;
-		--ring: 252 100% 68%;
+		--ring: 251 76% 68%;
 		--chart-1: 12 76% 61%;
 		--chart-2: 173 58% 39%;
 		--chart-3: 197 37% 24%;
@@ -35,9 +36,16 @@
 		--surface-2: 240 12% 10%;
 		--rule: 240 8% 18%;
 
-		--alien-1: 199 89% 60%;
-		--alien-2: 234 89% 74%;
-		--alien-3: 270 95% 75%;
+		/* Shadows carry the background hue instead of pure black */
+		--shadow-tint: 245 40% 2%;
+
+		--ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+		--ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+
+		--z-header: 40;
+		--z-modal: 50;
+		--z-grain: 60;
+		--z-skip: 70;
 
 		--font-sans: "Geist Variable", "Geist", system-ui, sans-serif;
 		--font-serif: "Instrument Serif", Georgia, serif;
@@ -56,8 +64,18 @@
 		@apply bg-background text-foreground;
 	}
 
-	#main {
+	#main,
+	section[id] {
 		scroll-margin-top: 5rem;
+	}
+
+	h1,
+	h2,
+	h3 {
+		text-wrap: balance;
+	}
+	p {
+		text-wrap: pretty;
 	}
 
 	:focus-visible {
@@ -81,45 +99,20 @@
 /* ── Static aurora — no animation, no paint cost ── */
 .aurora-bg {
 	background:
-		radial-gradient(ellipse 80% 60% at 20% 40%, hsl(var(--alien-1) / 0.05) 0%, transparent 60%),
-		radial-gradient(ellipse 60% 80% at 80% 20%, hsl(var(--alien-2) / 0.05) 0%, transparent 60%),
-		radial-gradient(ellipse 70% 50% at 50% 80%, hsl(var(--alien-3) / 0.04) 0%, transparent 60%);
+		radial-gradient(ellipse 70% 55% at 30% 45%, hsl(var(--accent) / 0.07) 0%, transparent 65%),
+		radial-gradient(ellipse 50% 70% at 85% 15%, hsl(var(--accent) / 0.04) 0%, transparent 60%);
 }
 
-/* ── Film grain — small, fixed, GPU-cheap ── */
-@keyframes grain {
-	0%,
-	100% {
-		transform: translate(0, 0);
-	}
-	10% {
-		transform: translate(-5%, -10%);
-	}
-	30% {
-		transform: translate(7%, -25%);
-	}
-	50% {
-		transform: translate(-15%, 10%);
-	}
-	70% {
-		transform: translate(0%, 15%);
-	}
-	90% {
-		transform: translate(-10%, 10%);
-	}
-}
-
+/* ── Film grain — static texture, no repaint ── */
 .film-grain::after {
 	content: "";
 	position: fixed;
-	inset: -50%;
-	width: 200%;
-	height: 200%;
+	inset: 0;
 	background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
-	opacity: 0.022;
+	background-size: 256px 256px;
+	opacity: 0.03;
 	pointer-events: none;
-	z-index: 9999;
-	animation: grain 6s steps(6) infinite;
+	z-index: var(--z-grain);
 }
 
 /* ── Grid pattern ── */
@@ -130,25 +123,11 @@
 	background-size: 60px 60px;
 }
 
-/* ── Pulse dot ── */
-@keyframes glow-pulse {
-	0%,
-	100% {
-		opacity: 0.4;
-	}
-	50% {
-		opacity: 0.9;
-	}
-}
-.glow-pulse {
-	animation: glow-pulse 3s ease-in-out infinite;
-}
-
 /* ── Alien rings ── */
 @keyframes ring-expand {
 	0% {
 		opacity: 0;
-		transform: scale(0.3);
+		transform: scale(0.6);
 	}
 	30% {
 		opacity: 0.06;
@@ -162,10 +141,10 @@
 	will-change: transform, opacity;
 }
 .alien-ring-1 {
-	animation: ring-expand 6s ease-out infinite;
+	animation: ring-expand 8s var(--ease-out) infinite;
 }
 .alien-ring-2 {
-	animation: ring-expand 6s ease-out 3s infinite;
+	animation: ring-expand 8s var(--ease-out) 4s infinite;
 }
 
 /* ── Editorial display face — used sparingly ── */

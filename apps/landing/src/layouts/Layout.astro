@@ -1,24 +1,45 @@
 ---
-import AlienIcon from '../assets/logos/alien.svg';
 import '@fontsource-variable/geist/index.css';
 import '@fontsource-variable/geist-mono/index.css';
 import '@fontsource/instrument-serif/400.css';
 import '@fontsource/instrument-serif/400-italic.css';
 import '../styles/global.css';
+
+interface Props {
+	title?: string;
+	description?: string;
+}
+
+const {
+	title = 'COSMQ — Mobile database client',
+	description = 'Open-source database client for iOS and Android. Connects straight to PostgreSQL, MySQL, MariaDB, CockroachDB, MongoDB and SQLite over TCP, with no proxy in between.',
+} = Astro.props;
+
+const canonical = Astro.site ? new URL(Astro.url.pathname, Astro.site).href : undefined;
 ---
 <!doctype html>
 <html lang="en" class="dark scroll-smooth">
 	<head>
 		<meta charset="UTF-8" />
-		<meta name="viewport" content="width=device-width" />
-		<meta name="theme-color" content="#06060a" />
-		<link rel="icon" type="image/svg+xml" href={AlienIcon.src} />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<meta name="theme-color" content="#09090c" />
+		<meta name="color-scheme" content="dark" />
+		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
 		<meta name="generator" content={Astro.generator} />
-		<meta name="description" content="COSMQ — universal mobile database client. PostgreSQL, MySQL, MongoDB and more, direct from your phone." />
-		<title>COSMQ — Mobile Database Client</title>
+		<title>{title}</title>
+		<meta name="description" content={description} />
+		{canonical && <link rel="canonical" href={canonical} />}
+		<meta property="og:type" content="website" />
+		<meta property="og:site_name" content="COSMQ" />
+		<meta property="og:title" content={title} />
+		<meta property="og:description" content={description} />
+		{canonical && <meta property="og:url" content={canonical} />}
+		<meta name="twitter:card" content="summary" />
+		<meta name="twitter:title" content={title} />
+		<meta name="twitter:description" content={description} />
 	</head>
-	<body class="m-0 w-full min-h-screen flex flex-col bg-background text-foreground font-sans film-grain">
-		<a href="#main" class="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-[200] focus:px-4 focus:py-2 focus:rounded-lg focus:bg-accent focus:text-accent-foreground focus:text-sm focus:font-medium focus:outline-none">
+	<body class="m-0 w-full min-h-[100dvh] flex flex-col bg-background text-foreground font-sans antialiased film-grain">
+		<a href="#main" class="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-[var(--z-skip)] focus:px-4 focus:py-2 focus:rounded-md focus:bg-foreground focus:text-background focus:text-sm focus:font-medium focus:outline-none">
 			Skip to content
 		</a>
 		<slot />

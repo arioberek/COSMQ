@@ -1,107 +1,92 @@
-import { Cable, type LucideIcon, ShieldCheck, Smartphone, SquareTerminal } from "lucide-react";
 import { motion } from "motion/react";
 
 interface Feature {
 	title: string;
 	description: string;
-	Icon: LucideIcon;
-	accent: string;
+	// A concrete detail from the app, set in mono. Replaces a decorative icon.
+	spec: string;
 }
 
 const features: Feature[] = [
 	{
 		title: "Direct TCP",
 		description:
-			"Native TCP sockets, straight to your database. No proxy server in front, no REST shim, no third-party in between.",
-		Icon: Cable,
-		accent: "hsl(var(--alien-1))",
+			"COSMQ speaks each database's own wire protocol over a TCP socket. No proxy server, no REST gateway, nothing sitting between your phone and your data.",
+		spec: ":5432  :3306  :26257  :27017",
 	},
 	{
-		title: "Stays on device",
+		title: "Passwords stay on the device",
 		description:
-			"Credentials are encrypted with the platform secure enclave — Keychain on iOS, Keystore on Android. Nothing leaves your phone.",
-		Icon: ShieldCheck,
-		accent: "#34d399",
+			"Passwords go into the system keychain: Keychain on iOS, Keystore on Android. Add a Face ID or fingerprint lock that kicks in after you leave the app.",
+		spec: "expo-secure-store",
 	},
 	{
-		title: "iOS, Android, Web",
+		title: "Hard to drop a table by accident",
 		description:
-			"One consistent client across every device you carry. Pick up a query on the train, finish it on the laptop.",
-		Icon: Smartphone,
-		accent: "#60a5fa",
+			"UPDATE, DELETE, DROP, TRUNCATE and ALTER ask before they run. Open transactions can roll back on a timer, so nothing sits locked while your phone is in your pocket.",
+		spec: "BEGIN … auto-rollback 10–600s",
 	},
 	{
-		title: "SQL editor that fits a phone",
+		title: "An editor sized for thumbs",
 		description:
-			"Syntax highlighting, history, results table — designed for thumbs first, not retrofitted from a desktop IDE.",
-		Icon: SquareTerminal,
-		accent: "hsl(var(--alien-3))",
+			"Syntax highlighting, autocomplete that knows you're after FROM, keyword chips and searchable history. Built for a phone first, not shrunk down from a desktop IDE.",
+		spec: "SELECT * FROM orders▍",
 	},
 ];
 
 function FeatureRow({ feature, index }: { feature: Feature; index: number }) {
-	const { Icon, title, description, accent } = feature;
+	const { title, description, spec } = feature;
 	const num = String(index + 1).padStart(2, "0");
 
 	return (
 		<motion.article
-			initial={{ opacity: 0, y: 24 }}
+			initial={{ opacity: 0, y: 16 }}
 			whileInView={{ opacity: 1, y: 0 }}
 			viewport={{ once: true, margin: "-80px" }}
-			transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-			className="relative grid grid-cols-1 md:grid-cols-12 gap-6 md:gap-10 py-12 md:py-16 border-t border-border"
+			transition={{ duration: 0.6, ease: [0.23, 1, 0.32, 1] }}
+			className="relative grid grid-cols-1 md:grid-cols-12 gap-4 md:gap-10 pt-10 pb-12 md:pt-14 md:pb-16 border-t border-border"
 		>
-			<div className="md:col-span-2 flex md:flex-col items-center md:items-start gap-4">
-				<span className="font-mono text-[12px] tracking-[0.2em] text-foreground/50">{num}</span>
-				<div
-					className="flex items-center justify-center w-11 h-11 rounded-lg border"
-					style={{
-						background: `${accent.startsWith("hsl") ? accent.replace(")", " / 0.08)") : `${accent}15`}`,
-						borderColor: `${accent.startsWith("hsl") ? accent.replace(")", " / 0.18)") : `${accent}26`}`,
-					}}
-				>
-					<Icon className="w-[18px] h-[18px]" style={{ color: accent }} strokeWidth={1.6} />
-				</div>
-			</div>
+			<span className="md:col-span-1 font-mono text-[12px] tracking-[0.2em] text-foreground/45 tabular-nums md:pt-2">
+				{num}
+			</span>
 
-			<h3 className="md:col-span-4 text-[clamp(1.5rem,3vw,2rem)] font-bold tracking-[-0.02em] leading-[1.15] text-foreground">
+			<h3 className="md:col-span-5 text-[clamp(1.5rem,3vw,2rem)] font-semibold tracking-[-0.025em] leading-[1.15] text-foreground">
 				{title}
 			</h3>
 
-			<p className="md:col-span-6 text-[15px] md:text-base text-muted-foreground leading-[1.7] max-w-[520px]">
-				{description}
-			</p>
+			<div className="md:col-span-6 flex flex-col gap-5 md:pt-1">
+				<p className="text-[15px] md:text-base text-muted-foreground leading-[1.7] max-w-[34rem]">
+					{description}
+				</p>
+				<code className="self-start font-mono text-[12px] md:text-[13px] text-[hsl(var(--accent))] bg-[hsl(var(--accent)/0.08)] px-2.5 py-1 rounded-[4px] whitespace-pre">
+					{spec}
+				</code>
+			</div>
 		</motion.article>
 	);
 }
 
 export function FeaturesSection() {
 	return (
-		<section id="features" className="relative py-24 md:py-32 px-6 lg:px-10">
+		<section id="features" className="relative pt-24 pb-28 md:pt-32 md:pb-36 px-6 lg:px-10">
 			<div className="max-w-[1280px] mx-auto">
-				<div className="mb-16 md:mb-20 max-w-[640px]">
-					<motion.span
-						initial={{ opacity: 0 }}
-						whileInView={{ opacity: 1 }}
-						viewport={{ once: true }}
-						transition={{ duration: 0.5 }}
-						className="eyebrow mb-6"
-					>
+				<motion.div
+					className="mb-14 md:mb-20 max-w-[640px]"
+					initial={{ opacity: 0, y: 12 }}
+					whileInView={{ opacity: 1, y: 0 }}
+					viewport={{ once: true, margin: "-80px" }}
+					transition={{ duration: 0.6, ease: [0.23, 1, 0.32, 1] }}
+				>
+					<span className="eyebrow mb-6">
 						<span className="eyebrow-num">01</span>
 						<span className="eyebrow-rule" />
 						<span>Why it works</span>
-					</motion.span>
-					<motion.h2
-						initial={{ opacity: 0, y: 16 }}
-						whileInView={{ opacity: 1, y: 0 }}
-						viewport={{ once: true }}
-						transition={{ duration: 0.6, delay: 0.1 }}
-						className="text-[clamp(2rem,5vw,3.25rem)] font-bold tracking-[-0.03em] leading-[1.1] text-foreground"
-					>
+					</span>
+					<h2 className="text-[clamp(2rem,5vw,3.25rem)] font-semibold tracking-[-0.035em] leading-[1.08] text-foreground">
 						Four reasons it actually <span className="font-display font-normal">works</span> on a
 						phone.
-					</motion.h2>
-				</div>
+					</h2>
+				</motion.div>
 
 				<div className="border-b border-border">
 					{features.map((feature, i) => (

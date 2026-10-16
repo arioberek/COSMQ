@@ -19,7 +19,6 @@
 		"astro": "^5.16.6",
 		"class-variance-authority": "^0.7.1",
 		"clsx": "^2.1.1",
-		"lucide-react": "^0.562.0",
 		"motion": "^12.23.26",
 		"react": "^19.2.3",
 		"react-dom": "^19.2.3",
