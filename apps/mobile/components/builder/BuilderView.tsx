@@ -87,12 +87,16 @@ export const BuilderView = memo(function BuilderView({
     }
   }, [instance, type]);
 
-  // Initial load of tables when entering the builder.
+  // Load tables once per connection when entering the builder. Keying on
+  // "already attempted" rather than "list is empty" matters: a database with
+  // no tables (or a failed listTables) would otherwise reload forever.
+  // Refresh stays available for manual reloads.
+  const autoLoadedFor = useRef<string | null>(null);
   useEffect(() => {
-    if (tables.length === 0 && !loadingTables) {
-      loadTables();
-    }
-  }, [tables.length, loadingTables, loadTables]);
+    if (autoLoadedFor.current === connectionId) return;
+    autoLoadedFor.current = connectionId;
+    loadTables();
+  }, [connectionId, loadTables]);
 
   const loadColumns = useCallback(
     async (schema: string | undefined, table: string) => {

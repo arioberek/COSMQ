@@ -117,7 +117,7 @@ export const MongoBuilder = memo(function MongoBuilder({
       <BuilderSection
         title="Collection"
         footer={
-          collectionsEmpty ? "No collections loaded yet. Tap Refresh to load them." : undefined
+          collectionsEmpty ? "No collections found. Create one, then tap Refresh." : undefined
         }
       >
         <ListRow

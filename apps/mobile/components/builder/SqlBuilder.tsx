@@ -142,7 +142,9 @@ export const SqlBuilder = memo(function SqlBuilder({
     <YStack gap={28}>
       <BuilderSection
         title="From"
-        footer={tablesEmpty ? "No tables loaded yet. Tap Refresh to load them." : undefined}
+        footer={
+          tablesEmpty ? "No tables found. Create one in SQL mode, then tap Refresh." : undefined
+        }
       >
         <ListRow
           title="Table"
