@@ -1,93 +1,130 @@
+import { Ionicons } from "@expo/vector-icons";
 import { memo, useEffect, useRef } from "react";
 import { ActivityIndicator, Pressable, StyleSheet } from "react-native";
 import Animated, {
+  Easing,
   interpolate,
   useAnimatedStyle,
   useReducedMotion,
   useSharedValue,
   withTiming,
 } from "react-native-reanimated";
+import { useTheme } from "../hooks/useTheme";
+import { AppText } from "./ui";
+
+const EASE_OUT = Easing.bezier(0.23, 1, 0.32, 1);
+const HEIGHT = 44;
+const RADIUS = 12;
+const PADDING_H = 18;
 
 type RunButtonProps = {
   executing: boolean;
   onPress: () => void;
   disabled?: boolean;
-  primaryColor: string;
   label?: string;
 };
 
+/**
+ * Filled accent "Run" button. While a query executes it morphs into a round
+ * spinner (state indication); press feedback is a 0.97 scale. With Reduce
+ * Motion on, the morph and scale become plain crossfades.
+ */
 export const RunButton = memo(function RunButton({
   executing,
   onPress,
   disabled,
-  primaryColor,
   label = "Run",
 }: RunButtonProps) {
+  const theme = useTheme();
   const reducedMotion = useReducedMotion();
   const progress = useSharedValue(0); // 0 = idle, 1 = executing
+  const pressed = useSharedValue(0);
   const naturalWidth = useSharedValue(0);
   const measured = useRef(false);
 
+  // Re-measure the idle width when the label changes.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: label is the trigger, not a read
   useEffect(() => {
     measured.current = false;
-    naturalWidth.value = 0;
+    naturalWidth.set(0);
   }, [label, naturalWidth]);
 
   useEffect(() => {
-    const target = executing ? 1 : 0;
-    progress.value = withTiming(target, { duration: reducedMotion ? 120 : 220 });
+    progress.set(
+      withTiming(executing ? 1 : 0, { duration: reducedMotion ? 150 : 220, easing: EASE_OUT }),
+    );
   }, [executing, reducedMotion, progress]);
 
   const containerStyle = useAnimatedStyle(() => {
-    if (naturalWidth.value === 0) return {};
-    const width = interpolate(progress.value, [0, 1], [naturalWidth.value, 44], "clamp");
-    const borderRadius = interpolate(progress.value, [0, 1], [8, 22], "clamp");
-    const paddingH = interpolate(progress.value, [0, 1], [20, 0], "clamp");
+    const p = progress.get();
+    const press = pressed.get();
+    const base = reducedMotion
+      ? { opacity: interpolate(press, [0, 1], [1, 0.75]) }
+      : { transform: [{ scale: interpolate(press, [0, 1], [1, 0.97]) }] };
+    const width = naturalWidth.get();
+    if (width === 0 || reducedMotion) return base;
     return {
-      width,
-      borderRadius,
-      paddingHorizontal: paddingH,
+      ...base,
+      width: interpolate(p, [0, 1], [width, HEIGHT], "clamp"),
+      borderRadius: interpolate(p, [0, 1], [RADIUS, HEIGHT / 2], "clamp"),
+      paddingHorizontal: interpolate(p, [0, 1], [PADDING_H, 0], "clamp"),
     };
   });
 
-  const labelStyle = useAnimatedStyle(() => ({
-    opacity: interpolate(progress.value, [0, 0.4], [1, 0], "clamp"),
-    transform: [{ scale: interpolate(progress.value, [0, 0.5], [1, 0.7], "clamp") }],
-  }));
+  const labelStyle = useAnimatedStyle(() => {
+    const p = progress.get();
+    return reducedMotion
+      ? { opacity: interpolate(p, [0, 1], [1, 0], "clamp") }
+      : {
+          opacity: interpolate(p, [0, 0.4], [1, 0], "clamp"),
+          transform: [{ scale: interpolate(p, [0, 0.5], [1, 0.9], "clamp") }],
+        };
+  });
 
-  const spinnerStyle = useAnimatedStyle(() => ({
-    opacity: interpolate(progress.value, [0.5, 1], [0, 1], "clamp"),
-    transform: [{ scale: interpolate(progress.value, [0.5, 1], [0.7, 1], "clamp") }],
-  }));
+  const spinnerStyle = useAnimatedStyle(() => {
+    const p = progress.get();
+    return reducedMotion
+      ? { opacity: interpolate(p, [0, 1], [0, 1], "clamp") }
+      : {
+          opacity: interpolate(p, [0.5, 1], [0, 1], "clamp"),
+          transform: [{ scale: interpolate(p, [0.5, 1], [0.9, 1], "clamp") }],
+        };
+  });
+
+  const pressDuration = reducedMotion ? 100 : 120;
 
   return (
     <Pressable
       onPress={onPress}
+      onPressIn={() => pressed.set(withTiming(1, { duration: pressDuration, easing: EASE_OUT }))}
+      onPressOut={() => pressed.set(withTiming(0, { duration: 160, easing: EASE_OUT }))}
       disabled={disabled}
-      style={styles.pressable}
+      accessibilityRole="button"
+      accessibilityLabel={executing ? "Running query" : `${label} query`}
       accessibilityState={{ busy: executing, disabled: !!disabled }}
     >
       <Animated.View
-        style={[styles.button, { backgroundColor: primaryColor }, containerStyle]}
+        style={[styles.button, { backgroundColor: theme.colors.accentFill }, containerStyle]}
         onLayout={(e) => {
-          // Capture natural width only once before the first execution
+          // Capture the idle width once, before the first execution.
           if (!measured.current && !executing) {
             const w = e.nativeEvent.layout.width;
             if (w > 0) {
-              naturalWidth.value = w;
+              naturalWidth.set(w);
               measured.current = true;
             }
           }
         }}
       >
-        {/* Label */}
-        <Animated.View style={[styles.overlay, labelStyle]} pointerEvents="none">
-          <Animated.Text style={styles.labelText}>{label}</Animated.Text>
+        <Animated.View style={[styles.label, labelStyle]} pointerEvents="none">
+          <Ionicons name="play" size={15} color={theme.colors.onAccent} />
+          <AppText variant="headline" tone="onAccent" numberOfLines={1}>
+            {label}
+          </AppText>
         </Animated.View>
 
-        {/* Spinner */}
         <Animated.View style={[styles.overlay, spinnerStyle]} pointerEvents="none">
-          <ActivityIndicator color="#fff" size="small" />
+          <ActivityIndicator color={theme.colors.onAccent} size="small" />
         </Animated.View>
       </Animated.View>
     </Pressable>
@@ -95,29 +132,23 @@ export const RunButton = memo(function RunButton({
 });
 
 const styles = StyleSheet.create({
-  pressable: {
-    alignSelf: "flex-end",
-  },
   button: {
-    height: 44,
+    height: HEIGHT,
     alignItems: "center",
     justifyContent: "center",
     overflow: "hidden",
-    paddingHorizontal: 20,
-    borderRadius: 8,
+    paddingHorizontal: PADDING_H,
+    borderRadius: RADIUS,
+    borderCurve: "continuous",
+  },
+  label: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
   },
   overlay: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    top: 0,
-    bottom: 0,
+    ...StyleSheet.absoluteFillObject,
     alignItems: "center",
     justifyContent: "center",
-  },
-  labelText: {
-    color: "#fff",
-    fontSize: 14,
-    fontWeight: "600",
   },
 });

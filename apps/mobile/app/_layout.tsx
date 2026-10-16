@@ -1,4 +1,5 @@
 import "../polyfills";
+import "../lib/web-reset";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import Constants from "expo-constants";
 import { useFonts } from "expo-font";

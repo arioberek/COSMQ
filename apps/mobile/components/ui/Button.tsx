@@ -15,7 +15,7 @@ const StyledButton = styled(TamaguiButton, {
 
   variants: {
     tone: {
-      filled: { backgroundColor: "$accent", pressStyle: { backgroundColor: "$accentLight" } },
+      filled: { backgroundColor: "$accentFill", pressStyle: { backgroundColor: "$accentFill" } },
       tinted: { backgroundColor: "$accentMuted", pressStyle: { backgroundColor: "$accentMuted" } },
       gray: { backgroundColor: "$fill", pressStyle: { backgroundColor: "$fill" } },
       plain: { backgroundColor: "transparent", pressStyle: { backgroundColor: "transparent" } },
@@ -36,6 +36,8 @@ const StyledButton = styled(TamaguiButton, {
     buttonSize: "md",
   },
 });
+
+const ANIMATE_ONLY = ["transform", "opacity"];
 
 type Tone = "filled" | "tinted" | "gray" | "plain" | "destructive";
 // Legacy names kept so existing call sites read naturally.
@@ -91,6 +93,9 @@ export const Button = memo(function Button({
       buttonSize={size}
       disabled={isDisabled}
       opacity={isDisabled ? 0.45 : 1}
+      // Only transform/opacity animate. Tamagui's RN animation driver can't
+      // interpolate web CSS-variable colors ("var(--accent)") and throws.
+      animateOnly={ANIMATE_ONLY}
       accessibilityRole="button"
       accessibilityState={{ disabled: !!isDisabled, busy: !!loading }}
       {...props}

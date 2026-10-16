@@ -32,6 +32,7 @@ radii in screens.
 | `$placeholderColor` | 30% | 30% | Text input placeholder |
 | `$borderColor` | separator | separator | Hairlines (0.5pt) |
 | `$accent` / `$primary` | `#6e56cf` | `#9585f2` | Tint: buttons, links, selection, switches |
+| `$accentFill` | `#6e56cf` | `#7461e6` | Background of filled buttons (white label ≥ 4.5:1) |
 | `$accentMuted` | 12% violet | 20% violet | Tinted button background, selected chip |
 | `$success` / `$successLight` | `#248a3d` / `#34c759` | `#30d158` | Connected, query OK. Use `successLight` for dots |
 | `$warning` | `#c93400` | `#ff9f0a` | Open transaction, caution |

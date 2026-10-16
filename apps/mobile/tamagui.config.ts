@@ -177,6 +177,7 @@ const palette = {
     separatorSubtle: "rgba(60, 60, 67, 0.12)",
     fill: "rgba(118, 118, 128, 0.12)",
     accent: "#6e56cf",
+    accentFill: "#6e56cf",
     accentPressed: "#5b45b8",
     accentMuted: "rgba(110, 86, 207, 0.12)",
     success: "#248a3d",
@@ -223,7 +224,10 @@ const palette = {
     separator: "rgba(84, 84, 88, 0.65)",
     separatorSubtle: "rgba(84, 84, 88, 0.34)",
     fill: "rgba(118, 118, 128, 0.24)",
+    // Tint for text/icons on dark surfaces; fills use a deeper shade so white
+    // labels keep >= 4.5:1 contrast.
     accent: "#9585f2",
+    accentFill: "#7461e6",
     accentPressed: "#a99cf5",
     accentMuted: "rgba(149, 133, 242, 0.2)",
     success: "#30d158",
@@ -333,6 +337,7 @@ const buildTheme = (p: Palette) => ({
   danger: p.danger,
   dangerMuted: p.dangerMuted,
   accent: p.accent,
+  accentFill: p.accentFill,
   accentMuted: p.accentMuted,
   accentLight: p.accentPressed,
 

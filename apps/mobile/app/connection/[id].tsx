@@ -1,42 +1,40 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { router, useLocalSearchParams } from "expo-router";
+import { router, Stack, useLocalSearchParams } from "expo-router";
 import { useState } from "react";
-import { ActivityIndicator } from "react-native";
-import { ScrollView, Text, useTheme, XStack, YStack } from "tamagui";
-import { DatabaseIcon } from "../../components/database-icon";
-import { Button, Dialog } from "../../components/ui";
+import { ActivityIndicator, Alert, ScrollView } from "react-native";
+import { useTheme, XStack, YStack } from "tamagui";
+import { DatabaseTile } from "../../components/database-icon";
+import { AppText, Button, EmptyState, ListRow, ListSection } from "../../components/ui";
+import { DATABASE_LABELS } from "../../lib/database-meta";
 import { useHaptic } from "../../lib/haptics";
 import { safeBack } from "../../lib/navigation";
 import { deleteConnection, getConnectionWithPassword } from "../../lib/storage/connections";
+import type { ConnectionConfig } from "../../lib/types";
 import { useConnectionStore } from "../../stores/connection";
 
-const InfoRow = ({ label, value }: { label: string; value: string }) => (
-  <XStack
-    justifyContent="space-between"
-    alignItems="center"
-    paddingVertical="$sm"
-    gap="$md"
-    borderBottomWidth={1}
-    borderBottomColor="$borderColor"
-  >
-    <Text color="$textSubtle" fontSize={14} flexShrink={0}>
-      {label}
-    </Text>
-    <Text
-      color="$color"
-      fontSize={14}
-      fontWeight="500"
+const describeSsl = (ssl: ConnectionConfig["ssl"]) => {
+  if (typeof ssl === "boolean") return ssl ? "On" : "Off";
+  if (!ssl.enabled) return "Off";
+  return ssl.rejectUnauthorized === false ? "On, Unverified" : "On";
+};
+
+/** Trailing value for a details row: secondary, selectable, truncated in the middle. */
+function DetailValue({ children }: { children: string }) {
+  return (
+    <AppText
+      variant="body"
+      tone="secondary"
       numberOfLines={1}
       ellipsizeMode="middle"
-      flex={1}
+      flexShrink={1}
       textAlign="right"
       selectable
     >
-      {value}
-    </Text>
-  </XStack>
-);
+      {children}
+    </AppText>
+  );
+}
 
 export default function ConnectionDetailScreen() {
   const theme = useTheme();
@@ -44,15 +42,13 @@ export default function ConnectionDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const queryClient = useQueryClient();
   const [connecting, setConnecting] = useState(false);
-  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-  const [showErrorDialog, setShowErrorDialog] = useState(false);
-  const [errorMessage, setErrorMessage] = useState("");
+  const [connectError, setConnectError] = useState<string | null>(null);
 
   const { connect, activeConnections, disconnect } = useConnectionStore();
 
   const { data: connection, isLoading } = useQuery({
     queryKey: ["connection", id],
-    queryFn: () => getConnectionWithPassword(id!),
+    queryFn: () => getConnectionWithPassword(id ?? ""),
     enabled: !!id,
   });
 
@@ -63,14 +59,14 @@ export default function ConnectionDetailScreen() {
     if (!connection) return;
 
     setConnecting(true);
+    setConnectError(null);
     try {
       await connect(connection);
       haptic.success();
       router.replace(`/query/${connection.id}`);
     } catch (error) {
       haptic.error();
-      setErrorMessage(error instanceof Error ? error.message : "Failed to connect");
-      setShowErrorDialog(true);
+      setConnectError(error instanceof Error ? error.message : "Failed to connect");
     } finally {
       setConnecting(false);
     }
@@ -83,12 +79,14 @@ export default function ConnectionDetailScreen() {
       haptic.success();
     } catch (error) {
       haptic.error();
-      setErrorMessage(error instanceof Error ? error.message : "Failed to disconnect");
-      setShowErrorDialog(true);
+      Alert.alert(
+        "Couldn’t Disconnect",
+        error instanceof Error ? error.message : "Failed to disconnect",
+      );
     }
   };
 
-  const handleDeleteConfirm = async () => {
+  const deleteNow = async () => {
     if (!id) return;
     try {
       await disconnect(id);
@@ -96,121 +94,177 @@ export default function ConnectionDetailScreen() {
       await queryClient.invalidateQueries({ queryKey: ["connections"] });
       safeBack();
     } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : "Failed to delete connection");
-      setShowErrorDialog(true);
+      Alert.alert(
+        "Couldn’t Delete Connection",
+        error instanceof Error ? error.message : "Failed to delete connection",
+      );
     }
+  };
+
+  const confirmDelete = () => {
+    if (!connection) return;
+    Alert.alert(
+      `Delete “${connection.name}”?`,
+      "The saved connection and its password will be removed from this device.",
+      [
+        { text: "Cancel", style: "cancel" },
+        { text: "Delete", style: "destructive", onPress: deleteNow },
+      ],
+    );
   };
 
   if (isLoading) {
     return (
       <YStack flex={1} justifyContent="center" alignItems="center" backgroundColor="$background">
-        <ActivityIndicator size="large" color={theme.primary.val} />
+        <Stack.Screen options={{ title: "" }} />
+        <ActivityIndicator color={theme.textSubtle.val} />
       </YStack>
     );
   }
 
   if (!connection) {
     return (
-      <YStack flex={1} backgroundColor="$background">
-        <Text color="$danger" fontSize={16} textAlign="center" marginTop="$lg">
-          Connection not found
-        </Text>
+      <YStack flex={1} justifyContent="center" backgroundColor="$background" paddingBottom="$xxl">
+        <Stack.Screen options={{ title: "" }} />
+        <EmptyState
+          icon={<Ionicons name="help-circle-outline" size={56} color={theme.textSubtle.val} />}
+          title="Connection Not Found"
+          message="It may have been deleted on this device."
+          action={
+            <Button variant="tinted" onPress={() => safeBack()}>
+              Back to Connections
+            </Button>
+          }
+        />
       </YStack>
     );
   }
 
+  const sqlite = connection.type === "sqlite";
+  const target = sqlite ? connection.database : connection.host;
+  const status = connecting
+    ? { label: "Connecting…", dot: "$textSubtle" }
+    : isConnected
+      ? { label: "Connected", dot: "$successLight" }
+      : activeConnection?.state.status === "error"
+        ? { label: "Connection Error", dot: "$danger" }
+        : { label: "Not Connected", dot: "$textSubtle" };
+
   return (
     <>
-      <ScrollView flex={1} backgroundColor="$background" contentContainerStyle={{ padding: 16 }}>
-        <YStack alignItems="center" paddingVertical="$lg">
-          <YStack marginBottom="$md">
-            <DatabaseIcon type={connection.type} size={64} color={theme.color.val} />
-          </YStack>
-          <Text color="$color" fontSize={24} fontWeight="600" marginBottom="$md">
-            {connection.name}
-          </Text>
-          <YStack
-            paddingHorizontal="$md"
-            paddingVertical="$xs"
-            borderRadius="$md"
-            backgroundColor={isConnected ? "$successMuted" : "$primaryMuted"}
-          >
-            <Text color="$color" fontSize={12} fontWeight="500">
-              {isConnected ? "Connected" : "Disconnected"}
-            </Text>
+      <Stack.Screen options={{ title: connection.name }} />
+      <ScrollView
+        style={{ flex: 1, backgroundColor: theme.background.val }}
+        contentInsetAdjustmentBehavior="automatic"
+        contentContainerStyle={{ padding: 16, paddingBottom: 48, gap: 28 }}
+      >
+        <YStack alignItems="center" gap="$md" paddingTop="$sm">
+          <DatabaseTile type={connection.type} size={72} tag={connection.color} />
+          <YStack alignItems="center" gap="$xs" maxWidth="100%">
+            <AppText variant="title2" textAlign="center" numberOfLines={2}>
+              {connection.name}
+            </AppText>
+            <AppText
+              variant="subhead"
+              tone="secondary"
+              textAlign="center"
+              numberOfLines={1}
+              ellipsizeMode="middle"
+            >
+              {DATABASE_LABELS[connection.type]} · {target}
+            </AppText>
+            <XStack
+              alignItems="center"
+              gap={6}
+              marginTop={2}
+              accessibilityLabel={`Status: ${status.label}`}
+            >
+              <YStack width={7} height={7} borderRadius={4} backgroundColor={status.dot} />
+              <AppText variant="footnote" tone="secondary">
+                {status.label}
+              </AppText>
+            </XStack>
           </YStack>
         </YStack>
 
-        <YStack backgroundColor="$surface" borderRadius="$md" padding="$md" marginBottom="$lg">
-          <InfoRow label="Type" value={connection.type.toUpperCase()} />
-          <InfoRow label="Host" value={connection.host} />
-          <InfoRow label="Port" value={connection.port.toString()} />
-          <InfoRow label="Database" value={connection.database} />
-          <InfoRow label="Username" value={connection.username} />
-          <InfoRow label="SSL" value={connection.ssl ? "Enabled" : "Disabled"} />
-        </YStack>
-
-        <YStack gap="$md">
+        <YStack gap="$sm">
           {isConnected ? (
-            <>
-              <Button variant="primary" onPress={() => router.push(`/query/${connection.id}`)}>
-                Open Query Editor
-              </Button>
-              <Button variant="secondary" onPress={handleDisconnect}>
-                Disconnect
-              </Button>
-            </>
+            <Button
+              variant="filled"
+              size="lg"
+              onPress={() => router.push(`/query/${connection.id}`)}
+            >
+              Open Query Editor
+            </Button>
           ) : (
             <Button
-              variant="primary"
+              variant="filled"
+              size="lg"
               onPress={handleConnect}
               disabled={connecting}
               loading={connecting}
             >
-              Connect
+              {connectError ? "Try Again" : "Connect"}
             </Button>
           )}
-
-          <Button
-            variant="secondary"
-            onPress={() => router.push(`/connection/new?edit=${connection.id}`)}
-          >
-            <XStack alignItems="center" gap="$sm">
-              <Ionicons name="create-outline" size={18} color={theme.color.val} />
-              <Text color="$color" fontWeight="500">
-                Edit connection
-              </Text>
-            </XStack>
-          </Button>
-
-          <Button variant="ghost" onPress={() => setShowDeleteDialog(true)} marginTop="$md">
-            <Text color="$danger" fontWeight="500">
-              Delete Connection
-            </Text>
-          </Button>
+          {connectError && !isConnected ? (
+            <YStack
+              gap="$xs"
+              padding={12}
+              borderRadius="$md"
+              style={{ borderCurve: "continuous" }}
+              backgroundColor="$dangerMuted"
+              accessibilityLiveRegion="polite"
+            >
+              <XStack alignItems="center" gap={6}>
+                <Ionicons name="alert-circle" size={16} color={theme.danger.val} />
+                <AppText variant="subhead" emphasized tone="danger">
+                  Couldn’t Connect
+                </AppText>
+              </XStack>
+              <AppText variant="footnote" tone="danger" selectable>
+                {connectError}
+              </AppText>
+            </YStack>
+          ) : null}
         </YStack>
+
+        <ListSection title="Details">
+          <ListRow title="Type" value={DATABASE_LABELS[connection.type]} />
+          {sqlite ? (
+            <ListRow title="File" value={<DetailValue>{connection.database}</DetailValue>} />
+          ) : null}
+          {!sqlite ? (
+            <ListRow title="Host" value={<DetailValue>{connection.host}</DetailValue>} />
+          ) : null}
+          {!sqlite ? (
+            <ListRow title="Port" value={<DetailValue>{connection.port.toString()}</DetailValue>} />
+          ) : null}
+          {!sqlite ? (
+            <ListRow title="Database" value={<DetailValue>{connection.database}</DetailValue>} />
+          ) : null}
+          {!sqlite ? (
+            <ListRow
+              title="User"
+              value={<DetailValue>{connection.username || "None"}</DetailValue>}
+            />
+          ) : null}
+          {!sqlite ? <ListRow title="SSL/TLS" value={describeSsl(connection.ssl)} /> : null}
+        </ListSection>
+
+        <ListSection>
+          <ListRow
+            title="Edit Connection"
+            tint
+            onPress={() => router.push(`/connection/new?edit=${connection.id}`)}
+          />
+          {isConnected ? <ListRow title="Disconnect" tint onPress={handleDisconnect} /> : null}
+        </ListSection>
+
+        <ListSection>
+          <ListRow title="Delete Connection" destructive onPress={confirmDelete} />
+        </ListSection>
       </ScrollView>
-
-      <Dialog
-        open={showDeleteDialog}
-        onOpenChange={setShowDeleteDialog}
-        title="Delete Connection"
-        description="Are you sure you want to delete this connection?"
-        confirmText="Delete"
-        cancelText="Cancel"
-        variant="danger"
-        onConfirm={handleDeleteConfirm}
-      />
-
-      <Dialog
-        open={showErrorDialog}
-        onOpenChange={setShowErrorDialog}
-        title="Connection Failed"
-        description={errorMessage}
-        confirmText="OK"
-        cancelText="Dismiss"
-        onConfirm={() => setShowErrorDialog(false)}
-      />
     </>
   );
 }

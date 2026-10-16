@@ -36,6 +36,7 @@ export const useTheme = () => {
         danger: v("danger"),
         dangerMuted: v("dangerMuted"),
         accent: v("accent"),
+        accentFill: v("accentFill"),
         accentMuted: v("accentMuted"),
         placeholder: v("placeholderColor"),
         disabled: v("disabled"),
