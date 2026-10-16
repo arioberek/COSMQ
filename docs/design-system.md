@@ -37,6 +37,7 @@ radii in screens.
 | `$warning` | `#c93400` | `#ff9f0a` | Open transaction, caution |
 | `$danger` / `$dangerMuted` | `#d70015` | `#ff453a` | Errors, destructive actions |
 | `$syntax*` | Xcode light | Xcode dark | SQL highlighting |
+| `$tile*` | iOS system colors | iOS system colors | `ListIcon` tiles only (Blue, Indigo, Gray, Green, Orange, Red, Pink, Teal) |
 
 Spacing uses a 4pt grid: `$xs` 4, `$sm` 8, `$md` 16, `$lg` 24, `$xl` 32,
 `$xxl` 48. Screen edge padding is 16. Section spacing is 28 (`gap`).

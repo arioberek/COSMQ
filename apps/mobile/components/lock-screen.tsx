@@ -1,7 +1,9 @@
 import { Ionicons } from "@expo/vector-icons";
 import { memo, useCallback, useEffect, useRef, useState } from "react";
-import { ActivityIndicator } from "react-native";
-import { Button, Text, useTheme, YStack } from "tamagui";
+import { ActivityIndicator, StyleSheet } from "react-native";
+import Animated, { Easing, FadeIn, useReducedMotion } from "react-native-reanimated";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useTheme, YStack } from "tamagui";
 import AlienLogo from "../assets/logos/alien.svg";
 import {
   authenticate,
@@ -9,13 +11,18 @@ import {
   checkBiometricCapability,
   getBiometricDisplayName,
 } from "../lib/app-lock";
+import { AppText, Button } from "./ui";
 
 type LockScreenProps = {
   onUnlock: () => void;
 };
 
+const ENTER = FadeIn.duration(220).easing(Easing.bezier(0.23, 1, 0.32, 1));
+
 export const LockScreen = memo(function LockScreen({ onUnlock }: LockScreenProps) {
   const theme = useTheme();
+  const insets = useSafeAreaInsets();
+  const reducedMotion = useReducedMotion();
 
   const [capability, setCapability] = useState<BiometricCapability | null>(null);
   const [isAuthenticating, setIsAuthenticating] = useState(false);
@@ -74,121 +81,87 @@ export const LockScreen = memo(function LockScreen({ onUnlock }: LockScreenProps
 
   const canAuthenticate = capability?.isSupported && capability?.isEnrolled;
 
+  const message = error
+    ? error
+    : warning
+      ? warning
+      : capability && !canAuthenticate
+        ? !capability.isSupported
+          ? "This device doesn’t support biometric authentication."
+          : "No biometrics are enrolled. Set up Face ID, Touch ID or a fingerprint in your device settings."
+        : "Your database connections are protected.";
+
+  const messageTone = error ? "danger" : warning ? "warning" : "secondary";
+
   return (
-    <YStack
-      position="absolute"
-      top={0}
-      left={0}
-      right={0}
-      bottom={0}
-      backgroundColor="$background"
-      zIndex={9999}
+    <Animated.View
+      entering={reducedMotion ? undefined : ENTER}
+      style={[StyleSheet.absoluteFill, { zIndex: 9999, backgroundColor: theme.background.val }]}
+      accessibilityViewIsModal
     >
-      <YStack flex={1} justifyContent="center" alignItems="center" padding="$xl">
-        <YStack
-          width={100}
-          height={100}
-          borderRadius="$full"
-          backgroundColor="$surface"
-          justifyContent="center"
-          alignItems="center"
-          marginBottom="$lg"
-          borderWidth={2}
-          borderColor="$borderColor"
-        >
-          <AlienLogo width={60} height={60} />
+      <YStack
+        flex={1}
+        paddingHorizontal="$xl"
+        paddingTop={insets.top}
+        paddingBottom={Math.max(insets.bottom, 16) + 16}
+      >
+        <YStack flex={1} justifyContent="center" alignItems="center" gap="$sm">
+          {/* Echoes the app icon: white alien on the accent tile. */}
+          <YStack
+            width={76}
+            height={76}
+            borderRadius="$lg"
+            style={{ borderCurve: "continuous" }}
+            backgroundColor="$accent"
+            alignItems="center"
+            justifyContent="center"
+            marginBottom="$sm"
+            accessibilityElementsHidden
+            importantForAccessibility="no-hide-descendants"
+          >
+            <AlienLogo width={48} height={48} color={theme.textOnAccent.val} />
+          </YStack>
+          <AppText variant="title3" textAlign="center" accessibilityRole="header">
+            COSMQ Locked
+          </AppText>
+          <AppText
+            variant="footnote"
+            tone={messageTone}
+            textAlign="center"
+            maxWidth={300}
+            accessibilityLiveRegion="polite"
+          >
+            {message}
+          </AppText>
         </YStack>
 
-        <Text fontSize={32} fontWeight="bold" color="$color" marginBottom="$sm">
-          COSMQ
-        </Text>
-        <Text fontSize={18} color="$textSubtle" marginBottom="$xl">
-          App Locked
-        </Text>
-
-        {error ? (
-          <YStack
-            backgroundColor="$dangerMuted"
-            padding="$md"
-            borderRadius="$md"
-            marginBottom="$lg"
-            maxWidth={300}
-          >
-            <Text color="$danger" fontSize={14} textAlign="center" lineHeight={20}>
-              {error}
-            </Text>
-          </YStack>
-        ) : null}
-
-        {warning ? (
-          <YStack
-            backgroundColor="$warningMuted"
-            padding="$md"
-            borderRadius="$md"
-            marginBottom="$lg"
-            maxWidth={300}
-          >
-            <Text color="$warning" fontSize={14} textAlign="center">
-              {warning}
-            </Text>
-          </YStack>
-        ) : null}
-
-        {!capability ? (
-          <ActivityIndicator size="large" color={theme.primary.val} style={{ marginBottom: 24 }} />
-        ) : canAuthenticate ? (
-          <Button
-            backgroundColor="$primary"
-            paddingHorizontal="$xl"
-            paddingVertical="$md"
-            borderRadius="$md"
-            marginBottom="$lg"
-            gap="$sm"
-            onPress={handleUnlock}
-            disabled={isAuthenticating}
-            opacity={isAuthenticating ? 0.6 : 1}
-            pressStyle={{ opacity: 0.85 }}
-            animation="quick"
-          >
-            {isAuthenticating ? (
-              <ActivityIndicator color={theme.textOnPrimary.val} />
-            ) : (
-              <>
-                <Ionicons
-                  name={
-                    capability.availableTypes.includes("facial")
-                      ? "scan-outline"
-                      : "finger-print-outline"
-                  }
-                  size={20}
-                  color={theme.textOnPrimary.val}
-                />
-                <Text color="$textOnPrimary" fontSize={15} fontWeight="600">
-                  Unlock with {biometricName}
-                </Text>
-              </>
-            )}
-          </Button>
-        ) : (
-          <YStack
-            backgroundColor="$surfaceMuted"
-            padding="$md"
-            borderRadius="$md"
-            marginBottom="$lg"
-            maxWidth={300}
-          >
-            <Text color="$textSubtle" fontSize={14} textAlign="center" lineHeight={20}>
-              {!capability.isSupported
-                ? "Biometric authentication not supported on this device"
-                : "No biometric credentials enrolled. Please set up Face ID or fingerprint in device settings."}
-            </Text>
-          </YStack>
-        )}
-
-        <Text color="$textSubtle" fontSize={12} textAlign="center">
-          Your database connections are protected
-        </Text>
+        <YStack minHeight={50} justifyContent="center" alignItems="center">
+          {!capability ? (
+            <ActivityIndicator color={theme.textSubtle.val} />
+          ) : canAuthenticate ? (
+            <Button
+              size="lg"
+              alignSelf="stretch"
+              onPress={handleUnlock}
+              loading={isAuthenticating}
+              accessibilityLabel={`Unlock with ${biometricName}`}
+            >
+              <Ionicons
+                name={
+                  capability.availableTypes.includes("facial")
+                    ? "scan-outline"
+                    : "finger-print-outline"
+                }
+                size={20}
+                color={theme.textOnAccent.val}
+              />
+              <AppText variant="headline" tone="onAccent" numberOfLines={1}>
+                Unlock with {biometricName}
+              </AppText>
+            </Button>
+          ) : null}
+        </YStack>
       </YStack>
-    </YStack>
+    </Animated.View>
   );
 });

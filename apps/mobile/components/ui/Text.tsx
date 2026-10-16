@@ -8,8 +8,9 @@ export const AppText = styled(Text, {
   name: "AppText",
   fontFamily: "$body",
   color: "$color",
-  // Native default; also stops web <button> wrappers from centering text.
   textAlign: "auto",
+  // "auto" isn't valid CSS; without this, web <button> wrappers center text.
+  "$platform-web": { textAlign: "left" },
 
   variants: {
     variant: {

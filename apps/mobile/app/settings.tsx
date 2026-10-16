@@ -2,9 +2,9 @@ import { Ionicons } from "@expo/vector-icons";
 import Constants from "expo-constants";
 import * as Linking from "expo-linking";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Pressable, TextInput } from "react-native";
-import { ScrollView, Text, useTheme, XStack, YStack } from "tamagui";
-import { Dialog, Switch } from "../components/ui";
+import { Alert, ScrollView, TextInput } from "react-native";
+import { useTheme, XStack, YStack } from "tamagui";
+import { AppText, ListIcon, ListRow, ListSection, Switch } from "../components/ui";
 import {
   authenticate,
   type BiometricCapability,
@@ -13,6 +13,8 @@ import {
 } from "../lib/app-lock";
 import {
   APP_LOCK_TIMEOUT_LABELS,
+  APPEARANCE_LABELS,
+  type Appearance,
   type AppLockTimeout,
   AUTO_ROLLBACK_RANGE,
   normalizeAutoRollbackSeconds,
@@ -20,8 +22,17 @@ import {
 import { useSettingsStore } from "../stores/settings";
 
 const TIMEOUT_OPTIONS: AppLockTimeout[] = ["immediate", "15s", "1m", "5m"];
+const APPEARANCE_OPTIONS: Appearance[] = ["system", "light", "dark"];
+
+// TextInput can't use AppText variants; this mirrors the `body` text style (17pt).
+const BODY_FONT_SIZE = 17;
+
+const openUrl = (url: string) => {
+  Linking.openURL(url).catch(() => {});
+};
 
 export default function SettingsScreen() {
+  const theme = useTheme();
   const { settings, updateSettings } = useSettingsStore();
   const appVersion = Constants.expoConfig?.version ?? "1.0.0";
   const [biometricCapability, setBiometricCapability] = useState<BiometricCapability | null>(null);
@@ -31,9 +42,6 @@ export default function SettingsScreen() {
     settings.autoRollbackSeconds.toString(),
   );
   const [isAutoRollbackEditing, setIsAutoRollbackEditing] = useState(false);
-
-  const [showAlertDialog, setShowAlertDialog] = useState(false);
-  const [alertContent, setAlertContent] = useState({ title: "", message: "" });
 
   useEffect(() => {
     let mounted = true;
@@ -73,13 +81,12 @@ export default function SettingsScreen() {
       }
 
       if (!canEnableAppLock) {
-        setAlertContent({
-          title: "Cannot Enable App Lock",
-          message: biometricCapability?.isSupported
-            ? "No biometric credentials are enrolled. Please set up Face ID, Touch ID, or fingerprint in your device settings first."
-            : "Biometric authentication is not supported on this device.",
-        });
-        setShowAlertDialog(true);
+        Alert.alert(
+          "Can’t Turn On App Lock",
+          biometricCapability?.isSupported
+            ? "No biometrics are enrolled. Set up Face ID, Touch ID or a fingerprint in your device settings first."
+            : "This device doesn’t support biometric authentication.",
+        );
         return;
       }
 
@@ -87,8 +94,7 @@ export default function SettingsScreen() {
       if (result.success) {
         await updateSettings({ appLockEnabled: true });
       } else if (result.error) {
-        setAlertContent({ title: "Authentication Failed", message: result.error });
-        setShowAlertDialog(true);
+        Alert.alert("Authentication Failed", result.error);
       }
     },
     [canEnableAppLock, biometricCapability, updateSettings],
@@ -134,11 +140,7 @@ export default function SettingsScreen() {
     versionTapCount.current += 1;
     if (versionTapCount.current >= 5) {
       versionTapCount.current = 0;
-      setAlertContent({
-        title: "Nice find.",
-        message: "Thanks for poking around. Build something.",
-      });
-      setShowAlertDialog(true);
+      Alert.alert("Nice find.", "Thanks for poking around. Build something.");
       return;
     }
 
@@ -147,386 +149,227 @@ export default function SettingsScreen() {
     }, 1200);
   }, []);
 
+  const securityFooter = !biometricCapability
+    ? undefined
+    : canEnableAppLock
+      ? `Require ${biometricName} to open COSMQ.`
+      : biometricCapability.isSupported
+        ? "Set up Face ID, Touch ID or a fingerprint in your device settings to turn on App Lock."
+        : "This device doesn’t support biometric authentication.";
+
+  const securityIcon = biometricCapability?.availableTypes.includes("facial")
+    ? "scan"
+    : biometricCapability?.availableTypes.includes("fingerprint")
+      ? "finger-print"
+      : "lock-closed";
+
+  const linkIcon = <Ionicons name="open-outline" size={17} color={theme.textSubtle.val} />;
+
   return (
-    <YStack flex={1} backgroundColor="$background">
-      <ScrollView flex={1} contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 48 }}>
-        <YStack paddingTop="$lg" paddingBottom="$lg" gap={2}>
-          <Text color="$color" fontSize={26} fontWeight="600" letterSpacing={-0.4}>
-            Settings
-          </Text>
-          <Text color="$textSubtle" fontSize={13}>
-            App preferences
-          </Text>
-        </YStack>
-
-        <Section title="Appearance">
-          <SettingRow
-            label="Dark mode"
-            description="Switch between light and dark themes"
-            value={settings.darkMode}
-            onValueChange={(value) => updateSettings({ darkMode: value })}
+    <ScrollView
+      contentInsetAdjustmentBehavior="automatic"
+      keyboardDismissMode="interactive"
+      keyboardShouldPersistTaps="handled"
+      contentContainerStyle={{ padding: 16, paddingBottom: 48, gap: 28 }}
+    >
+      <ListSection title="Appearance">
+        {APPEARANCE_OPTIONS.map((option) => (
+          <ListRow
+            key={option}
+            title={APPEARANCE_LABELS[option]}
+            accessory={settings.appearance === option ? "check" : undefined}
+            onPress={() => updateSettings({ appearance: option })}
+            accessibilityLabel={`${APPEARANCE_LABELS[option]} appearance${settings.appearance === option ? ", selected" : ""}`}
           />
-        </Section>
+        ))}
+      </ListSection>
 
-        <Section title="Security">
-          <SettingRow
-            label={`App lock (${biometricName})`}
-            description={
-              canEnableAppLock
-                ? "Require biometric authentication to open the app"
-                : biometricCapability?.isSupported
-                  ? "Set up Face ID or fingerprint in device settings to enable"
-                  : "Not supported on this device"
+      <ListSection title="Security" footer={securityFooter}>
+        <ListRow
+          icon={<ListIcon name={securityIcon} color={theme.tileGreen.val} />}
+          title="App Lock"
+          accessory={
+            <Switch
+              checked={settings.appLockEnabled}
+              onCheckedChange={handleAppLockToggle}
+              accessibilityLabel={`App Lock with ${biometricName}`}
+            />
+          }
+        />
+      </ListSection>
+
+      {settings.appLockEnabled ? (
+        <ListSection
+          title="Require Unlock"
+          footer="How long COSMQ can stay in the background before it locks."
+        >
+          {TIMEOUT_OPTIONS.map((option) => (
+            <ListRow
+              key={option}
+              title={APP_LOCK_TIMEOUT_LABELS[option]}
+              accessory={settings.appLockTimeout === option ? "check" : undefined}
+              onPress={() => updateSettings({ appLockTimeout: option })}
+              accessibilityLabel={`${APP_LOCK_TIMEOUT_LABELS[option]}${settings.appLockTimeout === option ? ", selected" : ""}`}
+            />
+          ))}
+        </ListSection>
+      ) : null}
+
+      <ListSection
+        title="Safety"
+        footer={`Confirmation asks before UPDATE, DELETE or DROP runs. Auto-rollback rolls back a transaction still open when the timer runs out (${AUTO_ROLLBACK_RANGE.min}–${AUTO_ROLLBACK_RANGE.max} seconds).`}
+      >
+        <ListRow
+          icon={<ListIcon name="warning" color={theme.tileRed.val} />}
+          title="Confirm Dangerous Queries"
+          accessory={
+            <Switch
+              checked={settings.dangerousOpsHint}
+              onCheckedChange={(value) => updateSettings({ dangerousOpsHint: value })}
+              accessibilityLabel="Confirm dangerous queries"
+            />
+          }
+        />
+        <ListRow
+          icon={<ListIcon name="arrow-undo" color={theme.tileOrange.val} />}
+          title="Auto-Rollback"
+          accessory={
+            <Switch
+              checked={settings.autoRollbackEnabled}
+              onCheckedChange={handleAutoRollbackToggle}
+              accessibilityLabel="Auto-rollback transactions"
+            />
+          }
+        />
+        {settings.autoRollbackEnabled ? (
+          <ListRow
+            icon={<ListIcon name="timer" color={theme.tileOrange.val} />}
+            title="Rollback After"
+            accessory={
+              <XStack alignItems="center" gap={4}>
+                <TextInput
+                  value={autoRollbackInput}
+                  onChangeText={setAutoRollbackInput}
+                  onFocus={() => setIsAutoRollbackEditing(true)}
+                  onBlur={() => {
+                    setIsAutoRollbackEditing(false);
+                    commitAutoRollbackSeconds();
+                  }}
+                  onSubmitEditing={commitAutoRollbackSeconds}
+                  placeholder={`${AUTO_ROLLBACK_RANGE.min}–${AUTO_ROLLBACK_RANGE.max}`}
+                  placeholderTextColor={theme.placeholderColor.val}
+                  keyboardType="number-pad"
+                  returnKeyType="done"
+                  maxLength={3}
+                  selectTextOnFocus
+                  accessibilityLabel="Rollback after, in seconds"
+                  style={{
+                    color: theme.textMuted.val,
+                    fontSize: BODY_FONT_SIZE,
+                    width: 64,
+                    textAlign: "right",
+                    paddingVertical: 0,
+                    fontVariant: ["tabular-nums"],
+                  }}
+                />
+                <AppText variant="body" tone="secondary">
+                  s
+                </AppText>
+              </XStack>
             }
-            value={settings.appLockEnabled}
-            onValueChange={handleAppLockToggle}
           />
-          {settings.appLockEnabled ? (
-            <>
-              <YStack height={1} backgroundColor="$borderColor" marginVertical="$sm" />
-              <TimeoutSelector
-                value={settings.appLockTimeout}
-                onChange={(value) => updateSettings({ appLockTimeout: value })}
-              />
-            </>
-          ) : null}
-        </Section>
+        ) : null}
+      </ListSection>
 
-        <Section title="Safety">
-          <SettingRow
-            label="Confirm dangerous statements"
-            description="Prompt before running UPDATE / DELETE / DROP"
-            value={settings.dangerousOpsHint}
-            onValueChange={(value) => updateSettings({ dangerousOpsHint: value })}
-          />
-          <YStack height={1} backgroundColor="$borderColor" marginVertical="$sm" />
-          <SettingRow
-            label="Auto-rollback transactions"
-            description="Roll back unfinished transactions automatically"
-            value={settings.autoRollbackEnabled}
-            onValueChange={handleAutoRollbackToggle}
-          />
-          <YStack height={1} backgroundColor="$borderColor" marginVertical="$sm" />
-          <NumberSettingRow
-            label="Auto-rollback timer"
-            description={`${AUTO_ROLLBACK_RANGE.min}–${AUTO_ROLLBACK_RANGE.max} seconds`}
-            value={autoRollbackInput}
-            onChangeText={setAutoRollbackInput}
-            onFocus={() => setIsAutoRollbackEditing(true)}
-            onBlur={() => {
-              setIsAutoRollbackEditing(false);
-              commitAutoRollbackSeconds();
-            }}
-            editable={settings.autoRollbackEnabled}
-          />
-        </Section>
+      <ListSection
+        title="Editor"
+        footer="Templates add common queries above the editor. Quick actions add keyword chips below it."
+      >
+        <ListRow
+          icon={<ListIcon name="sparkles" color={theme.accent.val} />}
+          title="Autocomplete"
+          accessory={
+            <Switch
+              checked={settings.enableAutocomplete}
+              onCheckedChange={(value) => updateSettings({ enableAutocomplete: value })}
+              accessibilityLabel="Autocomplete"
+            />
+          }
+        />
+        <ListRow
+          icon={<ListIcon name="document-text" color={theme.tileBlue.val} />}
+          title="Templates"
+          accessory={
+            <Switch
+              checked={settings.showSqlTemplates}
+              onCheckedChange={(value) => updateSettings({ showSqlTemplates: value })}
+              accessibilityLabel="Templates"
+            />
+          }
+        />
+        <ListRow
+          icon={<ListIcon name="flash" color={theme.tileIndigo.val} />}
+          title="Quick Actions"
+          accessory={
+            <Switch
+              checked={settings.showQuickActions}
+              onCheckedChange={(value) => updateSettings({ showQuickActions: value })}
+              accessibilityLabel="Quick actions"
+            />
+          }
+        />
+      </ListSection>
 
-        <Section title="Editor">
-          <SettingRow
-            label="Autocomplete"
-            description="Suggest SQL keywords as you type"
-            value={settings.enableAutocomplete}
-            onValueChange={(value) => updateSettings({ enableAutocomplete: value })}
-          />
-          <YStack height={1} backgroundColor="$borderColor" marginVertical="$sm" />
-          <SettingRow
-            label="Templates"
-            description="Show common-query templates above the editor"
-            value={settings.showSqlTemplates}
-            onValueChange={(value) => updateSettings({ showSqlTemplates: value })}
-          />
-          <YStack height={1} backgroundColor="$borderColor" marginVertical="$sm" />
-          <SettingRow
-            label="Quick actions"
-            description="Show keyword chips below the editor"
-            value={settings.showQuickActions}
-            onValueChange={(value) => updateSettings({ showQuickActions: value })}
-          />
-        </Section>
+      <ListSection title="Feedback" footer="Vibrate on success, errors and transaction events.">
+        <ListRow
+          icon={<ListIcon name="pulse" color={theme.tilePink.val} />}
+          title="Haptics"
+          accessory={
+            <Switch
+              checked={settings.hapticFeedbackEnabled}
+              onCheckedChange={(value) => updateSettings({ hapticFeedbackEnabled: value })}
+              accessibilityLabel="Haptics"
+            />
+          }
+        />
+      </ListSection>
 
-        <Section title="Feedback">
-          <SettingRow
-            label="Haptics"
-            description="Vibrate on success, errors, and transaction events"
-            value={settings.hapticFeedbackEnabled}
-            onValueChange={(value) => updateSettings({ hapticFeedbackEnabled: value })}
-          />
-        </Section>
+      <ListSection title="About">
+        <ListRow
+          icon={<ListIcon name="information" color={theme.tileGray.val} />}
+          title="Version"
+          value={appVersion}
+          onPress={handleVersionTap}
+          accessibilityLabel={`Version ${appVersion}`}
+        />
+        <ListRow
+          icon={<ListIcon name="person" color={theme.tileGray.val} />}
+          title="Author"
+          value="Arielton Oberek"
+        />
+        <ListRow
+          icon={<ListIcon name="globe-outline" color={theme.tileGray.val} />}
+          title="Website"
+          value="cosmq.arielton.com"
+          accessory={linkIcon}
+          onPress={() => openUrl("https://cosmq.arielton.com")}
+          accessibilityLabel="Website, cosmq.arielton.com"
+        />
+        <ListRow
+          icon={<ListIcon name="logo-github" color={theme.tileGray.val} />}
+          title="GitHub"
+          value="arioberek/cosmq"
+          accessory={linkIcon}
+          onPress={() => openUrl("https://github.com/arioberek/cosmq")}
+          accessibilityLabel="GitHub, arioberek/cosmq"
+        />
+      </ListSection>
 
-        <Section title="About">
-          <InfoRow label="Version" value={appVersion} onPress={handleVersionTap} />
-          <YStack height={1} backgroundColor="$borderColor" marginVertical="$sm" />
-          <InfoRow label="Author" value="Arielton Oberek" />
-          <YStack height={1} backgroundColor="$borderColor" marginVertical="$sm" />
-          <LinkRow label="Website" value="cosmq.arielton.com" url="https://cosmq.arielton.com" />
-          <YStack height={1} backgroundColor="$borderColor" marginVertical="$sm" />
-          <LinkRow
-            label="GitHub"
-            value="arioberek/cosmq"
-            url="https://github.com/arioberek/cosmq"
-          />
-        </Section>
-
-        <YStack alignItems="center" paddingTop="$xl">
-          <Text color="$textSubtle" fontSize={12}>
-            Run queries from anywhere.
-          </Text>
-        </YStack>
-      </ScrollView>
-
-      <Dialog
-        open={showAlertDialog}
-        onOpenChange={setShowAlertDialog}
-        title={alertContent.title}
-        description={alertContent.message}
-        confirmText="OK"
-        cancelText="Dismiss"
-        onConfirm={() => setShowAlertDialog(false)}
-      />
-    </YStack>
+      <YStack alignItems="center">
+        <AppText variant="footnote" tone="tertiary">
+          Run queries from anywhere.
+        </AppText>
+      </YStack>
+    </ScrollView>
   );
 }
-
-const Section = ({ title, children }: { title: string; children: React.ReactNode }) => (
-  <YStack marginBottom="$lg">
-    <Text
-      color="$textSubtle"
-      fontSize={11}
-      fontWeight="600"
-      textTransform="uppercase"
-      letterSpacing={1.2}
-      marginBottom="$sm"
-      marginLeft="$xs"
-    >
-      {title}
-    </Text>
-    <YStack
-      borderRadius="$md"
-      padding="$md"
-      borderWidth={1}
-      borderColor="$cardBorder"
-      backgroundColor="$surface"
-    >
-      {children}
-    </YStack>
-  </YStack>
-);
-
-const SettingRow = ({
-  label,
-  description,
-  value,
-  onValueChange,
-}: {
-  label: string;
-  description?: string;
-  value: boolean;
-  onValueChange: (value: boolean) => void;
-}) => (
-  <XStack alignItems="center" justifyContent="space-between" gap="$md" paddingVertical="$xs">
-    <YStack flex={1} gap={2}>
-      <Text color="$color" fontSize={16} fontWeight="600">
-        {label}
-      </Text>
-      {description ? (
-        <Text color="$textSubtle" fontSize={13} lineHeight={18}>
-          {description}
-        </Text>
-      ) : null}
-    </YStack>
-    <Switch checked={value} onCheckedChange={onValueChange} />
-  </XStack>
-);
-
-const NumberSettingRow = ({
-  label,
-  description,
-  value,
-  onChangeText,
-  onFocus,
-  onBlur,
-  editable,
-}: {
-  label: string;
-  description?: string;
-  value: string;
-  onChangeText: (value: string) => void;
-  onFocus: () => void;
-  onBlur: () => void;
-  editable: boolean;
-}) => {
-  const theme = useTheme();
-
-  return (
-    <XStack alignItems="center" justifyContent="space-between" gap="$md" paddingVertical="$xs">
-      <YStack flex={1} gap={2}>
-        <Text color="$color" fontSize={16} fontWeight="600">
-          {label}
-        </Text>
-        {description ? (
-          <Text color="$textSubtle" fontSize={13} lineHeight={18}>
-            {description}
-          </Text>
-        ) : null}
-      </YStack>
-      <XStack
-        alignItems="center"
-        gap={6}
-        paddingHorizontal="$md"
-        paddingVertical="$sm"
-        borderRadius="$md"
-        backgroundColor="$surfaceAlt"
-        borderWidth={1}
-        borderColor="$borderColor"
-        minWidth={100}
-        justifyContent="flex-end"
-        opacity={editable ? 1 : 0.5}
-      >
-        <TextInput
-          style={{
-            color: editable ? theme.color.val : theme.textSubtle.val,
-            fontSize: 15,
-            minWidth: 40,
-            textAlign: "right",
-            paddingVertical: 2,
-            fontFamily: "JetBrainsMono",
-          }}
-          value={value}
-          onChangeText={onChangeText}
-          onFocus={onFocus}
-          onBlur={onBlur}
-          placeholder={`${AUTO_ROLLBACK_RANGE.min}-${AUTO_ROLLBACK_RANGE.max}`}
-          placeholderTextColor={theme.placeholderColor.val}
-          keyboardType="number-pad"
-          returnKeyType="done"
-          editable={editable}
-        />
-        <Text color={editable ? "$textSubtle" : "$disabled"} fontSize={13} fontWeight="600">
-          s
-        </Text>
-      </XStack>
-    </XStack>
-  );
-};
-
-const InfoRow = ({
-  label,
-  value,
-  onPress,
-}: {
-  label: string;
-  value: string;
-  onPress?: () => void;
-}) =>
-  onPress ? (
-    <Pressable
-      style={({ pressed }) => [
-        {
-          flexDirection: "row",
-          justifyContent: "space-between",
-          alignItems: "center",
-          paddingVertical: 4,
-        },
-        pressed && { opacity: 0.7 },
-      ]}
-      onPress={onPress}
-    >
-      <Text color="$textSubtle" fontSize={15}>
-        {label}
-      </Text>
-      <XStack alignItems="center" gap="$xs">
-        <Text color="$color" fontSize={15} fontWeight="600">
-          {value}
-        </Text>
-        <YStack width={20} height={20} justifyContent="center" alignItems="center">
-          <Text color="$textSubtle" fontSize={18} fontWeight="300">
-            ›
-          </Text>
-        </YStack>
-      </XStack>
-    </Pressable>
-  ) : (
-    <XStack justifyContent="space-between" alignItems="center" paddingVertical="$xs">
-      <Text color="$textSubtle" fontSize={15}>
-        {label}
-      </Text>
-      <Text color="$color" fontSize={15} fontWeight="600">
-        {value}
-      </Text>
-    </XStack>
-  );
-
-const LinkRow = ({ label, value, url }: { label: string; value: string; url: string }) => {
-  const theme = useTheme();
-
-  return (
-    <Pressable
-      style={({ pressed }) => [
-        {
-          flexDirection: "row",
-          justifyContent: "space-between",
-          alignItems: "center",
-          paddingVertical: 4,
-        },
-        pressed && { opacity: 0.7 },
-      ]}
-      onPress={() => {
-        Linking.openURL(url).catch(() => {});
-      }}
-    >
-      <Text color="$textSubtle" fontSize={15}>
-        {label}
-      </Text>
-      <XStack alignItems="center" gap="$xs">
-        <Text color="$primary" fontSize={15} fontWeight="600">
-          {value}
-        </Text>
-        <Ionicons name="open-outline" size={14} color={theme.primary.val} />
-      </XStack>
-    </Pressable>
-  );
-};
-
-const TimeoutSelector = ({
-  value,
-  onChange,
-}: {
-  value: AppLockTimeout;
-  onChange: (value: AppLockTimeout) => void;
-}) => {
-  const theme = useTheme();
-  return (
-    <YStack gap="$sm" paddingVertical="$xs">
-      <Text color="$textSubtle" fontSize={13}>
-        Lock after leaving app
-      </Text>
-      <XStack flexWrap="wrap" gap="$sm">
-        {TIMEOUT_OPTIONS.map((option) => {
-          const isActive = value === option;
-          return (
-            <Pressable
-              key={option}
-              style={{
-                paddingHorizontal: 14,
-                paddingVertical: 8,
-                borderRadius: 8,
-                borderWidth: 1,
-                borderColor: isActive ? theme.primary.val : theme.borderColor.val,
-                backgroundColor: isActive ? theme.primaryMuted.val : "transparent",
-              }}
-              onPress={() => onChange(option)}
-            >
-              <Text
-                color={isActive ? "$primary" : "$textSubtle"}
-                fontSize={13}
-                fontWeight={isActive ? "600" : "500"}
-              >
-                {APP_LOCK_TIMEOUT_LABELS[option]}
-              </Text>
-            </Pressable>
-          );
-        })}
-      </XStack>
-    </YStack>
-  );
-};
