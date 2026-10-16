@@ -428,7 +428,7 @@ export default function NewConnectionScreen() {
         {!sqlite ? (
           <ListSection
             title="Connection URL"
-            footer="Paste a URL to fill in the fields below. Nothing is saved until you tap Save."
+            footer="Paste a URL to fill in the fields below. Nothing is saved until you confirm."
           >
             <FormField
               mono

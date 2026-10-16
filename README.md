@@ -48,13 +48,13 @@ COSMQ (**C**lient **O**pen-**S**ource **M**obile **Q**uery) is a database client
 
 | Engine | Auth | TLS | Schema browser | Transactions |
 | --- | --- | --- | --- | --- |
-| PostgreSQL | Cleartext, MD5, SCRAM-SHA-256 | Direct TLS¹ | Tables, views, columns | Yes |
-| MySQL / MariaDB | `mysql_native_password`, `caching_sha2_password` | Direct TLS¹ | Tables, views, columns | Yes |
-| CockroachDB | PostgreSQL wire protocol | Direct TLS¹ | Tables, views, columns | Yes |
+| PostgreSQL | Cleartext, MD5, SCRAM-SHA-256 | Yes¹ | Tables, views, columns | Yes |
+| MySQL / MariaDB | `mysql_native_password`, `caching_sha2_password` | Yes¹ | Tables, views, columns | Yes |
+| CockroachDB | PostgreSQL wire protocol | Yes¹ | Tables, views, columns | Yes |
 | MongoDB | SCRAM-SHA-1 | Yes | Collections, sampled fields | n/a |
 | SQLite | n/a (on-device file) | n/a | Tables, views, columns | Yes |
 
-¹ COSMQ opens TLS as soon as the socket connects. The in-protocol upgrade that PostgreSQL (`SSLRequest`) and MySQL (`CLIENT_SSL`) servers usually expect is not implemented yet, so TLS to those engines only works when the server or a proxy in front of it accepts TLS directly.
+¹ TLS is negotiated the way each server expects (PostgreSQL `SSLRequest`, MySQL `CLIENT_SSL`) and certificates are verified by default. When SSL is on, COSMQ never falls back to plaintext.
 
 MongoDB queries are JSON database commands, for example `{"find": "users", "filter": {"active": true}, "limit": 20}`.
 
@@ -186,7 +186,6 @@ docker-compose.yml        local test databases
 
 Not shipped yet:
 
-- TLS upgrade negotiation for PostgreSQL and MySQL (`SSLRequest` / `CLIENT_SSL`)
 - `mongodb+srv://` (DNS seed list) connections
 - SSH tunneling
 - Export results to a file (CSV, JSON, SQL `INSERT`)

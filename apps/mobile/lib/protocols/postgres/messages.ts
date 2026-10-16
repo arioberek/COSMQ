@@ -46,6 +46,14 @@ export const TransactionStatus = {
   FAILED: "E",
 } as const;
 
+/** SSLRequest: length 8 + magic code 80877103. The server answers "S" or "N". */
+export function createSslRequestMessage(): Buffer {
+  const buffer = Buffer.alloc(8);
+  buffer.writeInt32BE(8, 0);
+  buffer.writeInt32BE(80877103, 4);
+  return buffer;
+}
+
 export function createStartupMessage(
   user: string,
   database: string,
