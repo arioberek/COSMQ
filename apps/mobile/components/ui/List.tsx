@@ -1,5 +1,12 @@
 import { Ionicons } from "@expo/vector-icons";
-import { Children, cloneElement, isValidElement, memo, type ReactElement, type ReactNode } from "react";
+import {
+  Children,
+  cloneElement,
+  isValidElement,
+  memo,
+  type ReactElement,
+  type ReactNode,
+} from "react";
 import { Pressable } from "react-native";
 import { useTheme, View, XStack, YStack } from "tamagui";
 import { AppText } from "./Text";
@@ -7,13 +14,7 @@ import { AppText } from "./Text";
 type IconName = keyof typeof Ionicons.glyphMap;
 
 /** iOS Settings-style icon: white glyph on a colored rounded square. */
-export const ListIcon = memo(function ListIcon({
-  name,
-  color,
-}: {
-  name: IconName;
-  color: string;
-}) {
+export const ListIcon = memo(function ListIcon({ name, color }: { name: IconName; color: string }) {
   return (
     <View
       width={29}
@@ -42,7 +43,12 @@ export function ListSection({ title, footer, children }: ListSectionProps) {
   return (
     <YStack gap={6}>
       {title ? (
-        <AppText variant="footnote" tone="secondary" paddingHorizontal="$md" textTransform="uppercase">
+        <AppText
+          variant="footnote"
+          tone="secondary"
+          paddingHorizontal="$md"
+          textTransform="uppercase"
+        >
           {title}
         </AppText>
       ) : null}
@@ -52,9 +58,7 @@ export function ListSection({ title, footer, children }: ListSectionProps) {
         overflow="hidden"
         style={{ borderCurve: "continuous" }}
       >
-        {rows.map((row, index) =>
-          cloneElement(row, { showSeparator: index < rows.length - 1 }),
-        )}
+        {rows.map((row, index) => cloneElement(row, { showSeparator: index < rows.length - 1 }))}
       </YStack>
       {footer ? (
         typeof footer === "string" ? (

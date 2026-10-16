@@ -7,11 +7,12 @@ import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AppState, type AppStateStatus } from "react-native";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { useTheme } from "tamagui";
-import { useResolvedColorScheme } from "../hooks/useResolvedColorScheme";
 import { LockScreen } from "../components/lock-screen";
 import { Provider } from "../components/Provider";
+import { useResolvedColorScheme } from "../hooks/useResolvedColorScheme";
 import { APP_LOCK_TIMEOUT_MS } from "../lib/settings";
 import { migrateFromSecureStore } from "../lib/storage/connections";
 import { useSettingsStore } from "../stores/settings";
@@ -160,12 +161,14 @@ export default function RootLayout() {
   }
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <SafeAreaProvider>
-        <Provider>
-          <RootLayoutContent />
-        </Provider>
-      </SafeAreaProvider>
-    </QueryClientProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <QueryClientProvider client={queryClient}>
+        <SafeAreaProvider>
+          <Provider>
+            <RootLayoutContent />
+          </Provider>
+        </SafeAreaProvider>
+      </QueryClientProvider>
+    </GestureHandlerRootView>
   );
 }

@@ -1,5 +1,5 @@
-import * as SecureStore from "./secure-store";
 import { type AppSettings, DEFAULT_SETTINGS } from "../settings";
+import * as SecureStore from "./secure-store";
 
 const SETTINGS_KEY = "cosmq_settings";
 

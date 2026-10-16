@@ -19,7 +19,10 @@ const StyledButton = styled(TamaguiButton, {
       tinted: { backgroundColor: "$accentMuted", pressStyle: { backgroundColor: "$accentMuted" } },
       gray: { backgroundColor: "$fill", pressStyle: { backgroundColor: "$fill" } },
       plain: { backgroundColor: "transparent", pressStyle: { backgroundColor: "transparent" } },
-      destructive: { backgroundColor: "$dangerMuted", pressStyle: { backgroundColor: "$dangerMuted" } },
+      destructive: {
+        backgroundColor: "$dangerMuted",
+        pressStyle: { backgroundColor: "$dangerMuted" },
+      },
     },
     buttonSize: {
       sm: { height: "$buttonSm", paddingHorizontal: 14, borderRadius: "$full" },
@@ -51,7 +54,10 @@ const TONE_FOR: Record<Variant, Tone> = {
   danger: "destructive",
 };
 
-type ButtonProps = Omit<GetProps<typeof StyledButton>, "children" | "size" | "buttonSize" | "tone" | "variant"> & {
+type ButtonProps = Omit<
+  GetProps<typeof StyledButton>,
+  "children" | "size" | "buttonSize" | "tone" | "variant"
+> & {
   variant?: Variant;
   size?: "sm" | "md" | "lg";
   loading?: boolean;
