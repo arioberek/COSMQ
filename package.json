@@ -28,10 +28,5 @@
   "packageManager": "bun@1.2.0",
   "engines": {
     "node": ">=18"
-  },
-  "dependencies": {
-    "expo": "^55.0.23",
-    "react": "19.2.0",
-    "react-native": "0.83.6"
   }
 }
