@@ -2,7 +2,7 @@ import { PortalProvider } from "@tamagui/portal";
 import { ToastProvider, ToastViewport } from "@tamagui/toast";
 import type { ReactNode } from "react";
 import { TamaguiProvider, type TamaguiProviderProps } from "tamagui";
-import { useSettingsStore } from "../stores/settings";
+import { useResolvedColorScheme } from "../hooks/useResolvedColorScheme";
 import { config } from "../tamagui.config";
 
 type ProviderProps = {
@@ -10,12 +10,10 @@ type ProviderProps = {
 } & Omit<TamaguiProviderProps, "config">;
 
 export function Provider({ children, ...rest }: ProviderProps) {
-  const { settings } = useSettingsStore();
-
-  const resolvedTheme = settings.darkMode ? "dark" : "light";
+  const scheme = useResolvedColorScheme();
 
   return (
-    <TamaguiProvider config={config} defaultTheme={resolvedTheme} {...rest}>
+    <TamaguiProvider config={config} defaultTheme={scheme} {...rest}>
       <PortalProvider shouldAddRootHost>
         <ToastProvider swipeDirection="up" duration={4000}>
           {children}

@@ -31,7 +31,7 @@ import {
   type QuerySnippet,
   saveSnippet,
 } from "../../lib/storage/snippets";
-import type { Theme } from "../../lib/theme";
+import type { AppTheme as Theme } from "../../hooks/useTheme";
 import type { ColumnInfo, DatabaseType, QueryResult, TableInfo } from "../../lib/types";
 import { useConnectionStore } from "../../stores/connection";
 import { useSettingsStore } from "../../stores/settings";

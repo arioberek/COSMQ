@@ -1,7 +1,9 @@
 export type AppLockTimeout = "immediate" | "15s" | "1m" | "5m";
 
+export type Appearance = "system" | "light" | "dark";
+
 export type AppSettings = {
-  darkMode: boolean;
+  appearance: Appearance;
   dangerousOpsHint: boolean;
   enableAutocomplete: boolean;
   showSqlTemplates: boolean;
@@ -21,7 +23,7 @@ export const AUTO_ROLLBACK_RANGE = {
 export const DEFAULT_AUTO_ROLLBACK_SECONDS = 20;
 
 export const DEFAULT_SETTINGS: AppSettings = {
-  darkMode: true,
+  appearance: "system",
   dangerousOpsHint: true,
   enableAutocomplete: true,
   showSqlTemplates: false,
@@ -53,4 +55,10 @@ export const APP_LOCK_TIMEOUT_LABELS: Record<AppLockTimeout, string> = {
   "15s": "After 15 seconds",
   "1m": "After 1 minute",
   "5m": "After 5 minutes",
+};
+
+export const APPEARANCE_LABELS: Record<Appearance, string> = {
+  system: "System",
+  light: "Light",
+  dark: "Dark",
 };

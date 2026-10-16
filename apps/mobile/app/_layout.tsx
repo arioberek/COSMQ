@@ -9,6 +9,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { AppState, type AppStateStatus } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { useTheme } from "tamagui";
+import { useResolvedColorScheme } from "../hooks/useResolvedColorScheme";
 import { LockScreen } from "../components/lock-screen";
 import { Provider } from "../components/Provider";
 import { APP_LOCK_TIMEOUT_MS } from "../lib/settings";
@@ -37,6 +38,7 @@ const queryClient = new QueryClient({
 
 function RootLayoutContent() {
   const theme = useTheme();
+  const scheme = useResolvedColorScheme();
   const { loadSettings, settings, isLoaded: settingsLoaded } = useSettingsStore();
 
   const [isLocked, setIsLocked] = useState(true);
@@ -104,29 +106,32 @@ function RootLayoutContent() {
 
   return (
     <>
-      <StatusBar style={settings.darkMode ? "light" : "dark"} />
+      <StatusBar style={scheme === "dark" ? "light" : "dark"} />
       <Stack
         screenOptions={{
-          headerStyle: {
-            backgroundColor: theme.surface?.val,
-          },
-          headerTintColor: theme.color?.val,
-          headerTitleStyle: {
-            fontWeight: "bold",
-          },
-          contentStyle: {
-            backgroundColor: theme.background?.val,
-          },
+          headerStyle: { backgroundColor: theme.background.val },
+          headerLargeStyle: { backgroundColor: theme.background.val },
+          headerShadowVisible: false,
+          headerLargeTitleShadowVisible: false,
+          headerTintColor: theme.accent.val,
+          headerTitleStyle: { color: theme.color.val },
+          headerLargeTitleStyle: { color: theme.color.val },
+          headerBackButtonDisplayMode: "minimal",
+          contentStyle: { backgroundColor: theme.background.val },
         }}
       >
-        <Stack.Screen name="index" options={{ title: "COSMQ" }} />
+        <Stack.Screen name="index" options={{ title: "Connections", headerLargeTitle: true }} />
         <Stack.Screen
           name="connection/new"
-          options={{ title: "New Connection", presentation: "modal" }}
+          options={{
+            title: "New Connection",
+            presentation: "modal",
+            headerStyle: { backgroundColor: theme.background.val },
+          }}
         />
-        <Stack.Screen name="connection/[id]" options={{ title: "Connection" }} />
+        <Stack.Screen name="connection/[id]" options={{ title: "" }} />
         <Stack.Screen name="query/[connectionId]" options={{ title: "Query" }} />
-        <Stack.Screen name="settings" options={{ title: "Settings" }} />
+        <Stack.Screen name="settings" options={{ title: "Settings", headerLargeTitle: true }} />
       </Stack>
       {showLockScreen ? <LockScreen onUnlock={handleUnlock} /> : null}
     </>
