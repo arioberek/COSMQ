@@ -34,7 +34,15 @@ COSMQ (**C**lient **O**pen-**S**ource **M**obile **Q**uery) is a database client
   <img src=".github/assets/screenshots/builder-dark.png" width="200" alt="Visual query builder in dark mode" />
 </p>
 
-<!-- VIDEO -->
+## See it in motion
+
+<p align="center">
+  <a href="https://github.com/arioberek/COSMQ/raw/main/media/explainer/out/cosmq-explainer.mp4">
+    <img src="media/explainer/out/cosmq-teaser.webp" width="720" alt="COSMQ teaser: SQL typed into the editor, run, then the results switching between cards, table and JSON" />
+  </a>
+  <br />
+  <sub><a href="https://github.com/arioberek/COSMQ/raw/main/media/explainer/out/cosmq-explainer.mp4">Watch the 45-second tour (MP4)</a> · made with <a href="media/explainer">Remotion</a>, source in this repo</sub>
+</p>
 
 ## Database support
 
@@ -170,6 +178,7 @@ apps/
 packages/
   tsconfig/               shared TypeScript config
 docs/                     design system, releasing, branch protection
+media/explainer/          Remotion source for the explainer video (not part of the app build)
 docker-compose.yml        local test databases
 ```
 

@@ -1,0 +1,14 @@
+node_modules
+dist
+.DS_Store
+.env
+
+# Scratch renders (stills, intermediates) never get committed.
+renders/
+
+# Only the final deliverables in out/ are tracked.
+out/*
+!out/cosmq-explainer.mp4
+!out/cosmq-teaser.mp4
+!out/cosmq-teaser.webp
+!out/poster.png
