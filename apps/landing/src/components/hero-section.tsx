@@ -17,6 +17,9 @@ const ALIEN_PATHS = [
 	"M220.919 193.668C221.638 193.774 223.083 193.854 223.534 194.231C223.129 194.404 223.062 194.461 222.634 194.551C222.09 194.481 221.373 194.487 220.809 194.472L220.558 194.135L220.919 193.668Z",
 ];
 
+/**
+ * Renders a link whose spring motion follows the pointer and recenters when it leaves.
+ */
 function MagneticButton({ children, href }: { children: React.ReactNode; href: string }) {
 	const ref = useRef<HTMLAnchorElement>(null);
 	const x = useMotionValue(0);
@@ -54,7 +57,9 @@ function MagneticButton({ children, href }: { children: React.ReactNode; href: s
 	);
 }
 
-// Single inlined symbol — both layers reference via <use>, no path duplication.
+/**
+ * Builds the decorative alien backdrop, sharing one SVG symbol between glow and crisp layers.
+ */
 function AlienBackground() {
 	return (
 		<div
@@ -124,6 +129,9 @@ function AlienBackground() {
 	);
 }
 
+/**
+ * Introduces COSMQ with animated copy, project and feature links, and the phone preview.
+ */
 export const HeroSection = () => {
 	return (
 		<section className="relative min-h-[100dvh] flex items-center overflow-visible">

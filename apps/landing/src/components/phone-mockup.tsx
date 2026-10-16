@@ -2,6 +2,9 @@ import { motion } from "motion/react";
 import phoneScreenshot from "@/assets/screenshots/app/1.jpeg";
 import { Iphone } from "./ui/iphone";
 
+/**
+ * Frames the connection-list screenshot in an iPhone mockup with an entrance animation.
+ */
 export function PhoneMockup() {
 	return (
 		<motion.div

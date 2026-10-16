@@ -13,6 +13,9 @@ const databases = [
 // Duplicated track for seamless infinite loop.
 const track = [...databases, ...databases];
 
+/**
+ * Displays supported databases in a looping track with a separate screen reader list.
+ */
 export function DatabaseMarquee() {
 	return (
 		<section id="databases" className="relative pt-20 pb-24 md:pt-24 md:pb-32 overflow-hidden">

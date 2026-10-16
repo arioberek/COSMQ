@@ -34,6 +34,9 @@ const features: Feature[] = [
 	},
 ];
 
+/**
+ * Presents a feature's description and technical detail, numbered from its zero-based index.
+ */
 function FeatureRow({ feature, index }: { feature: Feature; index: number }) {
 	const { title, description, spec } = feature;
 	const num = String(index + 1).padStart(2, "0");
@@ -66,6 +69,9 @@ function FeatureRow({ feature, index }: { feature: Feature; index: number }) {
 	);
 }
 
+/**
+ * Groups the app's four core features into numbered rows with viewport entry animations.
+ */
 export function FeaturesSection() {
 	return (
 		<section id="features" className="relative pt-24 pb-28 md:pt-32 md:pb-36 px-6 lg:px-10">

@@ -38,6 +38,10 @@ const screenshots: Screenshot[] = [
 // Uneven on purpose: the row drifts apart slightly as it scrolls past.
 const PARALLAX_OFFSETS = [28, 12, 36, 20] as const;
 
+/**
+ * Displays screenshot cards with reduced-motion-aware parallax and an enlarged modal viewer.
+ * Traps focus and locks scrolling while the viewer is open, then restores trigger focus.
+ */
 export function ScreenshotsSection() {
 	const [selectedImage, setSelectedImage] = useState<Screenshot | null>(null);
 	const modalRef = useRef<HTMLDivElement>(null);
