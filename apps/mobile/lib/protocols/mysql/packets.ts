@@ -200,22 +200,53 @@ export function parseHandshakeV10(payload: Buffer): HandshakeV10 {
   };
 }
 
+const clientCapabilities = (database: string, ssl: boolean): number =>
+  CapabilityFlags.CLIENT_PROTOCOL_41 |
+  CapabilityFlags.CLIENT_SECURE_CONNECTION |
+  CapabilityFlags.CLIENT_LONG_PASSWORD |
+  CapabilityFlags.CLIENT_TRANSACTIONS |
+  CapabilityFlags.CLIENT_MULTI_RESULTS |
+  CapabilityFlags.CLIENT_PLUGIN_AUTH |
+  (database ? CapabilityFlags.CLIENT_CONNECT_WITH_DB : 0) |
+  (ssl ? CapabilityFlags.CLIENT_SSL : 0) |
+  CapabilityFlags.CLIENT_DEPRECATE_EOF;
+
+export const serverSupportsSsl = (handshake: HandshakeV10): boolean =>
+  ((handshake.capabilityFlagsLower | (handshake.capabilityFlagsUpper << 16)) &
+    CapabilityFlags.CLIENT_SSL) !==
+  0;
+
+/**
+ * Both sides support CLIENT_DEPRECATE_EOF (we always request it), so result sets
+ * have no EOF packet between column definitions and rows.
+ */
+export const serverSupportsDeprecateEof = (handshake: HandshakeV10): boolean =>
+  ((handshake.capabilityFlagsLower | (handshake.capabilityFlagsUpper << 16)) &
+    CapabilityFlags.CLIENT_DEPRECATE_EOF) !==
+  0;
+
+/**
+ * SSLRequest: the first 32 bytes of HandshakeResponse41 with CLIENT_SSL set.
+ * After sending it the client upgrades to TLS and sends the full response.
+ */
+export function createSslRequest(handshake: HandshakeV10, database: string): Buffer {
+  const buffer = Buffer.alloc(32);
+  buffer.writeUInt32LE(clientCapabilities(database, true) >>> 0, 0);
+  buffer.writeUInt32LE(0x00ffffff, 4);
+  buffer.writeUInt8(handshake.characterSet || 33, 8);
+  // bytes 9..31 stay zero (filler)
+  return buffer;
+}
+
 export function createHandshakeResponse41(
   handshake: HandshakeV10,
   username: string,
   authResponse: Buffer,
   database: string,
   authPluginName: string,
+  ssl = false,
 ): Buffer {
-  const capabilities =
-    CapabilityFlags.CLIENT_PROTOCOL_41 |
-    CapabilityFlags.CLIENT_SECURE_CONNECTION |
-    CapabilityFlags.CLIENT_LONG_PASSWORD |
-    CapabilityFlags.CLIENT_TRANSACTIONS |
-    CapabilityFlags.CLIENT_MULTI_RESULTS |
-    CapabilityFlags.CLIENT_PLUGIN_AUTH |
-    (database ? CapabilityFlags.CLIENT_CONNECT_WITH_DB : 0) |
-    CapabilityFlags.CLIENT_DEPRECATE_EOF;
+  const capabilities = clientCapabilities(database, ssl);
 
   const usernameBuffer = Buffer.from(username, "utf8");
   const databaseBuffer = database ? Buffer.from(database, "utf8") : null;

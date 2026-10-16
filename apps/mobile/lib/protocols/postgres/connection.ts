@@ -1,4 +1,4 @@
-import { sslConfigToTlsOptions, TcpClient } from "../../tcp/socket";
+import { isTlsEnabled, sslConfigToTlsOptions, TcpClient } from "../../tcp/socket";
 import type {
   ColumnInfo,
   ConnectionConfig,
@@ -15,6 +15,7 @@ import {
   createQueryMessage,
   createSaslInitialResponseMessage,
   createSaslResponseMessage,
+  createSslRequestMessage,
   createStartupMessage,
   createTerminateMessage,
   parseAuthenticationMessage,
@@ -53,12 +54,18 @@ export class PostgresConnection implements DatabaseConnection {
     this.state = { status: "connecting" };
 
     try {
+      const tls = sslConfigToTlsOptions(this.config.ssl);
+      // PostgreSQL negotiates TLS inside its protocol: connect in plaintext,
+      // send SSLRequest, then upgrade the socket if the server agrees.
       await this.client.connect({
         host: this.config.host,
         port: this.config.port,
-        tls: sslConfigToTlsOptions(this.config.ssl),
         timeout: 10000,
       });
+
+      if (isTlsEnabled(tls)) {
+        await this.negotiateTls(tls);
+      }
 
       await this.authenticate();
       this.state = { status: "connected" };
@@ -69,6 +76,25 @@ export class PostgresConnection implements DatabaseConnection {
       };
       throw error;
     }
+  }
+
+  private async negotiateTls(tls: ReturnType<typeof sslConfigToTlsOptions>): Promise<void> {
+    await this.client.send(createSslRequestMessage());
+    const reply = await this.client.receive();
+    if (reply.length !== 1) {
+      throw new Error("Unexpected response to SSL request");
+    }
+    const code = String.fromCharCode(reply[0]);
+    if (code === "N") {
+      // SSL was requested, so never fall back to plaintext.
+      throw new Error(
+        "The server does not support SSL. Turn off SSL for this connection or enable it on the server.",
+      );
+    }
+    if (code !== "S") {
+      throw new Error("Unexpected response to SSL request");
+    }
+    this.client.upgradeToTls(tls);
   }
 
   private async authenticate(): Promise<void> {

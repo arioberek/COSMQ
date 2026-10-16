@@ -1,4 +1,4 @@
-import { sslConfigToTlsOptions, TcpClient } from "../../tcp/socket";
+import { isTlsEnabled, sslConfigToTlsOptions, TcpClient } from "../../tcp/socket";
 import type {
   ColumnInfo,
   ConnectionConfig,
@@ -14,6 +14,7 @@ import {
   createHandshakeResponse41,
   createQueryPacket,
   createQuitPacket,
+  createSslRequest,
   getColumnTypeName,
   parseColumnDefinition,
   parseErrPacket,
@@ -21,6 +22,8 @@ import {
   parseOkPacket,
   parsePacketHeader,
   parseResultSetRow,
+  serverSupportsDeprecateEof,
+  serverSupportsSsl,
   wrapPacket,
 } from "./packets";
 
@@ -42,14 +45,21 @@ export class MySQLConnection implements DatabaseConnection {
     this.client = new TcpClient();
   }
 
+  private deprecateEof = false;
+
+  private get useTls(): boolean {
+    return isTlsEnabled(sslConfigToTlsOptions(this.config.ssl));
+  }
+
   async connect(): Promise<void> {
     this.state = { status: "connecting" };
 
     try {
+      // MySQL negotiates TLS inside its handshake (CLIENT_SSL), so the socket
+      // starts in plaintext and is upgraded in authenticate().
       await this.client.connect({
         host: this.config.host,
         port: this.config.port,
-        tls: sslConfigToTlsOptions(this.config.ssl),
         timeout: 10000,
       });
 
@@ -67,11 +77,25 @@ export class MySQLConnection implements DatabaseConnection {
   private async authenticate(): Promise<void> {
     const handshakeData = await this.receivePacket();
     const handshake = parseHandshakeV10(handshakeData.payload);
+    this.deprecateEof = serverSupportsDeprecateEof(handshake);
 
     const scramble = Buffer.concat([handshake.authPluginDataPart1, handshake.authPluginDataPart2]);
 
     const authPluginName = handshake.authPluginName || "mysql_native_password";
     const authResponse = createAuthResponse(this.config.password, scramble, authPluginName);
+
+    this.sequenceId = 1;
+    if (this.useTls) {
+      if (!serverSupportsSsl(handshake)) {
+        // SSL was requested, so never fall back to plaintext.
+        throw new Error(
+          "The server does not support SSL. Turn off SSL for this connection or enable it on the server.",
+        );
+      }
+      await this.sendPacket(createSslRequest(handshake, this.config.database));
+      this.client.upgradeToTls(sslConfigToTlsOptions(this.config.ssl));
+      this.sequenceId = 2;
+    }
 
     const responsePayload = createHandshakeResponse41(
       handshake,
@@ -79,9 +103,9 @@ export class MySQLConnection implements DatabaseConnection {
       authResponse,
       this.config.database,
       authPluginName,
+      this.useTls,
     );
 
-    this.sequenceId = 1;
     await this.sendPacket(responsePayload);
 
     const result = await this.receivePacket();
@@ -158,7 +182,8 @@ export class MySQLConnection implements DatabaseConnection {
     }
 
     if (payload.length > 1 && payload[1] === 0x04) {
-      if (this.config.ssl) {
+      // Full auth sends the password as-is, so only over TLS.
+      if (this.useTls) {
         const passwordBuffer = Buffer.from(`${this.config.password}\0`, "utf8");
         this.sequenceId++;
         await this.sendPacket(passwordBuffer);
@@ -250,10 +275,15 @@ export class MySQLConnection implements DatabaseConnection {
       });
     }
 
-    const eofOrOk = await this.receivePacket();
-    if (eofOrOk.payload[0] === 0xff) {
-      const err = parseErrPacket(eofOrOk.payload);
-      throw new Error(err.errorMessage);
+    // Without CLIENT_DEPRECATE_EOF the server ends the column definitions with an
+    // EOF packet. With it (MySQL 5.7.5+, MariaDB 10.2+) rows follow directly, and
+    // reading an "EOF" here would swallow the first row.
+    if (!this.deprecateEof) {
+      const eof = await this.receivePacket();
+      if (eof.payload[0] === 0xff) {
+        const err = parseErrPacket(eof.payload);
+        throw new Error(err.errorMessage);
+      }
     }
 
     const rows: Record<string, unknown>[] = [];

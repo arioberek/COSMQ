@@ -38,6 +38,24 @@ type TcpSocketInstance = {
 type TcpSocketModule = {
   createConnection: (options: Record<string, unknown>, cb?: () => void) => TcpSocketInstance;
   connectTLS?: (options: Record<string, unknown>, cb?: () => void) => TcpSocketInstance;
+  TLSSocket?: new (
+    socket: TcpSocketInstance,
+    options?: Record<string, unknown>,
+  ) => TcpSocketInstance;
+};
+
+export const isTlsEnabled = (tls: boolean | TlsOptions | undefined): boolean =>
+  typeof tls === "boolean" ? tls : (tls?.enabled ?? false);
+
+const tlsSocketOptions = (tls: boolean | TlsOptions): Record<string, unknown> => {
+  const options: Record<string, unknown> = {};
+  if (typeof tls === "object") {
+    if (tls.rejectUnauthorized !== undefined) options.rejectUnauthorized = tls.rejectUnauthorized;
+    if (tls.ca) options.ca = tls.ca;
+    if (tls.cert) options.cert = tls.cert;
+    if (tls.key) options.key = tls.key;
+  }
+  return options;
 };
 
 let cachedTcpSocket: TcpSocketModule | null = null;
@@ -127,6 +145,8 @@ class BufferList {
 
 export class TcpClient {
   private socket: TcpSocketInstance | null = null;
+  private tlsSocket: TcpSocketInstance | null = null;
+  private pendingSends = new Set<(error: Error) => void>();
   private buffer = new BufferList();
   private messageQueue: Array<{
     resolve: (data: Buffer) => void;
@@ -146,28 +166,14 @@ export class TcpClient {
         return;
       }
 
-      const useTls = typeof tls === "boolean" ? tls : tls.enabled;
+      const useTls = isTlsEnabled(tls);
 
       const connectionOptions: Record<string, unknown> = {
         host,
         port,
         timeout,
+        ...(useTls ? tlsSocketOptions(tls) : {}),
       };
-
-      if (useTls && typeof tls === "object") {
-        if (tls.rejectUnauthorized !== undefined) {
-          connectionOptions.rejectUnauthorized = tls.rejectUnauthorized;
-        }
-        if (tls.ca) {
-          connectionOptions.ca = tls.ca;
-        }
-        if (tls.cert) {
-          connectionOptions.cert = tls.cert;
-        }
-        if (tls.key) {
-          connectionOptions.key = tls.key;
-        }
-      }
 
       const socket = useTls
         ? TcpSocket.connectTLS?.(connectionOptions, () => {
@@ -221,6 +227,28 @@ export class TcpClient {
     });
   }
 
+  /**
+   * Upgrade the open plaintext connection to TLS in place (STARTTLS style), for
+   * protocols that negotiate TLS inside their own handshake: PostgreSQL
+   * SSLRequest, MySQL CLIENT_SSL. Writes issued after this call are encrypted;
+   * the native layer holds them until the TLS handshake completes. Existing
+   * data/close listeners keep working because both objects share one native socket.
+   */
+  upgradeToTls(tls: boolean | TlsOptions): void {
+    if (!this.socket || !this.connected) {
+      throw new Error("Not connected");
+    }
+    if (this.buffer.length > 0) {
+      // Plaintext bytes arriving before the upgrade could be injected by an attacker.
+      throw new Error("Unexpected data from server before TLS upgrade");
+    }
+    const { TLSSocket } = getTcpSocket();
+    if (!TLSSocket) {
+      throw new Error("TLS connections are not supported on this build");
+    }
+    this.tlsSocket = new TLSSocket(this.socket, tlsSocketOptions(tls));
+  }
+
   async send(data: Buffer): Promise<void> {
     return new Promise((resolve, reject) => {
       if (!this.socket || !this.connected) {
@@ -228,7 +256,12 @@ export class TcpClient {
         return;
       }
 
+      // A write whose socket errors or closes (e.g. a failed TLS handshake)
+      // never gets its callback; settle it from the error/close path instead.
+      const fail = (error: Error) => reject(error);
+      this.pendingSends.add(fail);
       this.socket.write(data, undefined, (err: Error | undefined) => {
+        this.pendingSends.delete(fail);
         if (err) {
           reject(err);
         } else {
@@ -271,11 +304,15 @@ export class TcpClient {
       const pending = this.messageQueue.shift();
       pending?.reject(error);
     }
+    for (const fail of this.pendingSends) fail(error);
+    this.pendingSends.clear();
   }
 
   async disconnect(): Promise<void> {
     if (this.socket) {
-      this.socket.destroy();
+      // Both objects wrap one native socket; destroy it once.
+      (this.tlsSocket ?? this.socket).destroy();
+      this.tlsSocket = null;
       this.socket = null;
       this.connected = false;
       this.buffer.clear();
