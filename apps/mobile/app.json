@@ -2,6 +2,7 @@
   "expo": {
     "name": "COSMQ",
     "slug": "cosmq",
+    "owner": "obereks-team",
     "description": "Client Open-Source Mobile Query - Universal database client for iOS, Android, and Web",
     "runtimeVersion": {
       "policy": "appVersion"
@@ -80,6 +81,12 @@
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "7509deda-99f4-49ab-ac3f-a9092ac5020a"
+      }
     }
   }
 }

@@ -88,7 +88,7 @@ your own Apple/Expo logins; none of the output belongs in git.
 
    Do not add `appleId` (your email) or an API key path here.
 
-5. **Create a least-privilege Expo token**: expo.dev ▸ Account settings ▸
+5. **Create a least-privilege Expo token**: expo.dev ▸ `obereks-team` settings ▸
    Robot users ▸ create `cosmq-github-actions` with the **Developer** role
    (enough to build and submit) ▸ create an access token for it. Prefer this
    over a personal token: it can be revoked without touching your login.
