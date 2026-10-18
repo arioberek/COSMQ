@@ -1,4 +1,4 @@
-import { motion, useMotionValue, useSpring } from "motion/react";
+import { MotionConfig, motion, useMotionValue, useReducedMotion, useSpring } from "motion/react";
 import { useCallback, useRef } from "react";
 import { PhoneMockup } from "./phone-mockup";
 
@@ -27,14 +27,19 @@ function MagneticButton({ children, href }: { children: React.ReactNode; href: s
 	const springX = useSpring(x, { stiffness: 300, damping: 20 });
 	const springY = useSpring(y, { stiffness: 300, damping: 20 });
 
+	const reduceMotion = useReducedMotion();
+
 	const handleMouse = useCallback(
 		(e: React.MouseEvent) => {
+			// Decorative movement: skip it for reduced-motion users and on touch,
+			// where hover events arrive as taps.
+			if (reduceMotion || !window.matchMedia("(hover: hover) and (pointer: fine)").matches) return;
 			const rect = ref.current?.getBoundingClientRect();
 			if (!rect) return;
 			x.set((e.clientX - (rect.left + rect.width / 2)) * 0.18);
 			y.set((e.clientY - (rect.top + rect.height / 2)) * 0.18);
 		},
-		[x, y],
+		[x, y, reduceMotion],
 	);
 
 	const handleLeave = useCallback(() => {
@@ -108,7 +113,7 @@ function AlienBackground() {
 			<style>{`
 				.alien-fade {
 					opacity: 0;
-					animation: alien-reveal 1.6s var(--ease-out) 0.3s forwards;
+					animation: alien-reveal 0.9s var(--ease-out) forwards;
 				}
 				@keyframes alien-reveal {
 					0% { opacity: 0; transform: scale(0.96); }
@@ -132,89 +137,82 @@ function AlienBackground() {
 /**
  * Introduces COSMQ with animated copy, project and feature links, and the phone preview.
  */
-export const HeroSection = () => {
+/** `phoneSrc`: the phone screenshot, resized in index.astro. */
+export const HeroSection = ({ phoneSrc }: { phoneSrc: string }) => {
 	return (
-		<section className="relative min-h-[100dvh] flex items-center overflow-visible">
-			<div className="absolute inset-0 aurora-bg overflow-hidden" />
-			<div className="absolute inset-0 grid-pattern opacity-30" />
+		<MotionConfig reducedMotion="user">
+			<section className="relative min-h-[100dvh] flex items-center overflow-visible">
+				<div className="absolute inset-0 aurora-bg overflow-hidden" />
+				<div className="absolute inset-0 grid-pattern opacity-30" />
 
-			<AlienBackground />
+				<AlienBackground />
 
-			<div className="relative z-10 max-w-[1400px] mx-auto px-6 lg:px-10 w-full grid lg:grid-cols-[1.2fr_1fr] gap-12 lg:gap-16 items-center pt-28 pb-20 lg:pt-28 lg:pb-16">
-				<div className="text-center lg:text-left flex flex-col items-center lg:items-start">
-					<motion.div
-						initial={{ opacity: 0, y: 12, filter: "blur(6px)" }}
-						animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-						transition={{ duration: 0.5, delay: 0.1, ease: [0.23, 1, 0.32, 1] }}
-						className="inline-flex items-center gap-2.5 text-muted-foreground text-[13px] font-medium mb-8 md:mb-10"
-					>
-						<span
-							className="w-1.5 h-1.5 rounded-[1px] bg-[hsl(var(--accent))]"
-							aria-hidden="true"
-						/>
-						Open source, MIT licensed, for iOS and Android
-					</motion.div>
-
-					<h1 className="text-[clamp(2.8rem,8vw,6rem)] leading-[1.05] mb-8 font-black tracking-[-0.04em] text-foreground">
-						<motion.span
-							className="block"
-							initial={{ opacity: 0, y: 32, filter: "blur(8px)" }}
-							animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-							transition={{ duration: 0.7, delay: 0.22, ease: [0.23, 1, 0.32, 1] }}
+				<div className="relative z-10 max-w-[1400px] mx-auto px-6 lg:px-10 w-full grid lg:grid-cols-[1.2fr_1fr] gap-12 lg:gap-16 items-center pt-28 pb-20 lg:pt-28 lg:pb-16">
+					<div className="text-center lg:text-left flex flex-col items-center lg:items-start">
+						{/* The copy animates with CSS (`.hero-reveal`), so it is painted in the
+					    server HTML and never waits for this island to hydrate. */}
+						<div
+							className="hero-reveal inline-flex items-center gap-2.5 text-muted-foreground text-[13px] font-medium mb-8 md:mb-10"
+							style={{ animationDelay: "80ms" }}
 						>
-							Your databases.
-						</motion.span>
-						<motion.span
-							className="block font-display font-normal text-foreground/95 pb-[0.1em]"
-							initial={{ opacity: 0, y: 32, filter: "blur(8px)" }}
-							animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-							transition={{ duration: 0.7, delay: 0.34, ease: [0.23, 1, 0.32, 1] }}
-						>
-							Everywhere.
-						</motion.span>
-					</h1>
-
-					<motion.p
-						initial={{ opacity: 0, y: 16, filter: "blur(4px)" }}
-						animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-						transition={{ duration: 0.6, delay: 0.46, ease: [0.23, 1, 0.32, 1] }}
-						className="text-[clamp(1rem,2.2vw,1.2rem)] text-muted-foreground max-w-[32rem] mx-auto lg:mx-0 mb-10 md:mb-12 leading-[1.6]"
-					>
-						Connect straight to PostgreSQL, MySQL, MongoDB and more from your phone. Write a query,
-						read the results, and skip the proxy in between.
-					</motion.p>
-
-					<motion.div
-						initial={{ opacity: 0, y: 16, filter: "blur(4px)" }}
-						animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-						transition={{ duration: 0.5, delay: 0.58, ease: [0.23, 1, 0.32, 1] }}
-						className="flex flex-wrap items-center gap-x-6 gap-y-3 justify-center lg:justify-start"
-					>
-						<MagneticButton href="https://github.com/arioberek/COSMQ">
-							View on GitHub
-						</MagneticButton>
-						<a
-							href="#features"
-							className="group inline-flex items-center gap-1.5 min-h-11 text-[15px] font-medium text-muted-foreground no-underline hover:text-foreground transition-colors duration-200"
-						>
-							How it works
 							<span
+								className="w-1.5 h-1.5 rounded-[1px] bg-[hsl(var(--accent))]"
 								aria-hidden="true"
-								className="transition-transform duration-200 ease-out group-hover:translate-y-0.5"
-							>
-								↓
+							/>
+							Open source, MIT licensed, for iOS and Android
+						</div>
+
+						<h1 className="text-[clamp(2.8rem,8vw,6rem)] leading-[1.05] mb-8 font-black tracking-[-0.03em] lg:tracking-[-0.045em] text-foreground">
+							<span className="hero-reveal block" style={{ animationDelay: "160ms" }}>
+								Your databases.
 							</span>
-						</a>
-					</motion.div>
+							<span
+								className="hero-reveal block font-display font-normal text-foreground/95 pb-[0.1em]"
+								style={{ animationDelay: "240ms" }}
+							>
+								Everywhere.
+							</span>
+						</h1>
+
+						<p
+							className="hero-reveal text-[clamp(1rem,2.2vw,1.2rem)] text-muted-foreground max-w-[32rem] mx-auto lg:mx-0 mb-10 md:mb-12 leading-[1.6]"
+							style={{ animationDelay: "320ms" }}
+						>
+							Connect straight to PostgreSQL, MySQL, MongoDB and more from your phone. Write a
+							query, read the results, and skip the proxy in between.
+						</p>
+
+						<div
+							className="hero-reveal flex flex-wrap items-center gap-x-6 gap-y-3 justify-center lg:justify-start"
+							style={{ animationDelay: "400ms" }}
+						>
+							<MagneticButton href="https://github.com/arioberek/COSMQ">
+								View on GitHub
+							</MagneticButton>
+							<a
+								href="#features"
+								className="group inline-flex items-center gap-1.5 min-h-11 text-[15px] font-medium text-muted-foreground no-underline hover:text-foreground transition-colors duration-200"
+							>
+								How it works
+								<span
+									aria-hidden="true"
+									className="transition-transform duration-200 ease-out group-hover:translate-y-0.5"
+								>
+									↓
+								</span>
+							</a>
+						</div>
+					</div>
+
+					<div className="flex justify-center lg:justify-end">
+						<PhoneMockup src={phoneSrc} />
+					</div>
 				</div>
 
-				<div className="flex justify-center lg:justify-end">
-					<PhoneMockup />
-				</div>
-			</div>
-
-			{/* Bottom fade into next section */}
-			<div className="absolute bottom-0 left-0 right-0 h-40 bg-gradient-to-t from-background to-transparent pointer-events-none z-20" />
-		</section>
+				{/* Bottom fade into next section: above the backdrop, below the content
+			    so it never dims the phone on short viewports. */}
+				<div className="absolute bottom-0 left-0 right-0 h-40 bg-gradient-to-t from-background to-transparent pointer-events-none z-0" />
+			</section>
+		</MotionConfig>
 	);
 };

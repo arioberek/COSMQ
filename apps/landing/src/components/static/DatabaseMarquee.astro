@@ -1,0 +1,193 @@
+---
+// Static: a CSS-only marquee needs no JavaScript. The pause button is the only
+// script, a few lines inline below.
+import CockroachIcon from "../../assets/icons/cockroachdb.svg";
+import MariadbIcon from "../../assets/icons/mariadb.svg";
+import MongoIcon from "../../assets/icons/mongodb.svg";
+import MysqlIcon from "../../assets/icons/mysql.svg";
+import PostgresIcon from "../../assets/icons/postgresql.svg";
+import SqliteIcon from "../../assets/icons/sqlite.svg";
+
+const databases = [
+	{ icon: PostgresIcon, name: "PostgreSQL" },
+	{ icon: MysqlIcon, name: "MySQL" },
+	{ icon: MongoIcon, name: "MongoDB" },
+	{ icon: SqliteIcon, name: "SQLite" },
+	{ icon: CockroachIcon, name: "CockroachDB" },
+	{ icon: MariadbIcon, name: "MariaDB" },
+];
+
+// Duplicated track for a seamless infinite loop.
+const track = [...databases, ...databases];
+---
+
+<section id="databases" class="relative pt-20 pb-24 md:pt-24 md:pb-32 overflow-hidden">
+	<div
+		class="absolute top-0 left-1/2 -translate-x-1/2 w-[200px] h-px bg-gradient-to-r from-transparent via-border to-transparent"
+		aria-hidden="true"
+	>
+	</div>
+
+	<div class="reveal-on-scroll text-center mb-14 md:mb-16 px-6">
+		<span class="eyebrow mb-6 justify-center">
+			<span class="eyebrow-num">03</span>
+			<span class="eyebrow-rule"></span>
+			<span>Databases</span>
+		</span>
+		<h2 class="text-[clamp(2rem,5vw,3.25rem)] font-semibold tracking-[-0.025em] md:tracking-[-0.035em] leading-[1.08] text-foreground mb-4">
+			Talks to <span class="font-display font-normal">your stack.</span>
+		</h2>
+		<p class="text-muted-foreground text-base max-w-[30rem] mx-auto leading-relaxed">
+			Paste the connection string you already use. COSMQ handles the protocol.
+		</p>
+	</div>
+
+	<ul class="sr-only">
+		{databases.map((db) => <li>{db.name}</li>)}
+	</ul>
+
+	<!-- Visual loop only; the list above is what assistive tech reads. -->
+	<div class="db-marquee-mask" aria-hidden="true">
+		<ul class="db-marquee-track">
+			{
+				track.map((db) => (
+					<li class="db-marquee-item">
+						<div class="db-marquee-icon">
+							<img
+								src={db.icon.src}
+								width="32"
+								height="32"
+								alt=""
+								loading="lazy"
+								decoding="async"
+								class="w-7 h-7 md:w-8 md:h-8 brightness-0 invert opacity-70"
+							/>
+						</div>
+						<span class="text-[15px] md:text-base font-medium tracking-[-0.01em] text-muted-foreground whitespace-nowrap">
+							{db.name}
+						</span>
+					</li>
+				))
+			}
+		</ul>
+	</div>
+
+	<!-- WCAG 2.2.2: anything that moves for more than 5 seconds needs a pause control. -->
+	<div class="db-marquee-controls">
+		<button type="button" class="db-marquee-toggle" aria-pressed="false" data-marquee-toggle>
+			Pause animation
+		</button>
+	</div>
+</section>
+
+<script>
+	for (const button of document.querySelectorAll<HTMLButtonElement>("[data-marquee-toggle]")) {
+		const section = button.closest("section");
+		button.addEventListener("click", () => {
+			const paused = button.getAttribute("aria-pressed") !== "true";
+			button.setAttribute("aria-pressed", String(paused));
+			button.textContent = paused ? "Play animation" : "Pause animation";
+			section?.classList.toggle("db-marquee-paused", paused);
+		});
+	}
+</script>
+
+<style is:global>
+	.db-marquee-mask {
+		position: relative;
+		overflow: hidden;
+		-webkit-mask-image: linear-gradient(to right, transparent 0, black 80px, black calc(100% - 80px), transparent 100%);
+		mask-image: linear-gradient(to right, transparent 0, black 80px, black calc(100% - 80px), transparent 100%);
+	}
+
+	/* Spacing lives on the items, not as a flex gap: the loop translates by
+	   -50%, and a gap leaves one item's spacing short, so the marquee
+	   would jump once per cycle. */
+	.db-marquee-track {
+		display: flex;
+		width: max-content;
+		padding: 0.5rem 0;
+		animation: db-marquee 32s linear infinite;
+		will-change: transform;
+	}
+	.db-marquee-mask:hover .db-marquee-track,
+	.db-marquee-paused .db-marquee-track {
+		animation-play-state: paused;
+	}
+
+	@keyframes db-marquee {
+		from {
+			transform: translateX(0);
+		}
+		to {
+			transform: translateX(-50%);
+		}
+	}
+
+	.db-marquee-item {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.875rem;
+		padding: 0.5rem 1rem;
+		margin-right: 3rem;
+		flex-shrink: 0;
+	}
+
+	.db-marquee-icon {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		width: 44px;
+		height: 44px;
+		border-radius: 12px;
+		background: hsl(var(--surface-1));
+		border: 1px solid hsl(var(--border));
+		flex-shrink: 0;
+	}
+
+	.db-marquee-controls {
+		display: flex;
+		justify-content: center;
+		margin-top: 1.5rem;
+	}
+
+	.db-marquee-toggle {
+		min-height: 44px;
+		padding: 0 1rem;
+		border-radius: 9999px;
+		font-size: 13px;
+		font-weight: 500;
+		color: hsl(var(--muted-foreground));
+		transition: color 200ms ease, background-color 200ms ease, transform 160ms var(--ease-out);
+	}
+	.db-marquee-toggle:active {
+		transform: scale(0.97);
+	}
+	@media (hover: hover) and (pointer: fine) {
+		.db-marquee-toggle:hover {
+			color: hsl(var(--foreground));
+			background: hsl(var(--secondary));
+		}
+	}
+
+	@media (min-width: 768px) {
+		.db-marquee-icon {
+			width: 52px;
+			height: 52px;
+		}
+		.db-marquee-item {
+			margin-right: 4rem;
+		}
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.db-marquee-track {
+			animation: none;
+			transform: translateX(0);
+		}
+		/* Nothing moves, so there's nothing to pause. */
+		.db-marquee-controls {
+			display: none;
+		}
+	}
+</style>

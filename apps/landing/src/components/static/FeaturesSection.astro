@@ -1,0 +1,75 @@
+---
+// Static: nothing here is interactive, so it ships as plain HTML. The entrance
+// is a CSS scroll-driven reveal (`.reveal-on-scroll` in global.css).
+interface Feature {
+	title: string;
+	description: string;
+	// A concrete detail from the app, set in mono. Replaces a decorative icon.
+	spec: string;
+}
+
+const features: Feature[] = [
+	{
+		title: "Direct TCP",
+		description:
+			"COSMQ speaks each server's own wire protocol over a TCP socket, and opens SQLite files right on the device. No proxy server, no REST gateway, nothing sitting between your phone and your data.",
+		spec: ":5432  :3306  :26257  :27017",
+	},
+	{
+		title: "Passwords stay on the device",
+		description:
+			"Passwords go into the system keychain: Keychain on iOS, Keystore on Android. Add a Face ID or fingerprint lock that kicks in after you leave the app.",
+		spec: "expo-secure-store",
+	},
+	{
+		title: "Hard to drop a table by accident",
+		description:
+			"UPDATE, DELETE, DROP, TRUNCATE and ALTER ask before they run. Open transactions can roll back on a timer, so nothing sits locked while your phone is in your pocket.",
+		spec: "BEGIN … auto-rollback 5–300s",
+	},
+	{
+		title: "An editor sized for thumbs",
+		description:
+			"Syntax highlighting, autocomplete that knows you're after FROM, keyword chips and searchable history. Built for a phone first, not shrunk down from a desktop IDE.",
+		spec: "SELECT * FROM orders▍",
+	},
+];
+---
+
+<section id="features" class="relative pt-24 pb-28 md:pt-32 md:pb-36 px-6 lg:px-10">
+	<div class="max-w-[1280px] mx-auto">
+		<div class="reveal-on-scroll mb-14 md:mb-20 max-w-[640px]">
+			<span class="eyebrow mb-6">
+				<span class="eyebrow-num">01</span>
+				<span class="eyebrow-rule"></span>
+				<span>Why it works</span>
+			</span>
+			<h2 class="text-[clamp(2rem,5vw,3.25rem)] font-semibold tracking-[-0.025em] md:tracking-[-0.035em] leading-[1.08] text-foreground">
+				Four reasons it actually <span class="font-display font-normal">works</span> on a phone.
+			</h2>
+		</div>
+
+		<div class="border-b border-border">
+			{
+				features.map(({ title, description, spec }, i) => (
+					<article class="reveal-on-scroll relative grid grid-cols-1 md:grid-cols-12 gap-4 md:gap-10 pt-10 pb-12 md:pt-14 md:pb-16 border-t border-border">
+						<span class="md:col-span-1 font-mono text-[12px] tracking-[0.2em] text-foreground/60 tabular-nums md:pt-2">
+							{String(i + 1).padStart(2, "0")}
+						</span>
+						<h3 class="md:col-span-5 text-[clamp(1.5rem,3vw,2rem)] font-semibold tracking-[-0.025em] leading-[1.15] text-foreground">
+							{title}
+						</h3>
+						<div class="md:col-span-6 flex flex-col gap-5 md:pt-1">
+							<p class="text-[15px] md:text-base text-muted-foreground leading-[1.7] max-w-[34rem]">
+								{description}
+							</p>
+							<code class="self-start font-mono text-[12px] md:text-[13px] text-[hsl(var(--accent))] bg-[hsl(var(--accent)/0.08)] px-2.5 py-1 rounded-[4px] whitespace-pre">
+								{spec}
+							</code>
+						</div>
+					</article>
+				))
+			}
+		</div>
+	</div>
+</section>

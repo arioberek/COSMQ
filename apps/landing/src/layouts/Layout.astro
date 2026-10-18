@@ -1,24 +1,28 @@
 ---
 import '@fontsource-variable/geist/index.css';
 import '@fontsource-variable/geist-mono/index.css';
-import '@fontsource/instrument-serif/400.css';
+// Only the italic face is used (`.font-display` is always italic).
 import '@fontsource/instrument-serif/400-italic.css';
 import '../styles/global.css';
 
 interface Props {
 	title?: string;
 	description?: string;
+	/** Error and utility pages: no canonical, and search engines skip them. */
+	noindex?: boolean;
 }
 
 const {
 	title = 'COSMQ — Mobile database client',
-	description = 'Open-source database client for iOS and Android. Connects straight to PostgreSQL, MySQL, MariaDB, CockroachDB, MongoDB and SQLite over TCP, with no proxy in between.',
+	description = 'Open-source database client for iOS and Android. Query PostgreSQL, MySQL, MariaDB, CockroachDB and MongoDB straight over TCP, and SQLite files on the device.',
+	noindex = false,
 } = Astro.props;
 
-const canonical = Astro.site ? new URL(Astro.url.pathname, Astro.site).href : undefined;
+const canonical = Astro.site && !noindex ? new URL(Astro.url.pathname, Astro.site).href : undefined;
+const ogImage = Astro.site ? new URL('/og.png', Astro.site).href : '/og.png';
 ---
 <!doctype html>
-<html lang="en" class="dark scroll-smooth">
+<html lang="en" class="dark motion-safe:scroll-smooth">
 	<head>
 		<meta charset="UTF-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -28,15 +32,21 @@ const canonical = Astro.site ? new URL(Astro.url.pathname, Astro.site).href : un
 		<meta name="generator" content={Astro.generator} />
 		<title>{title}</title>
 		<meta name="description" content={description} />
+		{noindex && <meta name="robots" content="noindex" />}
 		{canonical && <link rel="canonical" href={canonical} />}
 		<meta property="og:type" content="website" />
 		<meta property="og:site_name" content="COSMQ" />
 		<meta property="og:title" content={title} />
 		<meta property="og:description" content={description} />
 		{canonical && <meta property="og:url" content={canonical} />}
-		<meta name="twitter:card" content="summary" />
+		<meta property="og:image" content={ogImage} />
+		<meta property="og:image:width" content="1280" />
+		<meta property="og:image:height" content="640" />
+		<meta property="og:image:alt" content="COSMQ: the running-alien mascot and the app name" />
+		<meta name="twitter:card" content="summary_large_image" />
 		<meta name="twitter:title" content={title} />
 		<meta name="twitter:description" content={description} />
+		<meta name="twitter:image" content={ogImage} />
 	</head>
 	<body class="m-0 w-full min-h-[100dvh] flex flex-col bg-background text-foreground font-sans antialiased film-grain">
 		<a href="#main" class="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-[var(--z-skip)] focus:px-4 focus:py-2 focus:rounded-md focus:bg-foreground focus:text-background focus:text-sm focus:font-medium focus:outline-none">
