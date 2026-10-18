@@ -196,46 +196,46 @@ export default function HomeScreen() {
           ),
         }}
       />
-      <ScrollView
-        contentInsetAdjustmentBehavior="automatic"
-        contentContainerStyle={{ padding: 16, paddingBottom: 48, gap: 28, flexGrow: 1 }}
-      >
-        {isLoading ? null : connections.length === 0 ? (
-          <YStack flex={1} justifyContent="center" paddingBottom="$xxl">
-            <EmptyState
-              icon={<AlienLogo width={88} height={88} color={theme.accent.val} />}
-              title="No Connections"
-              message="Add a PostgreSQL, MySQL, MariaDB, CockroachDB, MongoDB or SQLite database to start querying."
-              action={<Button onPress={addConnection}>Add Connection</Button>}
-            />
-          </YStack>
-        ) : (
-          <>
-            {connected.length > 0 ? (
-              <ListSection title="Connected">
-                {connected.map((c) => (
-                  <ConnectionRow key={c.id} connection={c} isConnected onDelete={handleDelete} />
-                ))}
-              </ListSection>
-            ) : null}
-            {saved.length > 0 ? (
-              <ListSection
-                title={connected.length > 0 ? "Saved" : undefined}
-                footer="Swipe left on a connection to edit or delete it."
-              >
-                {saved.map((c) => (
-                  <ConnectionRow
-                    key={c.id}
-                    connection={c}
-                    isConnected={false}
-                    onDelete={handleDelete}
-                  />
-                ))}
-              </ListSection>
-            ) : null}
-          </>
-        )}
-      </ScrollView>
+      {isLoading ? null : connections.length === 0 ? (
+        // Not inside the large-title ScrollView: its header inset would push a
+        // vertically centered empty state below the visual center.
+        <YStack flex={1} justifyContent="center" paddingBottom="$xxl">
+          <EmptyState
+            icon={<AlienLogo width={88} height={88} color={theme.accent.val} />}
+            title="No Connections"
+            message="Add a PostgreSQL, MySQL, MariaDB, CockroachDB, MongoDB or SQLite database to start querying."
+            action={<Button onPress={addConnection}>Add Connection</Button>}
+          />
+        </YStack>
+      ) : (
+        <ScrollView
+          contentInsetAdjustmentBehavior="automatic"
+          contentContainerStyle={{ padding: 16, paddingBottom: 48, gap: 28 }}
+        >
+          {connected.length > 0 ? (
+            <ListSection title="Connected">
+              {connected.map((c) => (
+                <ConnectionRow key={c.id} connection={c} isConnected onDelete={handleDelete} />
+              ))}
+            </ListSection>
+          ) : null}
+          {saved.length > 0 ? (
+            <ListSection
+              title={connected.length > 0 ? "Saved" : undefined}
+              footer="Swipe left on a connection to edit or delete it."
+            >
+              {saved.map((c) => (
+                <ConnectionRow
+                  key={c.id}
+                  connection={c}
+                  isConnected={false}
+                  onDelete={handleDelete}
+                />
+              ))}
+            </ListSection>
+          ) : null}
+        </ScrollView>
+      )}
     </>
   );
 }
