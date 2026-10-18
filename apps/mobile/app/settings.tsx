@@ -286,7 +286,7 @@ export default function SettingsScreen() {
         footer="Templates add common queries above the editor. Quick actions add keyword chips below it."
       >
         <ListRow
-          icon={<ListIcon name="sparkles" color={theme.accent.val} />}
+          icon={<ListIcon name="sparkles" color={theme.tileTeal.val} />}
           title="Autocomplete"
           accessory={
             <Switch

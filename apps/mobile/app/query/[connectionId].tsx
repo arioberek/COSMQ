@@ -29,21 +29,17 @@ const MODES: EditorMode[] = ["editor", "builder"];
 
 const showAlert = (title: string, message: string) => Alert.alert(title, message);
 
+/** Tabs and line breaks inside a value would split the TSV grid, so they become spaces. */
+const tsvCell = (val: unknown) => {
+  if (val === null || val === undefined) return "";
+  const text = typeof val === "object" ? JSON.stringify(val) : String(val);
+  return text.replace(/\t/g, " ").replace(/\r?\n/g, " ");
+};
+
 const resultsAsTsv = (result: QueryResult) => {
-  const header = result.columns.map((c) => c.name).join("\t");
+  const header = result.columns.map((c) => tsvCell(c.name)).join("\t");
   const rows = result.rows
-    .map((row) =>
-      result.columns
-        .map((c) => {
-          const val = row[c.name];
-          return val === null
-            ? "null"
-            : typeof val === "object"
-              ? JSON.stringify(val)
-              : String(val);
-        })
-        .join("\t"),
-    )
+    .map((row) => result.columns.map((c) => tsvCell(row[c.name])).join("\t"))
     .join("\n");
   return `${header}\n${rows}`;
 };
@@ -72,11 +68,27 @@ export default function QueryScreen() {
   const runner = useQueryRunner(connectionId, connection?.config, showAlert);
   const { transaction } = runner;
 
+  const connect = useConnectionStore((state) => state.connect);
+  const [reconnecting, setReconnecting] = useState(false);
+  const reconnect = useCallback(async () => {
+    if (!connection) return;
+    setReconnecting(true);
+    try {
+      await connect(connection.config);
+      haptic.success();
+    } catch (err) {
+      haptic.error();
+      showAlert("Couldn’t Reconnect", err instanceof Error ? err.message : String(err));
+    } finally {
+      setReconnecting(false);
+    }
+  }, [connect, connection, haptic]);
+
   const instance = connection?.instance;
   const type = connection?.config.type;
   const schemaSource = useMemo(
-    () => (instance && type ? { instance, type } : null),
-    [instance, type],
+    () => (instance && type && connectionId ? { id: connectionId, instance, type } : null),
+    [instance, type, connectionId],
   );
   const schema = useSchemaBrowser(schemaSource, showAlert);
 
@@ -95,10 +107,9 @@ export default function QueryScreen() {
     (next: EditorMode) => {
       if (!connectionId) return;
       setEditorModeState(next);
-      haptic.light();
       setEditorMode(connectionId, next).catch(() => {});
     },
-    [connectionId, haptic],
+    [connectionId],
   );
 
   const toggleTables = () => {
@@ -159,7 +170,8 @@ export default function QueryScreen() {
     );
   }
 
-  const idle = !runner.result && !runner.error && !runner.executing;
+  const connectionLost = connection.state.status === "error";
+  const idle = !runner.result && !runner.error && !runner.executing && !connectionLost;
 
   return (
     <View style={{ flex: 1, backgroundColor: theme.colors.background }}>
@@ -235,7 +247,16 @@ export default function QueryScreen() {
           />
         ) : null}
 
-        {runner.error ? (
+        {connectionLost ? (
+          <QueryError
+            title="Connection Lost"
+            message={connection.state.error ?? "The connection to the server was lost."}
+            actionLabel="Reconnect"
+            busyLabel="Reconnecting…"
+            retrying={reconnecting}
+            onRetry={reconnect}
+          />
+        ) : runner.error ? (
           <QueryError message={runner.error} retrying={runner.executing} onRetry={runQuery} />
         ) : null}
 

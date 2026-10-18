@@ -59,6 +59,22 @@ export function useQueryRunner(
   const [transactionTimeLeft, setTransactionTimeLeft] = useState(0);
   const [bannerVisible, setBannerVisible] = useState(true);
   const autoRollbackTriggered = useRef(false);
+  // True while the dangerous-statement confirm is up; the countdown pauses.
+  const confirming = useRef(false);
+  // Latest transaction, for the unmount cleanup below.
+  const transactionRef = useRef(transactionState);
+  transactionRef.current = transactionState;
+
+  // Leaving the screen with a transaction open would leave the session inside
+  // BEGIN with its locks held and no banner to finish it. Roll it back.
+  useEffect(() => {
+    return () => {
+      const current = transactionRef.current;
+      if (current.active && current.statements && connectionId) {
+        executeQuery(connectionId, current.statements.rollback).catch(() => {});
+      }
+    };
+  }, [connectionId, executeQuery]);
 
   const finalizeTransaction = useCallback(
     async (action: "commit" | "rollback", auto = false) => {
@@ -68,7 +84,7 @@ export function useQueryRunner(
       if (!auto) setError(null);
 
       try {
-        await executeQuery(
+        const outcome = await executeQuery(
           connectionId,
           action === "commit"
             ? transactionState.statements.commit
@@ -78,8 +94,20 @@ export function useQueryRunner(
         setTransactionDeadline(null);
         setTransactionTimeLeft(0);
         setBannerVisible(false);
-        if (action === "commit") haptic.success();
-        else haptic.warning();
+        // PostgreSQL answers COMMIT with "ROLLBACK" when an earlier statement
+        // failed inside the transaction: nothing was committed.
+        const rolledBackInstead =
+          action === "commit" && /^ROLLBACK/i.test(outcome.command?.trim() ?? "");
+        if (rolledBackInstead) {
+          haptic.error();
+          setError(
+            "An earlier statement failed inside the transaction, so the database rolled it back instead of committing.",
+          );
+        } else if (action === "commit") {
+          haptic.success();
+        } else {
+          haptic.warning();
+        }
       } catch (err) {
         haptic.error();
         setError(err instanceof Error ? err.message : "Transaction failed");
@@ -148,7 +176,7 @@ export function useQueryRunner(
     const tick = () => {
       const remaining = Math.max(0, Math.ceil((transactionDeadline - Date.now()) / 1000));
       setTransactionTimeLeft(remaining);
-      if (remaining <= 0 && !autoRollbackTriggered.current && !executing) {
+      if (remaining <= 0 && !autoRollbackTriggered.current && !executing && !confirming.current) {
         autoRollbackTriggered.current = true;
         finalizeTransaction("rollback", true);
       }
@@ -187,9 +215,21 @@ export function useQueryRunner(
     if (!connectionId || !trimmed) return;
 
     if (settings.dangerousOpsHint) {
-      const dangerousKeyword = findDangerousKeyword(trimmed);
+      const dangerousKeyword = findDangerousKeyword(trimmed, config?.type);
       if (dangerousKeyword) {
-        const action = await confirmDangerous(dangerousKeyword);
+        // Pause the auto-rollback countdown while the alert is up, otherwise it
+        // can roll back underneath the alert and "Run Anyway" then commits
+        // outside any transaction.
+        confirming.current = true;
+        const confirmStarted = Date.now();
+        let action: DangerousAction;
+        try {
+          action = await confirmDangerous(dangerousKeyword);
+        } finally {
+          confirming.current = false;
+        }
+        const pausedFor = Date.now() - confirmStarted;
+        setTransactionDeadline((deadline) => (deadline === null ? null : deadline + pausedFor));
         if (action === "cancel") return;
         if (action === "wrap") {
           await executeWithTransaction(trimmed);

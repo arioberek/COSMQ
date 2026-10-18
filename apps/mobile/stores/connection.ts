@@ -27,6 +27,18 @@ const TCP_PROTOCOLS: ReadonlySet<DatabaseType> = new Set([
 
 type ConnectionFactory = (config: ConnectionConfig) => DatabaseConnection;
 
+/** Raw socket/protocol errors that mean the link to the server is gone, not that a query failed. */
+const CONNECTION_LOST_PATTERN =
+  /^(not connected|connection closed)$|ECONNRESET|EPIPE|ENOTCONN|socket (is )?closed|socket hang up|broken pipe|connection (was )?(reset|lost|terminated)/i;
+
+export const CONNECTION_LOST_MESSAGE =
+  "The connection to the server was lost. Reconnect to keep querying.";
+
+export const isConnectionLostError = (error: unknown): boolean => {
+  const message = error instanceof Error ? error.message : String(error ?? "");
+  return CONNECTION_LOST_PATTERN.test(message.trim());
+};
+
 const connectionFactories: Record<DatabaseType, ConnectionFactory> = {
   postgres: (config) => new PostgresConnection(config),
   cockroachdb: (config) => new PostgresConnection(config),
@@ -52,6 +64,12 @@ interface ConnectionStore {
   setCurrentConnection: (id: string | null) => void;
   getCurrentConnection: () => ActiveConnection | null;
   executeQuery: (connectionId: string, sql: string) => Promise<QueryResult>;
+  /**
+   * Call with any error from a connection instance. When it means the socket
+   * is gone, the connection is marked as errored so every screen stops
+   * claiming it's connected. Returns true when the connection was lost.
+   */
+  reportFailure: (connectionId: string, error: unknown) => boolean;
 }
 
 export const useConnectionStore = create<ConnectionStore>((set, get) => ({
@@ -159,13 +177,49 @@ export const useConnectionStore = create<ConnectionStore>((set, get) => ({
       throw new Error("Connection not found");
     }
     if (connection.state.status !== "connected") {
-      throw new Error("Not connected");
+      throw new Error(connection.state.error ?? "Not connected");
     }
 
     try {
       return await connection.instance.query(sql);
     } catch (error) {
+      if (get().reportFailure(connectionId, error)) {
+        throw new Error(CONNECTION_LOST_MESSAGE);
+      }
       throw new Error(formatQueryError(error, connection.config.type));
     }
   },
+
+  reportFailure: (connectionId: string, error: unknown): boolean => {
+    if (!isConnectionLostError(error)) return false;
+    const connection = get().activeConnections.get(connectionId);
+    if (!connection) return true;
+    // Release whatever is left of the socket; the next Connect starts fresh.
+    connection.instance.disconnect().catch(() => {});
+    set((state) => {
+      const connections = new Map(state.activeConnections);
+      const conn = connections.get(connectionId);
+      if (conn) {
+        connections.set(connectionId, {
+          ...conn,
+          state: { status: "error", error: CONNECTION_LOST_MESSAGE },
+        });
+      }
+      return { activeConnections: connections };
+    });
+    return true;
+  },
 }));
+
+/**
+ * User-facing message for an error from a connection instance (schema loads,
+ * describe calls). Marks the connection as lost when the socket is gone.
+ */
+export const describeConnectionError = (
+  connectionId: string,
+  error: unknown,
+  type: DatabaseType,
+): string =>
+  useConnectionStore.getState().reportFailure(connectionId, error)
+    ? CONNECTION_LOST_MESSAGE
+    : formatQueryError(error, type);

@@ -2,11 +2,11 @@ import { Ionicons } from "@expo/vector-icons";
 import { memo, useCallback, useState } from "react";
 import { ActivityIndicator, Pressable, ScrollView } from "react-native";
 import { useTheme, XStack, YStack } from "tamagui";
-import { formatQueryError } from "../../lib/errors";
 import type { ColumnInfo, DatabaseConnection, DatabaseType, TableInfo } from "../../lib/types";
+import { describeConnectionError } from "../../stores/connection";
 import { AppText } from "../ui";
 
-type SchemaSource = { instance: DatabaseConnection; type: DatabaseType } | null;
+type SchemaSource = { id: string; instance: DatabaseConnection; type: DatabaseType } | null;
 
 /** Table list and lazily described columns for the tables panel. */
 export function useSchemaBrowser(
@@ -24,7 +24,7 @@ export function useSchemaBrowser(
     try {
       setTables(await source.instance.listTables());
     } catch (err) {
-      showAlert("Couldn’t Load Tables", formatQueryError(err, source.type));
+      showAlert("Couldn’t Load Tables", describeConnectionError(source.id, err, source.type));
     } finally {
       setLoading(false);
     }
@@ -47,7 +47,7 @@ export function useSchemaBrowser(
         setTableColumns((prev) => ({ ...prev, [tableName]: columns }));
         setExpandedTable(tableName);
       } catch (err) {
-        showAlert("Couldn’t Load Columns", formatQueryError(err, source.type));
+        showAlert("Couldn’t Load Columns", describeConnectionError(source.id, err, source.type));
       }
     },
     [source, expandedTable, tableColumns, tables, showAlert],

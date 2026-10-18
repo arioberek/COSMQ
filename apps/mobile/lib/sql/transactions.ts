@@ -22,6 +22,18 @@ export const getTransactionStatements = (type: DatabaseType): TransactionStateme
 };
 
 const DANGEROUS_KEYWORDS = ["UPDATE", "DELETE", "DROP", "TRUNCATE", "ALTER", "MERGE", "REPLACE"];
+const DANGEROUS_PATTERN = new RegExp(`\\b(${DANGEROUS_KEYWORDS.join("|")})\\b`, "g");
+
+/** MongoDB database commands that modify or destroy data. */
+const DANGEROUS_MONGO_COMMANDS = new Set([
+  "update",
+  "delete",
+  "drop",
+  "dropDatabase",
+  "dropIndexes",
+  "findAndModify",
+  "renameCollection",
+]);
 
 /** Removes comments and string/identifier literals so keyword checks see only SQL. */
 const stripSql = (sql: string): string =>
@@ -30,13 +42,42 @@ const stripSql = (sql: string): string =>
     .replace(/--.*$/gm, " ")
     .replace(/'(?:[^'\\]|\\.)*'/g, "''")
     .replace(/"(?:[^"\\]|\\.)*"/g, '""')
+    .replace(/`(?:[^`\\]|\\.)*`/g, "``")
     .replace(/\s+/g, " ");
 
-/** The first data-modifying keyword in the statement, if any. */
-export const findDangerousKeyword = (sql: string): string | null => {
+/** The command name of a MongoDB JSON command: its first key. */
+const findDangerousMongoCommand = (query: string): string | null => {
+  try {
+    const parsed: unknown = JSON.parse(query);
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return null;
+    const command = Object.keys(parsed)[0];
+    return command && DANGEROUS_MONGO_COMMANDS.has(command) ? command : null;
+  } catch {
+    return null;
+  }
+};
+
+/**
+ * The first data-modifying keyword in the statement, if any.
+ * `REPLACE(...)` the function and `SELECT ... FOR UPDATE` are reads and are skipped.
+ * MongoDB queries are JSON commands, so they're checked by command name instead.
+ */
+export const findDangerousKeyword = (sql: string, type?: DatabaseType): string | null => {
+  if (type === "mongodb") return findDangerousMongoCommand(sql.trim());
+
   const normalized = stripSql(sql).toUpperCase();
-  const match = normalized.match(new RegExp(`\\b(${DANGEROUS_KEYWORDS.join("|")})\\b`));
-  return match ? match[1] : null;
+  DANGEROUS_PATTERN.lastIndex = 0;
+  let match: RegExpExecArray | null = DANGEROUS_PATTERN.exec(normalized);
+  while (match) {
+    const keyword = match[1];
+    const before = normalized.slice(0, match.index).trimEnd();
+    const after = normalized.slice(match.index + keyword.length).trimStart();
+    const isReplaceFunction = keyword === "REPLACE" && after.startsWith("(");
+    const isRowLock = keyword === "UPDATE" && /\bFOR$/.test(before);
+    if (!isReplaceFunction && !isRowLock) return keyword;
+    match = DANGEROUS_PATTERN.exec(normalized);
+  }
+  return null;
 };
 
 /** "0:45" for a minute or more, "12s" below. */

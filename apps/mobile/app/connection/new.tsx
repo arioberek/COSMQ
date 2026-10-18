@@ -170,7 +170,7 @@ export default function NewConnectionScreen() {
   const usernameRef = useRef<TextInput>(null);
   const passwordRef = useRef<TextInput>(null);
 
-  const { data: connectionToEdit } = useQuery({
+  const { data: connectionToEdit, isLoading: loadingEdit } = useQuery({
     queryKey: ["connection", editId],
     queryFn: () => getConnectionWithPassword(editId ?? ""),
     enabled: isEditMode,
@@ -378,9 +378,18 @@ export default function NewConnectionScreen() {
       return;
     }
 
+    // Saving before the connection being edited has loaded would create a
+    // second copy of it instead of updating it.
+    if (isEditMode && !existingConnection) return;
+
     setSaving(true);
 
     try {
+      if (isEditMode && editId) {
+        // The host, database or credentials may have changed under a live
+        // connection; drop it so the next Connect uses the new settings.
+        await disconnect(editId).catch(() => {});
+      }
       await saveConnection(buildConfig(existingConnection?.id ?? generateConnectionId(), ""));
       await queryClient.invalidateQueries({ queryKey: ["connections"] });
       if (isEditMode) {
@@ -410,7 +419,7 @@ export default function NewConnectionScreen() {
             <HeaderTextButton
               label={isEditMode ? "Save" : "Add"}
               emphasized
-              disabled={!canSave || testing}
+              disabled={!canSave || testing || (isEditMode && loadingEdit)}
               loading={saving}
               onPress={handleSave}
             />

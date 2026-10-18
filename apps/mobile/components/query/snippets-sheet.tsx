@@ -26,7 +26,9 @@ export const SnippetsSheet = memo(function SnippetsSheet({
   const [snippets, setSnippets] = useState<QuerySnippet[]>([]);
 
   const load = useCallback(() => {
-    getSnippets().then(setSnippets);
+    getSnippets()
+      .then(setSnippets)
+      .catch(() => setSnippets([]));
   }, []);
 
   useEffect(() => {
@@ -118,9 +120,17 @@ export const SaveSnippetDialog = memo(function SaveSnippetDialog({
     if (open) setName("");
   }, [open]);
 
-  const save = async () => {
+  // Returns false so the dialog stays open instead of closing without saving.
+  const save = () => {
     const trimmedName = name.trim();
-    if (!trimmedName) return;
+    if (!trimmedName) {
+      haptic.warning();
+      return false;
+    }
+    void persist(trimmedName);
+  };
+
+  const persist = async (trimmedName: string) => {
     try {
       await saveSnippet({ name: trimmedName, query: query.trim() });
       haptic.success();

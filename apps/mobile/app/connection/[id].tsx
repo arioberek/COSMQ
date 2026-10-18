@@ -54,6 +54,10 @@ export default function ConnectionDetailScreen() {
 
   const activeConnection = id ? activeConnections.get(id) : null;
   const isConnected = activeConnection?.state.status === "connected";
+  // A connect attempt's own error, or the store's (e.g. the socket dropped mid-session).
+  const shownError =
+    connectError ??
+    (activeConnection?.state.status === "error" ? (activeConnection.state.error ?? null) : null);
 
   const handleConnect = async () => {
     if (!connection) return;
@@ -204,10 +208,10 @@ export default function ConnectionDetailScreen() {
               disabled={connecting}
               loading={connecting}
             >
-              {connectError ? "Try Again" : "Connect"}
+              {shownError ? "Try Again" : "Connect"}
             </Button>
           )}
-          {connectError && !isConnected ? (
+          {shownError && !isConnected ? (
             <YStack
               gap="$xs"
               padding={12}
@@ -223,7 +227,7 @@ export default function ConnectionDetailScreen() {
                 </AppText>
               </XStack>
               <AppText variant="footnote" tone="danger" selectable>
-                {connectError}
+                {shownError}
               </AppText>
             </YStack>
           ) : null}

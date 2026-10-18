@@ -2,7 +2,6 @@ import { Ionicons } from "@expo/vector-icons";
 import { memo, useCallback, useEffect, useMemo, useState } from "react";
 import { Pressable } from "react-native";
 import { useTheme as useTamaguiTheme, XStack, YStack } from "tamagui";
-import { useHaptic } from "../../lib/haptics";
 import {
   buildPrefsKey,
   type ColumnPrefs,
@@ -104,7 +103,6 @@ export const ResultsView = memo(function ResultsView({
   onCopyAll,
 }: ResultsViewProps) {
   const tamagui = useTamaguiTheme();
-  const haptic = useHaptic();
   const [mode, setMode] = useState<ResultsViewMode>("cards");
   const [search, setSearch] = useState("");
   const [sortColumn, setSortColumn] = useState<string | null>(null);
@@ -145,10 +143,9 @@ export const ResultsView = memo(function ResultsView({
   const handleModeChange = useCallback(
     (next: ResultsViewMode) => {
       setMode(next);
-      haptic.light();
       setResultsViewMode(connectionId, next).catch(() => {});
     },
-    [connectionId, haptic],
+    [connectionId],
   );
 
   const handlePrefsChange = useCallback(

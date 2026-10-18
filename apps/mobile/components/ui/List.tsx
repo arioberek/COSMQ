@@ -15,6 +15,7 @@ type IconName = keyof typeof Ionicons.glyphMap;
 
 /** iOS Settings-style icon: white glyph on a colored rounded square. */
 export const ListIcon = memo(function ListIcon({ name, color }: { name: IconName; color: string }) {
+  const theme = useTheme();
   return (
     <View
       width={29}
@@ -25,7 +26,7 @@ export const ListIcon = memo(function ListIcon({ name, color }: { name: IconName
       alignItems="center"
       justifyContent="center"
     >
-      <Ionicons name={name} size={17} color="#ffffff" />
+      <Ionicons name={name} size={17} color={theme.textOnAccent.val} />
     </View>
   );
 });

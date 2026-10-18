@@ -1,4 +1,5 @@
 import Constants, { ExecutionEnvironment } from "expo-constants";
+import { Platform } from "react-native";
 import type { SslConfig } from "../types";
 
 export interface TlsOptions {
@@ -72,13 +73,24 @@ function getTcpSocket(): TcpSocketModule {
     throw tcpSocketLoadError;
   }
 
+  if (Platform.OS === "web") {
+    tcpSocketLoadError = new Error(
+      "Database connections need the iOS or Android app. The web preview can’t open TCP sockets.",
+    );
+    throw tcpSocketLoadError;
+  }
+
   try {
     const mod = require("react-native-tcp-socket");
-    cachedTcpSocket = (mod?.default ?? mod) as TcpSocketModule;
+    const candidate = (mod?.default ?? mod) as Partial<TcpSocketModule> | undefined;
+    if (typeof candidate?.createConnection !== "function") {
+      throw new Error("react-native-tcp-socket did not load");
+    }
+    cachedTcpSocket = candidate as TcpSocketModule;
     return cachedTcpSocket;
   } catch {
     const message =
-      "TCP sockets are not available in Expo Go. Create a development build to use database connections.";
+      "TCP sockets are not available in this build. Create a development build to use database connections.";
     tcpSocketLoadError = new Error(message);
     throw tcpSocketLoadError;
   }

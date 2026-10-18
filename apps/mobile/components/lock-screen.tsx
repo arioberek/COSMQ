@@ -1,7 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { memo, useCallback, useEffect, useRef, useState } from "react";
-import { ActivityIndicator, StyleSheet } from "react-native";
-import Animated, { Easing, FadeIn, useReducedMotion } from "react-native-reanimated";
+import { ActivityIndicator, useWindowDimensions } from "react-native";
+import Animated, { Easing, FadeIn, FadeOut, useReducedMotion } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTheme, YStack } from "tamagui";
 import AlienLogo from "../assets/logos/alien.svg";
@@ -17,12 +17,17 @@ type LockScreenProps = {
   onUnlock: () => void;
 };
 
-const ENTER = FadeIn.duration(220).easing(Easing.bezier(0.23, 1, 0.32, 1));
+const EASE_OUT = Easing.bezier(0.23, 1, 0.32, 1);
+const ENTER = FadeIn.duration(220).easing(EASE_OUT);
+// Exit matches the entry path so unlocking doesn't cut to the app abruptly.
+const EXIT = FadeOut.duration(160).easing(EASE_OUT);
 
 export const LockScreen = memo(function LockScreen({ onUnlock }: LockScreenProps) {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
   const reducedMotion = useReducedMotion();
+  // Explicit size: it renders inside a portal, whose host has no layout of its own on web.
+  const { width, height } = useWindowDimensions();
 
   const [capability, setCapability] = useState<BiometricCapability | null>(null);
   const [isAuthenticating, setIsAuthenticating] = useState(false);
@@ -96,7 +101,18 @@ export const LockScreen = memo(function LockScreen({ onUnlock }: LockScreenProps
   return (
     <Animated.View
       entering={reducedMotion ? undefined : ENTER}
-      style={[StyleSheet.absoluteFill, { zIndex: 9999, backgroundColor: theme.background.val }]}
+      exiting={reducedMotion ? undefined : EXIT}
+      style={{
+        position: "absolute",
+        top: 0,
+        left: 0,
+        width,
+        height,
+        zIndex: 9999,
+        backgroundColor: theme.background.val,
+        // The web portal host is pointer-events: none; the lock screen must catch every touch.
+        pointerEvents: "auto",
+      }}
       accessibilityViewIsModal
     >
       <YStack

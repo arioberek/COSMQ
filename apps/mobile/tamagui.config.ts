@@ -1,17 +1,18 @@
 import { createAnimations } from "@tamagui/animations-react-native";
 import { tokens as defaultTokens } from "@tamagui/config/v3";
 import { shorthands } from "@tamagui/shorthands";
-import { createFont, createTamagui, createTokens } from "tamagui";
+import { createFont, createTamagui, createTokens, isWeb } from "tamagui";
 
 // All UI motion uses critically-damped springs so animations settle without
-// overshoot. The previous values were under-damped (damping 10-20 vs the ~30
-// needed for no oscillation) which made dialogs, sheets, switches, and any
-// `pressStyle` visibly wiggle on settle. `bouncy` and `tooltip` keep their
-// names but no longer bounce — call sites stay legal without code edits.
+// overshoot. Critical damping is 2·√(stiffness·mass): ≈33.5 for stiffness 280,
+// ≈28.3 for 200 and ≈22.8 for 130. Anything lower still overshoots a little,
+// which made dialogs, sheets, switches, and any `pressStyle` visibly wiggle on
+// settle. `bouncy` and `tooltip` keep their names but no longer bounce — call
+// sites stay legal without code edits.
 const animations = createAnimations({
   bouncy: {
     type: "spring",
-    damping: 30,
+    damping: 34,
     mass: 1,
     stiffness: 280,
   },
@@ -23,7 +24,7 @@ const animations = createAnimations({
   },
   quick: {
     type: "spring",
-    damping: 30,
+    damping: 34,
     mass: 1,
     stiffness: 280,
   },
@@ -41,7 +42,7 @@ const animations = createAnimations({
   },
   tooltip: {
     type: "spring",
-    damping: 30,
+    damping: 34,
     mass: 1,
     stiffness: 280,
   },
@@ -74,7 +75,12 @@ const buildLineHeight = () =>
     Object.entries(TYPE_SCALE).map(([key, size]) => [key, lineHeightFor(size)]),
   ) as Record<keyof typeof TYPE_SCALE, number>;
 
-const SYSTEM_STACK = "System";
+// "System" is React Native's alias for the platform UI font. Browsers don't
+// know it and fall back to their default serif, so the web preview gets a
+// real system stack.
+const SYSTEM_STACK = isWeb
+  ? "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif"
+  : "System";
 
 const headingFont = createFont({
   family: SYSTEM_STACK,

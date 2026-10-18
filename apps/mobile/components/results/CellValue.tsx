@@ -5,14 +5,7 @@ import { useTheme as useTamaguiTheme, XStack } from "tamagui";
 import { useHaptic } from "../../lib/haptics";
 import type { ColumnInfo } from "../../lib/types";
 import { AppText } from "../ui/Text";
-import {
-  cellKind,
-  formatDate,
-  formatNumberCompact,
-  formatNumberExact,
-  previewString,
-  truthyBoolean,
-} from "./format";
+import { cellKind, formatDate, formatNumberCell, previewString, truthyBoolean } from "./format";
 
 type CellValueProps = {
   column: ColumnInfo;
@@ -21,6 +14,8 @@ type CellValueProps = {
   onJsonPress?: (value: unknown, column: ColumnInfo) => void;
   /** Text alignment for multi-line values. */
   textAlign?: "left" | "right";
+  /** Show numbers exactly as the server sent them (detail sheet). */
+  exact?: boolean;
 };
 
 /** Tertiary italic "NULL", shared by cards, table and detail views. */
@@ -38,6 +33,7 @@ export const CellValue = memo(function CellValue({
   numberOfLines = 1,
   onJsonPress,
   textAlign,
+  exact = false,
 }: CellValueProps) {
   const tamagui = useTamaguiTheme();
   const haptic = useHaptic();
@@ -72,8 +68,8 @@ export const CellValue = memo(function CellValue({
   }
 
   if (kind === "number") {
-    const n = typeof value === "number" ? value : Number(value);
-    if (!Number.isFinite(n)) {
+    const display = formatNumberCell(column, value, exact || showExact);
+    if (display === null) {
       return (
         <AppText
           variant="code"
@@ -85,8 +81,7 @@ export const CellValue = memo(function CellValue({
         </AppText>
       );
     }
-    const display = showExact ? formatNumberExact(n) : formatNumberCompact(n);
-    const isCompact = display !== formatNumberExact(n);
+    const isCompact = display !== formatNumberCell(column, value, true);
     return (
       <Pressable
         onLongPress={() => {

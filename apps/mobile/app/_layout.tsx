@@ -3,14 +3,14 @@ import "../lib/web-reset";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import Constants from "expo-constants";
 import { useFonts } from "expo-font";
-import { Stack } from "expo-router";
+import { router, Stack, usePathname } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { AppState, type AppStateStatus } from "react-native";
+import { AppState, type AppStateStatus, Platform } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
-import { useTheme } from "tamagui";
+import { Portal, useTheme } from "tamagui";
 import { LockScreen } from "../components/lock-screen";
 import { Provider } from "../components/Provider";
 import { useResolvedColorScheme } from "../hooks/useResolvedColorScheme";
@@ -24,7 +24,7 @@ SplashScreen.preventAutoHideAsync().catch(() => {});
 
 if (!isExpoGo) {
   SplashScreen.setOptions({
-    duration: 800,
+    duration: 300,
     fade: true,
   });
 }
@@ -47,6 +47,25 @@ function RootLayoutContent() {
   const hasAuthenticatedRef = useRef(false);
   const lastUnlockTime = useRef<number>(0);
   const backgroundTimestamp = useRef<number | null>(null);
+  const pathname = usePathname();
+  const pathnameRef = useRef(pathname);
+  pathnameRef.current = pathname;
+
+  // The lock screen lives in a portal above every in-app sheet and dialog, but
+  // a natively presented modal (the connection form, which holds passwords)
+  // sits above the whole React root. Dismiss it when the app locks; the
+  // unsaved form is discarded, which is the safer trade.
+  const lock = useCallback(() => {
+    hasAuthenticatedRef.current = false;
+    setIsLocked(true);
+    if (
+      Platform.OS !== "web" &&
+      pathnameRef.current.startsWith("/connection/new") &&
+      router.canDismiss()
+    ) {
+      router.dismiss();
+    }
+  }, []);
 
   useEffect(() => {
     loadSettings();
@@ -83,14 +102,13 @@ function RootLayoutContent() {
         const timeout = APP_LOCK_TIMEOUT_MS[settings.appLockTimeout];
 
         if (timeInBackground >= timeout) {
-          hasAuthenticatedRef.current = false;
-          setIsLocked(true);
+          lock();
         }
 
         backgroundTimestamp.current = null;
       }
     },
-    [settings.appLockEnabled, settings.appLockTimeout],
+    [settings.appLockEnabled, settings.appLockTimeout, lock],
   );
 
   useEffect(() => {
@@ -135,7 +153,11 @@ function RootLayoutContent() {
         <Stack.Screen name="query/[connectionId]" options={{ title: "Query" }} />
         <Stack.Screen name="settings" options={{ title: "Settings", headerLargeTitle: true }} />
       </Stack>
-      {showLockScreen ? <LockScreen onUnlock={handleUnlock} /> : null}
+      {/* Highest portal in the app (dialogs use 300000, sheets 200000), kept
+          mounted so the lock screen's exit fade can play when it unmounts. */}
+      <Portal zIndex={1000000}>
+        {showLockScreen ? <LockScreen onUnlock={handleUnlock} /> : null}
+      </Portal>
     </>
   );
 }

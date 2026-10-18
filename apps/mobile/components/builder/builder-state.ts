@@ -74,9 +74,18 @@ export const SQL_OPERATORS: SqlOperator[] = [
   "IS NOT NULL",
 ];
 
-const renderSqlCondition = (cond: SqlCondition, type: DatabaseType): string | null => {
+/** Declared type per column name, from `describeTable`. Lets literals match the column. */
+export type ColumnTypes = Readonly<Record<string, string>>;
+
+const renderSqlCondition = (
+  cond: SqlCondition,
+  type: DatabaseType,
+  columnTypes: ColumnTypes,
+): string | null => {
   if (!cond.column) return null;
   const col = quoteIdent(cond.column, type);
+  const columnType = columnTypes[cond.column];
+  const literal = (raw: string) => formatSqlLiteral(raw, type, columnType);
 
   if (SQL_OPERATORS_NO_VALUE.has(cond.operator)) {
     return `${col} ${cond.operator}`;
@@ -89,27 +98,38 @@ const renderSqlCondition = (cond: SqlCondition, type: DatabaseType): string | nu
     return null;
   }
 
+  // `col = NULL` is never true in SQL; comparing with null means IS [NOT] NULL.
+  if (inferLiteralKind(cond.value) === "null") {
+    if (cond.operator === "=") return `${col} IS NULL`;
+    if (cond.operator === "!=") return `${col} IS NOT NULL`;
+  }
+
   if (cond.operator === "IN" || cond.operator === "NOT IN") {
     const items = splitListLiteral(cond.value);
     if (items.length === 0) return null;
-    const list = items.map((v) => formatSqlLiteral(v, type)).join(", ");
+    const list = items.map(literal).join(", ");
     return `${col} ${cond.operator} (${list})`;
   }
 
   if (cond.operator === "BETWEEN") {
     const items = splitListLiteral(cond.value);
     if (items.length !== 2) return null;
-    return `${col} BETWEEN ${formatSqlLiteral(items[0], type)} AND ${formatSqlLiteral(items[1], type)}`;
+    return `${col} BETWEEN ${literal(items[0])} AND ${literal(items[1])}`;
   }
 
   if (cond.operator === "LIKE" || cond.operator === "NOT LIKE") {
-    return `${col} ${cond.operator} ${formatSqlLiteral(cond.value, type)}`;
+    // A pattern is always a string, whatever the column type.
+    return `${col} ${cond.operator} ${formatSqlLiteral(cond.value, type, "text")}`;
   }
 
-  return `${col} ${cond.operator} ${formatSqlLiteral(cond.value, type)}`;
+  return `${col} ${cond.operator} ${literal(cond.value)}`;
 };
 
-export const sqlBuilderToString = (state: SqlBuilderState, type: DatabaseType): string => {
+export const sqlBuilderToString = (
+  state: SqlBuilderState,
+  type: DatabaseType,
+  columnTypes: ColumnTypes = {},
+): string => {
   if (!state.table) return "";
 
   const cols =
@@ -121,7 +141,7 @@ export const sqlBuilderToString = (state: SqlBuilderState, type: DatabaseType): 
   if (state.conditions.length > 0) {
     const parts: string[] = [];
     for (const cond of state.conditions) {
-      const rendered = renderSqlCondition(cond, type);
+      const rendered = renderSqlCondition(cond, type, columnTypes);
       if (!rendered) continue;
       if (parts.length === 0) {
         parts.push(rendered);
