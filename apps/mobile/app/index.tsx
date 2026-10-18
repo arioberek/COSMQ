@@ -2,7 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { router, Stack } from "expo-router";
 import { memo, useCallback, useMemo } from "react";
-import { Alert, Pressable, ScrollView } from "react-native";
+import { ActivityIndicator, Alert, Pressable, ScrollView } from "react-native";
 import { useTheme, XStack, YStack } from "tamagui";
 import AlienLogo from "../assets/logos/alien.svg";
 import { DatabaseIcon } from "../components/database-icon";
@@ -40,7 +40,11 @@ const ConnectionTile = memo(function ConnectionTile({
       justifyContent="center"
       backgroundColor={tag ?? "$fill"}
     >
-      <DatabaseIcon type={connection.type} size={20} color={tag ? "#ffffff" : theme.color.val} />
+      <DatabaseIcon
+        type={connection.type}
+        size={20}
+        color={tag ? theme.textOnAccent.val : theme.color.val}
+      />
     </YStack>
   );
 });
@@ -134,9 +138,14 @@ function HeaderButton({
 export default function HomeScreen() {
   const theme = useTheme();
   const queryClient = useQueryClient();
-  const { activeConnections } = useConnectionStore();
+  const { activeConnections, disconnect } = useConnectionStore();
 
-  const { data: connections = [], isLoading } = useQuery({
+  const {
+    data: connections = [],
+    isLoading,
+    isError,
+    refetch,
+  } = useQuery({
     queryKey: ["connections"],
     queryFn: getConnections,
   });
@@ -164,6 +173,8 @@ export default function HomeScreen() {
             style: "destructive",
             onPress: async () => {
               try {
+                // Close the socket first so a live connection isn't orphaned.
+                await disconnect(connection.id).catch(() => {});
                 await deleteConnection(connection.id);
                 await queryClient.invalidateQueries({ queryKey: ["connections"] });
               } catch (error) {
@@ -175,7 +186,7 @@ export default function HomeScreen() {
         ],
       );
     },
-    [queryClient],
+    [queryClient, disconnect],
   );
 
   const addConnection = useCallback(() => router.push("/connection/new"), []);
@@ -196,7 +207,20 @@ export default function HomeScreen() {
           ),
         }}
       />
-      {isLoading ? null : connections.length === 0 ? (
+      {isLoading ? (
+        <YStack flex={1} alignItems="center" justifyContent="center" paddingBottom="$xxl">
+          <ActivityIndicator color={theme.textSubtle.val} />
+        </YStack>
+      ) : isError ? (
+        <YStack flex={1} justifyContent="center" paddingBottom="$xxl">
+          <EmptyState
+            icon={<Ionicons name="alert-circle-outline" size={56} color={theme.danger.val} />}
+            title="Couldn’t Load Connections"
+            message="The saved connections couldn’t be read from this device."
+            action={<Button onPress={() => refetch()}>Try Again</Button>}
+          />
+        </YStack>
+      ) : connections.length === 0 ? (
         // Not inside the large-title ScrollView: its header inset would push a
         // vertically centered empty state below the visual center.
         <YStack flex={1} justifyContent="center" paddingBottom="$xxl">

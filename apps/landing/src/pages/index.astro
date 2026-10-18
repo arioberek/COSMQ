@@ -1,14 +1,41 @@
 ---
 import Layout from '../layouts/Layout.astro';
-import { DatabaseMarquee } from '../components/database-marquee';
-import { FeaturesSection } from '../components/features-section';
-import { ScreenshotsSection } from '../components/screenshots-section';
+import DatabaseMarquee from '../components/static/DatabaseMarquee.astro';
+import FeaturesSection from '../components/static/FeaturesSection.astro';
+import { ScreenshotsSection, type ScreenshotImage } from '../components/screenshots-section';
+import Screenshot1 from '../assets/screenshots/app/1.jpeg';
+import Screenshot2 from '../assets/screenshots/app/2.jpeg';
+import Screenshot3 from '../assets/screenshots/app/3.jpeg';
+import Screenshot4 from '../assets/screenshots/app/4.jpeg';
 import AlienLogo from '../assets/logos/alien.svg';
 import TextLogo from '../assets/logos/text.svg';
 import { HeroSection } from '../components/hero-section';
-import { Image } from 'astro:assets';
+import { getImage, Image } from 'astro:assets';
 
 const repo = 'https://github.com/arioberek/COSMQ';
+
+// Screenshots are 736px wide JPEGs but show at about 260px (cards) and 220–260px
+// (hero phone). Resize to 1x/2x WebP at build time instead of shipping originals.
+const toWebp = (src: ImageMetadata, width: number) =>
+	getImage({ src, width, format: 'webp', quality: 80 });
+
+const screenshots: ScreenshotImage[] = await Promise.all(
+	[Screenshot1, Screenshot2, Screenshot3, Screenshot4].map(async (src) => {
+		const [small, card, full] = await Promise.all([
+			toWebp(src, 260),
+			toWebp(src, 520),
+			toWebp(src, src.width),
+		]);
+		return {
+			src: card.src,
+			srcSet: `${small.src} 260w, ${card.src} 520w`,
+			full: full.src,
+			width: src.width,
+			height: src.height,
+		};
+	}),
+);
+const phone = await toWebp(Screenshot1, 520);
 const navLink =
 	'inline-flex items-center min-h-11 px-3 text-muted-foreground no-underline text-[14px] font-medium transition-colors duration-200 hover:text-foreground';
 const footerLink =
@@ -19,8 +46,8 @@ const footerLink =
 	<header class="fixed top-0 left-0 right-0 z-[var(--z-header)] border-b border-border bg-background/75 backdrop-blur-md backdrop-saturate-150">
 		<nav aria-label="Primary" class="max-w-[1400px] mx-auto px-6 lg:px-10 h-16 flex justify-between items-center">
 			<a href="/" class="inline-flex items-center min-h-11 no-underline group" aria-label="COSMQ home">
-				<Image src={AlienLogo} alt="" width={28} height={28} class="md:hidden block opacity-90 group-hover:opacity-100 transition-opacity duration-200" />
-				<Image src={TextLogo} alt="" class="h-7 w-auto opacity-90 hidden md:block group-hover:opacity-100 transition-opacity duration-200" />
+				<Image src={AlienLogo} alt="" width={28} height={28} loading="eager" class="md:hidden block opacity-90 group-hover:opacity-100 transition-opacity duration-200" />
+				<Image src={TextLogo} alt="" loading="eager" class="h-7 w-auto opacity-90 hidden md:block group-hover:opacity-100 transition-opacity duration-200" />
 			</a>
 			<div class="flex gap-1 md:gap-2 items-center">
 				<a href="#features" class={`${navLink} hidden sm:inline-flex`}>Features</a>
@@ -30,14 +57,16 @@ const footerLink =
 		</nav>
 	</header>
 
-	<main id="main" class="w-full overflow-x-hidden">
-		<HeroSection client:idle />
+	<!-- overflow-x-clip, not hidden: "hidden" makes <main> a scroll container, and the
+	     scroll-driven reveals would bind to it (it never scrolls) instead of the page. -->
+	<main id="main" class="w-full overflow-x-clip">
+		<HeroSection client:idle phoneSrc={phone.src} />
 
-		<FeaturesSection client:visible />
+		<FeaturesSection />
 
-		<ScreenshotsSection client:visible />
+		<ScreenshotsSection client:visible images={screenshots} />
 
-		<DatabaseMarquee client:visible />
+		<DatabaseMarquee />
 
 		<section aria-labelledby="get-it" class="relative px-6 lg:px-10 pt-24 pb-28 md:pt-32 md:pb-40 border-t border-border overflow-hidden">
 			<div class="absolute inset-0 aurora-bg opacity-80 pointer-events-none" aria-hidden="true"></div>

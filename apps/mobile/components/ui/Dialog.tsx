@@ -56,7 +56,8 @@ type DialogProps = {
   description?: string;
   confirmText?: string;
   cancelText?: string;
-  onConfirm?: () => void;
+  /** Return `false` to keep the dialog open (for example, when validation fails). */
+  onConfirm?: () => unknown;
   onCancel?: () => void;
   variant?: DialogVariant;
   children?: React.ReactNode;
@@ -219,9 +220,12 @@ export const Dialog = memo(function Dialog({
               ? "default"
               : "cancel",
         onPress: () => {
-          if (primaryAction) primaryAction.onPress();
-          else onConfirm?.();
-          close();
+          if (primaryAction) {
+            primaryAction.onPress();
+            close();
+            return;
+          }
+          if (onConfirm?.() !== false) close();
         },
       });
     }

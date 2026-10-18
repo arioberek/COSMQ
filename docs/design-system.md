@@ -51,19 +51,23 @@ strings (`theme.colors.*`, `theme.syntax.*`).
 ## Typography: `AppText` (`components/ui/Text.tsx`)
 
 Apple text styles. Don't set `fontSize`, `fontWeight` or `letterSpacing` in screens.
+Variants set no explicit `lineHeight`: native labels use the font's natural
+leading, and on iOS any extra line height lands above the glyphs, pushing
+single-line labels below center in buttons, chips and rows.
 
-| `variant` | Size/leading | Use |
+| `variant` | Size | Use |
 | --- | --- | --- |
-| `largeTitle` | 34/41 bold | Rare. Prefer the native large title |
-| `title2` | 22/28 bold | Hero numbers, detail headers |
-| `title3` | 20/25 semibold | Empty state titles, sheet titles |
-| `headline` | 17/22 semibold | Emphasized row titles, buttons |
-| `body` | 17/22 | Default row and body text |
-| `callout` | 16/21 | Secondary body |
-| `subhead` | 15/20 | Supporting text, small buttons |
-| `footnote` | 13/18 | Section headers and footers, row subtitles, meta |
-| `caption` / `caption2` | 12/16, 11/13 | Badges, timestamps, table headers |
-| `code` | 13/18 JetBrains Mono | SQL, values, hosts, JSON |
+| `largeTitle` | 34 bold | Rare. Prefer the native large title |
+| `title1` | 28 bold | Rare. Standalone screen titles |
+| `title2` | 22 bold | Hero numbers, detail headers |
+| `title3` | 20 semibold | Empty state titles, sheet titles |
+| `headline` | 17 semibold | Emphasized row titles, buttons |
+| `body` | 17 | Default row and body text |
+| `callout` | 16 | Secondary body |
+| `subhead` | 15 | Supporting text, small buttons |
+| `footnote` | 13 | Section headers and footers, row subtitles, meta |
+| `caption` / `caption2` | 12, 11 | Badges, timestamps, table headers |
+| `code` | 13 JetBrains Mono | SQL, values, hosts, JSON (the SQL editor itself uses 15) |
 
 `tone`: `primary` (default), `secondary`, `tertiary`, `accent`, `danger`,
 `success`, `warning`, `onAccent`. `emphasized` makes it semibold.
@@ -113,8 +117,9 @@ sentence case for descriptions and footers.
 Follows `animate-expo` (Emil Kowalski's principles):
 
 - Don't animate high-frequency actions (tab and segment switches, typing).
-- Press feedback is scale 0.97 in about 120ms (built into `Button`). Rows
-  use a highlight, not a scale.
+- Press feedback is scale 0.97 only, no dimming (built into `Button`, driven
+  by the critically damped `quick` spring). Rows use a highlight, not a scale.
+- Haptics never fire on segment or tab switches; see the haptics rule below.
 - Enter/exit animations stay under 300ms with a strong ease-out
   (`Easing.bezier(0.23, 1, 0.32, 1)`). Never animate from `scale(0)`. Respect
   `useReducedMotion`.

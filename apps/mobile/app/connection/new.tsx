@@ -170,7 +170,7 @@ export default function NewConnectionScreen() {
   const usernameRef = useRef<TextInput>(null);
   const passwordRef = useRef<TextInput>(null);
 
-  const { data: connectionToEdit } = useQuery({
+  const { data: connectionToEdit, isLoading: loadingEdit } = useQuery({
     queryKey: ["connection", editId],
     queryFn: () => getConnectionWithPassword(editId ?? ""),
     enabled: isEditMode,
@@ -378,10 +378,26 @@ export default function NewConnectionScreen() {
       return;
     }
 
+    // Saving before the connection being edited has loaded would create a
+    // second copy of it instead of updating it.
+    if (isEditMode && !existingConnection) {
+      Alert.alert(
+        "Connection Not Loaded",
+        "The connection you’re editing couldn’t be loaded, so there’s nothing to save. Go back and open it again.",
+      );
+      return;
+    }
+
     setSaving(true);
 
     try {
       await saveConnection(buildConfig(existingConnection?.id ?? generateConnectionId(), ""));
+      if (isEditMode && editId) {
+        // The host, database or credentials may have changed under a live
+        // connection; drop it so the next Connect uses the new settings.
+        // After the save, so a failed save leaves the live connection alone.
+        await disconnect(editId).catch(() => {});
+      }
       await queryClient.invalidateQueries({ queryKey: ["connections"] });
       if (isEditMode) {
         await queryClient.invalidateQueries({ queryKey: ["connection", editId] });
@@ -410,7 +426,7 @@ export default function NewConnectionScreen() {
             <HeaderTextButton
               label={isEditMode ? "Save" : "Add"}
               emphasized
-              disabled={!canSave || testing}
+              disabled={!canSave || testing || (isEditMode && loadingEdit)}
               loading={saving}
               onPress={handleSave}
             />

@@ -1,27 +1,49 @@
 import { memo, type ReactNode } from "react";
-import { ActivityIndicator } from "react-native";
+import { ActivityIndicator, StyleSheet } from "react-native";
 import { type GetProps, styled, Button as TamaguiButton, useTheme } from "tamagui";
 import { AppText } from "./Text";
 
 // iOS button styles: filled (prominent), tinted, gray, plain, destructive.
 const StyledButton = styled(TamaguiButton, {
+  // Own name so Tamagui's `*_Button` sub-themes (white `$color`) don't leak
+  // into non-string children rendered with the default AppText tone. Each tone
+  // pins its hover background, which used to come from that sub-theme (web).
+  name: "AppButton",
   flexDirection: "row",
   alignItems: "center",
   justifyContent: "center",
   gap: "$sm",
   borderWidth: 0,
   animation: "quick",
-  pressStyle: { scale: 0.97, opacity: 0.8 },
+  // Press feedback is the scale alone; dimming as well reads as "disabled".
+  pressStyle: { scale: 0.97 },
 
   variants: {
     tone: {
-      filled: { backgroundColor: "$accentFill", pressStyle: { backgroundColor: "$accentFill" } },
-      tinted: { backgroundColor: "$accentMuted", pressStyle: { backgroundColor: "$accentMuted" } },
-      gray: { backgroundColor: "$fill", pressStyle: { backgroundColor: "$fill" } },
-      plain: { backgroundColor: "transparent", pressStyle: { backgroundColor: "transparent" } },
+      filled: {
+        backgroundColor: "$accentFill",
+        pressStyle: { backgroundColor: "$accentFill" },
+        hoverStyle: { backgroundColor: "$accentFill" },
+      },
+      tinted: {
+        backgroundColor: "$accentMuted",
+        pressStyle: { backgroundColor: "$accentMuted" },
+        hoverStyle: { backgroundColor: "$accentMuted" },
+      },
+      gray: {
+        backgroundColor: "$fill",
+        pressStyle: { backgroundColor: "$fill" },
+        hoverStyle: { backgroundColor: "$fill" },
+      },
+      plain: {
+        backgroundColor: "transparent",
+        pressStyle: { backgroundColor: "transparent" },
+        hoverStyle: { backgroundColor: "transparent" },
+      },
       destructive: {
         backgroundColor: "$dangerMuted",
         pressStyle: { backgroundColor: "$dangerMuted" },
+        hoverStyle: { backgroundColor: "$dangerMuted" },
       },
     },
     buttonSize: {
@@ -98,7 +120,13 @@ export const Button = memo(function Button({
       animateOnly={ANIMATE_ONLY}
       accessibilityRole="button"
       accessibilityState={{ disabled: !!isDisabled, busy: !!loading }}
+      // The 34pt capsule is below the 44pt minimum touch target; pad the hit area.
+      hitSlop={size === "sm" ? { top: 5, bottom: 5 } : undefined}
       {...props}
+      // Flattened: on web Tamagui hands a style array straight to the DOM, which throws.
+      style={
+        StyleSheet.flatten([{ borderCurve: "continuous" }, props.style]) as ButtonProps["style"]
+      }
     >
       {loading ? (
         <ActivityIndicator size="small" color={textColor} />

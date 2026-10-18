@@ -2,9 +2,9 @@ import { Ionicons } from "@expo/vector-icons";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ActivityIndicator, Pressable, ScrollView } from "react-native";
 import { useTheme as useTamaguiTheme, XStack, YStack } from "tamagui";
-import { formatQueryError } from "../../lib/errors";
 import { useHaptic } from "../../lib/haptics";
 import type { ColumnInfo, DatabaseConnection, DatabaseType, TableInfo } from "../../lib/types";
+import { describeConnectionError } from "../../stores/connection";
 import { AppText } from "../ui/Text";
 import {
   emptyMongoBuilderState,
@@ -81,11 +81,11 @@ export const BuilderView = memo(function BuilderView({
       setTables(list);
     } catch (err) {
       if (tablesReqRef.current !== reqId) return;
-      setError(formatQueryError(err, type));
+      setError(describeConnectionError(connectionId, err, type, instance));
     } finally {
       if (tablesReqRef.current === reqId) setLoadingTables(false);
     }
-  }, [instance, type]);
+  }, [instance, type, connectionId]);
 
   // Load tables once per connection when entering the builder. Keying on
   // "already attempted" rather than "list is empty" matters: a database with
@@ -109,13 +109,13 @@ export const BuilderView = memo(function BuilderView({
         setColumns(cols);
       } catch (err) {
         if (columnsReqRef.current !== reqId) return;
-        setError(formatQueryError(err, type));
+        setError(describeConnectionError(connectionId, err, type, instance));
         setColumns([]);
       } finally {
         if (columnsReqRef.current === reqId) setLoadingColumns(false);
       }
     },
-    [instance, type],
+    [instance, type, connectionId],
   );
 
   // Auto-load columns whenever the table/collection changes. Bumping
@@ -140,12 +140,20 @@ export const BuilderView = memo(function BuilderView({
   }, [sql, sqlState.table, mongoState.collection, loadColumns]);
 
   // Live-emit the generated query string.
+  const columnTypes = useMemo(
+    () => Object.fromEntries(columns.map((c) => [c.name, c.type])),
+    [columns],
+  );
+
   const generatedQuery = useMemo(() => {
-    if (sql) return sqlBuilderToString(sqlState, type);
+    if (sql) return sqlBuilderToString(sqlState, type, columnTypes);
     return mongoBuilderToString(mongoState);
-  }, [sql, sqlState, mongoState, type]);
+  }, [sql, sqlState, mongoState, type, columnTypes]);
 
   useEffect(() => {
+    // A fresh builder has nothing to say yet; don't wipe SQL the user typed
+    // in the editor just because they peeked at the builder.
+    if (generatedQuery === "") return;
     onQueryChange(generatedQuery);
   }, [generatedQuery, onQueryChange]);
 

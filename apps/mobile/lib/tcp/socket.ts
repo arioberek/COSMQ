@@ -1,5 +1,18 @@
 import Constants, { ExecutionEnvironment } from "expo-constants";
+import { Platform } from "react-native";
 import type { SslConfig } from "../types";
+
+/**
+ * The socket is gone: closed, reset, or never connected. Thrown by the
+ * transport only, so callers can tell a dead connection from a failed query
+ * without pattern-matching server error text (which can echo the user's SQL).
+ */
+export class ConnectionLostError extends Error {
+  constructor(message = "Connection closed") {
+    super(message);
+    this.name = "ConnectionLostError";
+  }
+}
 
 export interface TlsOptions {
   enabled: boolean;
@@ -72,13 +85,24 @@ function getTcpSocket(): TcpSocketModule {
     throw tcpSocketLoadError;
   }
 
+  if (Platform.OS === "web") {
+    tcpSocketLoadError = new Error(
+      "Database connections need the iOS or Android app. The web preview can’t open TCP sockets.",
+    );
+    throw tcpSocketLoadError;
+  }
+
   try {
     const mod = require("react-native-tcp-socket");
-    cachedTcpSocket = (mod?.default ?? mod) as TcpSocketModule;
+    const candidate = (mod?.default ?? mod) as Partial<TcpSocketModule> | undefined;
+    if (typeof candidate?.createConnection !== "function") {
+      throw new Error("react-native-tcp-socket did not load");
+    }
+    cachedTcpSocket = candidate as TcpSocketModule;
     return cachedTcpSocket;
   } catch {
     const message =
-      "TCP sockets are not available in Expo Go. Create a development build to use database connections.";
+      "TCP sockets are not available in this build. Create a development build to use database connections.";
     tcpSocketLoadError = new Error(message);
     throw tcpSocketLoadError;
   }
@@ -210,14 +234,17 @@ export class TcpClient {
       socket.on("error", (error: unknown) => {
         const err = error instanceof Error ? error : new Error(String(error));
         if (!this.connected) {
+          // Failing to connect at all is a connect error, not a lost connection.
           reject(err);
+          this.handleError(err);
+          return;
         }
-        this.handleError(err);
+        this.handleError(new ConnectionLostError(err.message));
       });
 
       socket.on("close", () => {
         this.connected = false;
-        this.rejectPendingMessages(new Error("Connection closed"));
+        this.rejectPendingMessages(new ConnectionLostError());
       });
 
       socket.on("timeout", () => {
@@ -252,7 +279,7 @@ export class TcpClient {
   async send(data: Buffer): Promise<void> {
     return new Promise((resolve, reject) => {
       if (!this.socket || !this.connected) {
-        reject(new Error("Not connected"));
+        reject(new ConnectionLostError("Not connected"));
         return;
       }
 
@@ -316,7 +343,7 @@ export class TcpClient {
       this.socket = null;
       this.connected = false;
       this.buffer.clear();
-      this.rejectPendingMessages(new Error("Connection closed"));
+      this.rejectPendingMessages(new ConnectionLostError());
     }
   }
 

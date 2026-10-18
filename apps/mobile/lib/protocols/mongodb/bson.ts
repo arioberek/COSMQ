@@ -60,6 +60,11 @@ export class ObjectId {
     return this.bytes.toString("hex");
   }
 
+  /** So JSON.stringify (JSON view, copy row, TSV) shows the hex id, not the byte array. */
+  toJSON(): string {
+    return this.toString();
+  }
+
   toBuffer(): Buffer {
     return this.bytes;
   }

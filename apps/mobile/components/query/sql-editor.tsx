@@ -82,8 +82,13 @@ export const SqlEditor = memo(function SqlEditor({
     cursorRef.current = position;
     setCursorPosition(position);
     setTimeout(() => {
-      if (focus) inputRef.current?.focus();
-      inputRef.current?.setNativeProps({ selection: { start: position, end: position } });
+      const input = inputRef.current;
+      if (!input) return;
+      if (focus) input.focus();
+      // react-native-web host refs have no setNativeProps; skip rather than throw.
+      if (typeof input.setNativeProps === "function") {
+        input.setNativeProps({ selection: { start: position, end: position } });
+      }
     }, 0);
   }, []);
 

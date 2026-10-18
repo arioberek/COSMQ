@@ -225,6 +225,10 @@ export class PostgresConnection implements DatabaseConnection {
     const columns: ColumnInfo[] = [];
     const rows: Record<string, unknown>[] = [];
     let command = "";
+    // An ErrorResponse is followed by ReadyForQuery. Keep reading until then;
+    // throwing early leaves "Z" in the buffer and shifts every later response
+    // by one (the next query would return this one's leftovers).
+    let failure: Error | null = null;
 
     while (true) {
       const data = await this.client.receive();
@@ -266,7 +270,8 @@ export class PostgresConnection implements DatabaseConnection {
 
           case "E": {
             const error = parseErrorResponse(message.payload);
-            throw new Error(error.M || "Query failed");
+            failure ??= new Error(error.M || "Query failed");
+            break;
           }
 
           case "I": {
@@ -274,6 +279,7 @@ export class PostgresConnection implements DatabaseConnection {
           }
 
           case "Z": {
+            if (failure) throw failure;
             return {
               columns,
               rows,

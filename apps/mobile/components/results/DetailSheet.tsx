@@ -85,7 +85,7 @@ export const DetailSheet = memo(function DetailSheet({
                           {stringifyCell(value)}
                         </AppText>
                       ) : (
-                        <CellValue column={col} value={value} numberOfLines={6} />
+                        <CellValue column={col} value={value} numberOfLines={6} exact />
                       )}
                     </YStack>
                   }

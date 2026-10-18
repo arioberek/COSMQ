@@ -68,7 +68,13 @@ export function Iphone({ src, videoSrc, className, style, ...props }: IphoneProp
 						borderRadius: `${RADIUS_H}% / ${RADIUS_V}%`,
 					}}
 				>
-					<img src={src} alt="" className="block size-full object-cover object-top" />
+					<img
+						src={src}
+						alt=""
+						fetchPriority="high"
+						decoding="async"
+						className="block size-full object-cover object-top"
+					/>
 				</div>
 			)}
 

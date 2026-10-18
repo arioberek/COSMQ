@@ -50,16 +50,54 @@ const escapeStringLiteral = (raw: string, type: DatabaseType): string => {
   return backslashEscaped.replace(/'/g, "''");
 };
 
-export const formatSqlLiteral = (raw: string, type: DatabaseType): string => {
-  const kind = inferLiteralKind(raw);
+/** How a column's declared type constrains the literal compared against it. */
+export type ColumnValueKind = "text" | "number" | "boolean" | "unknown";
+
+// `\b` after "int" keeps "interval" out.
+const NUMBER_COLUMN =
+  /^(tiny|small|medium|big)?int(eger|[248])?\b|^(decimal|numeric|real|float|double|money|serial|bigserial|smallserial|number)/;
+const BOOLEAN_COLUMN = /^(bool|boolean|bit\(1\)|tinyint\(1\))$/;
+// Dates and times compare as quoted strings ('2026-10-18'), just like text.
+const TEXT_COLUMN =
+  /char|text|string|uuid|citext|name|enum|set\(|date|time|interval|inet|cidr|macaddr|json|xml|blob|binary|bytea/;
+
+export const columnValueKind = (columnType: string | undefined): ColumnValueKind => {
+  const t = (columnType ?? "").toLowerCase().trim();
+  if (!t) return "unknown";
+  if (BOOLEAN_COLUMN.test(t)) return "boolean";
+  if (NUMBER_COLUMN.test(t)) return "number";
+  if (TEXT_COLUMN.test(t)) return "text";
+  return "unknown";
+};
+
+/**
+ * SQL literal for a value typed into the builder. With the column's declared
+ * type, text columns always get a quoted string (`zip = '007'`, not `= 007`,
+ * which Postgres rejects and MySQL matches as 7) and number columns only take
+ * unquoted digits. Without a type, the literal's own shape decides.
+ */
+export const formatSqlLiteral = (raw: string, type: DatabaseType, columnType?: string): string => {
+  const inferred = inferLiteralKind(raw);
+  const columnKind = columnValueKind(columnType);
+  const kind: LiteralKind =
+    inferred === "null"
+      ? "null"
+      : columnKind === "text"
+        ? "string"
+        : columnKind === "number" && inferred !== "number"
+          ? "string"
+          : columnKind === "boolean" && inferred === "number"
+            ? "boolean"
+            : inferred;
   switch (kind) {
     case "null":
       return "NULL";
     case "number":
       return raw.trim();
     case "boolean": {
-      const truthy = raw.trim().toLowerCase() === "true";
-      // MySQL/MariaDB and SQLite accept TRUE/FALSE in modern versions; fall through
+      const lower = raw.trim().toLowerCase();
+      const truthy = lower === "true" || (lower !== "false" && Number(lower) !== 0);
+      // MySQL/MariaDB and SQLite store booleans as 0/1.
       if (type === "mysql" || type === "mariadb" || type === "sqlite") {
         return truthy ? "1" : "0";
       }

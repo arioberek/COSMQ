@@ -52,7 +52,6 @@ export function SortRow<Dir extends string | number>({
         values={[ascLabel, descLabel]}
         selectedIndex={dir === descValue ? 1 : 0}
         onChange={(index) => {
-          haptic.light();
           onDirChange(index === 1 ? descValue : ascValue);
         }}
         style={{ width: 124 }}

@@ -28,7 +28,10 @@ export const TransactionBanner = memo(function TransactionBanner({
   const theme = useTheme();
 
   return (
-    <Animated.View entering={FadeIn.duration(200).easing(EASE_OUT)} exiting={FadeOut.duration(150)}>
+    <Animated.View
+      entering={FadeIn.duration(200).easing(EASE_OUT)}
+      exiting={FadeOut.duration(150).easing(EASE_OUT)}
+    >
       <YStack
         backgroundColor="$warningMuted"
         borderRadius="$md"

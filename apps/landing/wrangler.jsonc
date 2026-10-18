@@ -2,7 +2,9 @@
 	"name": "cosmq",
 	"compatibility_date": "2026-01-05", // Update to the day you deploy
 	"assets": {
-		"directory": "./dist"
+		"directory": "./dist",
+		// Serve dist/404.html for unknown paths instead of a bare 404.
+		"not_found_handling": "404-page"
 	},
 	"observability": {
 		"enabled": false,

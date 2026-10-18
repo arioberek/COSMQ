@@ -16,7 +16,7 @@ export const Switch = memo(function Switch({ checked, onCheckedChange, ...props 
       onValueChange={onCheckedChange}
       trackColor={{ true: theme.accent.val, false: theme.fill.val }}
       ios_backgroundColor={theme.fill.val}
-      thumbColor="#ffffff"
+      thumbColor={theme.textOnAccent.val}
       {...props}
     />
   );

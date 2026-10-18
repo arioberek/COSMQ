@@ -18,7 +18,10 @@ export const HistorySheet = memo(function HistorySheet({
   const [history, setHistory] = useState<QueryHistoryItem[]>([]);
 
   useEffect(() => {
-    if (open) getQueryHistory().then(setHistory);
+    if (open)
+      getQueryHistory()
+        .then(setHistory)
+        .catch(() => setHistory([]));
   }, [open]);
 
   return (
