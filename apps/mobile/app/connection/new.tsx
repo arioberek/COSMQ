@@ -380,17 +380,24 @@ export default function NewConnectionScreen() {
 
     // Saving before the connection being edited has loaded would create a
     // second copy of it instead of updating it.
-    if (isEditMode && !existingConnection) return;
+    if (isEditMode && !existingConnection) {
+      Alert.alert(
+        "Connection Not Loaded",
+        "The connection you’re editing couldn’t be loaded, so there’s nothing to save. Go back and open it again.",
+      );
+      return;
+    }
 
     setSaving(true);
 
     try {
+      await saveConnection(buildConfig(existingConnection?.id ?? generateConnectionId(), ""));
       if (isEditMode && editId) {
         // The host, database or credentials may have changed under a live
         // connection; drop it so the next Connect uses the new settings.
+        // After the save, so a failed save leaves the live connection alone.
         await disconnect(editId).catch(() => {});
       }
-      await saveConnection(buildConfig(existingConnection?.id ?? generateConnectionId(), ""));
       await queryClient.invalidateQueries({ queryKey: ["connections"] });
       if (isEditMode) {
         await queryClient.invalidateQueries({ queryKey: ["connection", editId] });

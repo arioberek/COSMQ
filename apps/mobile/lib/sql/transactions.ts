@@ -33,7 +33,24 @@ const DANGEROUS_MONGO_COMMANDS = new Set([
   "dropIndexes",
   "findAndModify",
   "renameCollection",
+  "bulkWrite",
+  "dropUser",
+  "dropAllUsersFromDatabase",
+  "dropRole",
 ]);
+
+/** An aggregate whose pipeline writes a collection ($out replaces it, $merge upserts into it). */
+const aggregateWrites = (command: Record<string, unknown>): string | null => {
+  const pipeline = command.pipeline;
+  if (!Array.isArray(pipeline)) return null;
+  for (const stage of pipeline) {
+    if (stage && typeof stage === "object") {
+      if ("$out" in stage) return "aggregate $out";
+      if ("$merge" in stage) return "aggregate $merge";
+    }
+  }
+  return null;
+};
 
 /** Removes comments and string/identifier literals so keyword checks see only SQL. */
 const stripSql = (sql: string): string =>
@@ -51,6 +68,7 @@ const findDangerousMongoCommand = (query: string): string | null => {
     const parsed: unknown = JSON.parse(query);
     if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return null;
     const command = Object.keys(parsed)[0];
+    if (command === "aggregate") return aggregateWrites(parsed as Record<string, unknown>);
     return command && DANGEROUS_MONGO_COMMANDS.has(command) ? command : null;
   } catch {
     return null;
@@ -73,7 +91,8 @@ export const findDangerousKeyword = (sql: string, type?: DatabaseType): string |
     const before = normalized.slice(0, match.index).trimEnd();
     const after = normalized.slice(match.index + keyword.length).trimStart();
     const isReplaceFunction = keyword === "REPLACE" && after.startsWith("(");
-    const isRowLock = keyword === "UPDATE" && /\bFOR$/.test(before);
+    // FOR UPDATE / FOR NO KEY UPDATE are row locks on a read.
+    const isRowLock = keyword === "UPDATE" && /\bFOR( NO KEY)?$/.test(before);
     if (!isReplaceFunction && !isRowLock) return keyword;
     match = DANGEROUS_PATTERN.exec(normalized);
   }

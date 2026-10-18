@@ -5,6 +5,7 @@ import { MongoDBConnection } from "../lib/protocols/mongodb/connection";
 import { MySQLConnection } from "../lib/protocols/mysql/connection";
 import { PostgresConnection } from "../lib/protocols/postgres/connection";
 import { SQLiteConnection } from "../lib/protocols/sqlite/connection";
+import { ConnectionLostError } from "../lib/tcp/socket";
 import type {
   ConnectionConfig,
   ConnectionState,
@@ -27,16 +28,40 @@ const TCP_PROTOCOLS: ReadonlySet<DatabaseType> = new Set([
 
 type ConnectionFactory = (config: ConnectionConfig) => DatabaseConnection;
 
-/** Raw socket/protocol errors that mean the link to the server is gone, not that a query failed. */
-const CONNECTION_LOST_PATTERN =
-  /^(not connected|connection closed)$|ECONNRESET|EPIPE|ENOTCONN|socket (is )?closed|socket hang up|broken pipe|connection (was )?(reset|lost|terminated)/i;
-
 export const CONNECTION_LOST_MESSAGE =
   "The connection to the server was lost. Reconnect to keep querying.";
 
+/**
+ * True only for transport failures. Server error messages are never matched:
+ * they can echo the user's SQL ("… near 'connection reset'") and must not tear
+ * down a healthy connection. The two exact strings are the protocols' own
+ * "no socket" guards.
+ */
 export const isConnectionLostError = (error: unknown): boolean => {
-  const message = error instanceof Error ? error.message : String(error ?? "");
-  return CONNECTION_LOST_PATTERN.test(message.trim());
+  if (error instanceof ConnectionLostError) return true;
+  if (!(error instanceof Error)) return false;
+  return (
+    error.name === "ConnectionLostError" ||
+    /^(not connected|connection closed)$/i.test(error.message.trim())
+  );
+};
+
+/**
+ * One query at a time per connection. The wire protocols read responses from
+ * a shared buffer, so a schema load, a builder describe or a rollback sent
+ * while another query is in flight would interleave and corrupt both.
+ * Overriding `query` on the instance also covers listTables/describeTable,
+ * which call `this.query` internally.
+ */
+const serializeQueries = (instance: DatabaseConnection): DatabaseConnection => {
+  const run = instance.query.bind(instance);
+  let tail: Promise<unknown> = Promise.resolve();
+  instance.query = (sql: string) => {
+    const next = tail.then(() => run(sql));
+    tail = next.catch(() => {});
+    return next;
+  };
+  return instance;
 };
 
 const connectionFactories: Record<DatabaseType, ConnectionFactory> = {
@@ -68,8 +93,10 @@ interface ConnectionStore {
    * Call with any error from a connection instance. When it means the socket
    * is gone, the connection is marked as errored so every screen stops
    * claiming it's connected. Returns true when the connection was lost.
+   * Pass the instance that failed: a failure from an older or still-connecting
+   * instance (e.g. during Reconnect) must not tear down the current one.
    */
-  reportFailure: (connectionId: string, error: unknown) => boolean;
+  reportFailure: (connectionId: string, error: unknown, instance?: DatabaseConnection) => boolean;
 }
 
 export const useConnectionStore = create<ConnectionStore>((set, get) => ({
@@ -93,7 +120,7 @@ export const useConnectionStore = create<ConnectionStore>((set, get) => ({
     if (!factory) {
       throw new Error(`Unknown database type: ${config.type}`);
     }
-    const instance: DatabaseConnection = factory(config);
+    const instance: DatabaseConnection = serializeQueries(factory(config));
 
     const activeConnection: ActiveConnection = {
       config,
@@ -183,17 +210,19 @@ export const useConnectionStore = create<ConnectionStore>((set, get) => ({
     try {
       return await connection.instance.query(sql);
     } catch (error) {
-      if (get().reportFailure(connectionId, error)) {
+      if (get().reportFailure(connectionId, error, connection.instance)) {
         throw new Error(CONNECTION_LOST_MESSAGE);
       }
       throw new Error(formatQueryError(error, connection.config.type));
     }
   },
 
-  reportFailure: (connectionId: string, error: unknown): boolean => {
+  reportFailure: (connectionId: string, error: unknown, instance?: DatabaseConnection): boolean => {
     if (!isConnectionLostError(error)) return false;
     const connection = get().activeConnections.get(connectionId);
     if (!connection) return true;
+    if (instance && connection.instance !== instance) return true;
+    if (connection.state.status !== "connected") return true;
     // Release whatever is left of the socket; the next Connect starts fresh.
     connection.instance.disconnect().catch(() => {});
     set((state) => {
@@ -219,7 +248,8 @@ export const describeConnectionError = (
   connectionId: string,
   error: unknown,
   type: DatabaseType,
+  instance?: DatabaseConnection,
 ): string =>
-  useConnectionStore.getState().reportFailure(connectionId, error)
+  useConnectionStore.getState().reportFailure(connectionId, error, instance)
     ? CONNECTION_LOST_MESSAGE
     : formatQueryError(error, type);

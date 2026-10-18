@@ -2,6 +2,18 @@ import Constants, { ExecutionEnvironment } from "expo-constants";
 import { Platform } from "react-native";
 import type { SslConfig } from "../types";
 
+/**
+ * The socket is gone: closed, reset, or never connected. Thrown by the
+ * transport only, so callers can tell a dead connection from a failed query
+ * without pattern-matching server error text (which can echo the user's SQL).
+ */
+export class ConnectionLostError extends Error {
+  constructor(message = "Connection closed") {
+    super(message);
+    this.name = "ConnectionLostError";
+  }
+}
+
 export interface TlsOptions {
   enabled: boolean;
   rejectUnauthorized?: boolean;
@@ -222,14 +234,17 @@ export class TcpClient {
       socket.on("error", (error: unknown) => {
         const err = error instanceof Error ? error : new Error(String(error));
         if (!this.connected) {
+          // Failing to connect at all is a connect error, not a lost connection.
           reject(err);
+          this.handleError(err);
+          return;
         }
-        this.handleError(err);
+        this.handleError(new ConnectionLostError(err.message));
       });
 
       socket.on("close", () => {
         this.connected = false;
-        this.rejectPendingMessages(new Error("Connection closed"));
+        this.rejectPendingMessages(new ConnectionLostError());
       });
 
       socket.on("timeout", () => {
@@ -264,7 +279,7 @@ export class TcpClient {
   async send(data: Buffer): Promise<void> {
     return new Promise((resolve, reject) => {
       if (!this.socket || !this.connected) {
-        reject(new Error("Not connected"));
+        reject(new ConnectionLostError("Not connected"));
         return;
       }
 
@@ -328,7 +343,7 @@ export class TcpClient {
       this.socket = null;
       this.connected = false;
       this.buffer.clear();
-      this.rejectPendingMessages(new Error("Connection closed"));
+      this.rejectPendingMessages(new ConnectionLostError());
     }
   }
 

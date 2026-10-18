@@ -84,7 +84,10 @@ export default function QueryScreen() {
     }
   }, [connect, connection, haptic]);
 
-  const instance = connection?.instance;
+  // Only a connected instance is handed to the schema browser and Builder.
+  // While reconnecting, the new instance exists but isn't logged in yet, and
+  // describing tables on it would fail (and used to abort the reconnect).
+  const instance = connection?.state.status === "connected" ? connection.instance : undefined;
   const type = connection?.config.type;
   const schemaSource = useMemo(
     () => (instance && type && connectionId ? { id: connectionId, instance, type } : null),
@@ -170,7 +173,9 @@ export default function QueryScreen() {
     );
   }
 
-  const connectionLost = connection.state.status === "error";
+  // "connecting" counts too, so the block (with "Reconnecting…") stays up
+  // while Reconnect runs instead of vanishing the moment it starts.
+  const connectionLost = connection.state.status !== "connected";
   const idle = !runner.result && !runner.error && !runner.executing && !connectionLost;
 
   return (
@@ -197,7 +202,7 @@ export default function QueryScreen() {
             showTemplates={settings.showSqlTemplates}
             showQuickActions={settings.showQuickActions}
           />
-        ) : connectionId && connection.instance ? (
+        ) : connectionId && instance ? (
           <YStack
             height={380}
             padding={12}
@@ -208,7 +213,7 @@ export default function QueryScreen() {
             <BuilderView
               connectionId={connectionId}
               type={connection.config.type}
-              instance={connection.instance}
+              instance={instance}
               onQueryChange={setQuery}
             />
           </YStack>

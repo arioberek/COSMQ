@@ -57,7 +57,9 @@ const footerLink =
 		</nav>
 	</header>
 
-	<main id="main" class="w-full overflow-x-hidden">
+	<!-- overflow-x-clip, not hidden: "hidden" makes <main> a scroll container, and the
+	     scroll-driven reveals would bind to it (it never scrolls) instead of the page. -->
+	<main id="main" class="w-full overflow-x-clip">
 		<HeroSection client:idle phoneSrc={phone.src} />
 
 		<FeaturesSection />

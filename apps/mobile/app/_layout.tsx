@@ -7,7 +7,7 @@ import { router, Stack, usePathname } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { AppState, type AppStateStatus, Platform } from "react-native";
+import { AppState, type AppStateStatus, Platform, StyleSheet, View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { Portal, useTheme } from "tamagui";
@@ -52,14 +52,16 @@ function RootLayoutContent() {
   pathnameRef.current = pathname;
 
   // The lock screen lives in a portal above every in-app sheet and dialog, but
-  // a natively presented modal (the connection form, which holds passwords)
-  // sits above the whole React root. Dismiss it when the app locks; the
+  // on iOS a natively presented modal (the connection form, which holds
+  // passwords) sits above the whole React root. Dismiss it when the app locks; the
   // unsaved form is discarded, which is the safer trade.
   const lock = useCallback(() => {
     hasAuthenticatedRef.current = false;
     setIsLocked(true);
+    // iOS only: on Android the native-stack modal is an ordinary screen that
+    // the lock screen already covers.
     if (
-      Platform.OS !== "web" &&
+      Platform.OS === "ios" &&
       pathnameRef.current.startsWith("/connection/new") &&
       router.canDismiss()
     ) {
@@ -127,32 +129,51 @@ function RootLayoutContent() {
   return (
     <>
       <StatusBar style={scheme === "dark" ? "light" : "dark"} />
-      <Stack
-        screenOptions={{
-          headerStyle: { backgroundColor: theme.background.val },
-          headerLargeStyle: { backgroundColor: theme.background.val },
-          headerShadowVisible: false,
-          headerLargeTitleShadowVisible: false,
-          headerTintColor: theme.accent.val,
-          headerTitleStyle: { color: theme.color.val },
-          headerLargeTitleStyle: { color: theme.color.val },
-          headerBackButtonDisplayMode: "minimal",
-          contentStyle: { backgroundColor: theme.background.val },
-        }}
+      {/* While locked, the app underneath is hidden from VoiceOver/TalkBack too:
+          inside the portal the lock screen has no siblings, so its own
+          accessibilityViewIsModal can't hide them. */}
+      <View
+        style={styles.fill}
+        accessibilityElementsHidden={showLockScreen}
+        importantForAccessibility={showLockScreen ? "no-hide-descendants" : "auto"}
+        aria-hidden={showLockScreen}
       >
-        <Stack.Screen name="index" options={{ title: "Connections", headerLargeTitle: true }} />
-        <Stack.Screen
-          name="connection/new"
-          options={{
-            title: "New Connection",
-            presentation: "modal",
+        <Stack
+          screenOptions={{
             headerStyle: { backgroundColor: theme.background.val },
+            headerLargeStyle: { backgroundColor: theme.background.val },
+            headerShadowVisible: false,
+            headerLargeTitleShadowVisible: false,
+            headerTintColor: theme.accent.val,
+            headerTitleStyle: { color: theme.color.val },
+            headerLargeTitleStyle: { color: theme.color.val },
+            headerBackButtonDisplayMode: "minimal",
+            contentStyle: { backgroundColor: theme.background.val },
           }}
+        >
+          <Stack.Screen name="index" options={{ title: "Connections", headerLargeTitle: true }} />
+          <Stack.Screen
+            name="connection/new"
+            options={{
+              title: "New Connection",
+              presentation: "modal",
+              headerStyle: { backgroundColor: theme.background.val },
+            }}
+          />
+          <Stack.Screen name="connection/[id]" options={{ title: "" }} />
+          <Stack.Screen name="query/[connectionId]" options={{ title: "Query" }} />
+          <Stack.Screen name="settings" options={{ title: "Settings", headerLargeTitle: true }} />
+        </Stack>
+      </View>
+      {/* Opaque cover in the same render as the lock: the portal mounts its
+          content a frame later, which could flash the connection list on a
+          cold start. */}
+      {showLockScreen ? (
+        <View
+          pointerEvents="none"
+          style={[StyleSheet.absoluteFill, { backgroundColor: theme.background.val }]}
         />
-        <Stack.Screen name="connection/[id]" options={{ title: "" }} />
-        <Stack.Screen name="query/[connectionId]" options={{ title: "Query" }} />
-        <Stack.Screen name="settings" options={{ title: "Settings", headerLargeTitle: true }} />
-      </Stack>
+      ) : null}
       {/* Highest portal in the app (dialogs use 300000, sheets 200000), kept
           mounted so the lock screen's exit fade can play when it unmounts. */}
       <Portal zIndex={1000000}>
@@ -195,3 +216,7 @@ export default function RootLayout() {
     </GestureHandlerRootView>
   );
 }
+
+const styles = StyleSheet.create({
+  fill: { flex: 1 },
+});

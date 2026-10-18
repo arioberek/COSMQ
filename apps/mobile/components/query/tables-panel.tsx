@@ -24,7 +24,10 @@ export function useSchemaBrowser(
     try {
       setTables(await source.instance.listTables());
     } catch (err) {
-      showAlert("Couldn’t Load Tables", describeConnectionError(source.id, err, source.type));
+      showAlert(
+        "Couldn’t Load Tables",
+        describeConnectionError(source.id, err, source.type, source.instance),
+      );
     } finally {
       setLoading(false);
     }
@@ -47,7 +50,10 @@ export function useSchemaBrowser(
         setTableColumns((prev) => ({ ...prev, [tableName]: columns }));
         setExpandedTable(tableName);
       } catch (err) {
-        showAlert("Couldn’t Load Columns", describeConnectionError(source.id, err, source.type));
+        showAlert(
+          "Couldn’t Load Columns",
+          describeConnectionError(source.id, err, source.type, source.instance),
+        );
       }
     },
     [source, expandedTable, tableColumns, tables, showAlert],

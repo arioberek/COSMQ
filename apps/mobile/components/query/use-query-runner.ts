@@ -8,7 +8,7 @@ import {
   type TransactionStatements,
 } from "../../lib/sql/transactions";
 import { addToQueryHistory } from "../../lib/storage/query-history";
-import type { ConnectionConfig, QueryResult } from "../../lib/types";
+import type { ConnectionConfig, DatabaseConnection, QueryResult } from "../../lib/types";
 import { useConnectionStore } from "../../stores/connection";
 import { useSettingsStore } from "../../stores/settings";
 
@@ -64,17 +64,56 @@ export function useQueryRunner(
   // Latest transaction, for the unmount cleanup below.
   const transactionRef = useRef(transactionState);
   transactionRef.current = transactionState;
+  // A wrapped statement in flight: "begin" while BEGIN runs, "statement" once
+  // the session is inside the transaction but the banner isn't up yet.
+  const txPhase = useRef<"idle" | "begin" | "statement">("idle");
+  const pendingStatements = useRef<TransactionStatements | null>(null);
+  const unmounted = useRef(false);
+
+  // The connected instance, and the one the open transaction lives on. If they
+  // differ (dropped, reconnected), the transaction is gone server-side.
+  const liveInstance = useConnectionStore((state) => {
+    const conn = connectionId ? state.activeConnections.get(connectionId) : undefined;
+    return conn?.state.status === "connected" ? conn.instance : null;
+  });
+  const transactionInstance = useRef<DatabaseConnection | null>(null);
 
   // Leaving the screen with a transaction open would leave the session inside
-  // BEGIN with its locks held and no banner to finish it. Roll it back.
+  // BEGIN with its locks held and no banner to finish it. Roll it back. Queries
+  // are serialized per connection, so this lands after any statement in flight.
+  // A wrap still in its BEGIN step rolls itself back (see executeWithTransaction).
   useEffect(() => {
+    unmounted.current = false;
     return () => {
+      unmounted.current = true;
       const current = transactionRef.current;
-      if (current.active && current.statements && connectionId) {
-        executeQuery(connectionId, current.statements.rollback).catch(() => {});
+      const statements = current.active
+        ? current.statements
+        : txPhase.current === "statement"
+          ? pendingStatements.current
+          : null;
+      if (statements && connectionId) {
+        executeQuery(connectionId, statements.rollback).catch(() => {});
       }
     };
   }, [connectionId, executeQuery]);
+
+  // A dropped or replaced connection takes its transaction with it. Clear the
+  // banner instead of offering a Commit that would run on a fresh session and
+  // report success for work the server already threw away.
+  useEffect(() => {
+    if (!transactionState.active) return;
+    if (liveInstance === transactionInstance.current) return;
+    transactionInstance.current = null;
+    setTransactionState({ active: false, statements: null });
+    setTransactionDeadline(null);
+    setTransactionTimeLeft(0);
+    setBannerVisible(false);
+    haptic.error();
+    setError(
+      "The connection dropped while a transaction was open. The server rolled it back, so nothing from it was committed.",
+    );
+  }, [liveInstance, transactionState.active, haptic]);
 
   const finalizeTransaction = useCallback(
     async (action: "commit" | "rollback", auto = false) => {
@@ -141,8 +180,20 @@ export function useQueryRunner(
       const autoRollbackSeconds = settings.autoRollbackEnabled
         ? normalizeAutoRollbackSeconds(settings.autoRollbackSeconds)
         : null;
+      txPhase.current = "begin";
+      pendingStatements.current = transaction;
       await executeQuery(connectionId, transaction.begin);
+      if (unmounted.current) {
+        // The screen closed during BEGIN: don't run the statement at all.
+        await executeQuery(connectionId, transaction.rollback).catch(() => {});
+        return;
+      }
+      txPhase.current = "statement";
       const queryResult = await executeQuery(connectionId, sql);
+      // Closed while the statement ran: the cleanup already queued the rollback.
+      if (unmounted.current) return;
+      transactionInstance.current =
+        useConnectionStore.getState().activeConnections.get(connectionId)?.instance ?? null;
       setResult(queryResult);
       setExecutedQuery(sql);
       setTransactionState({ active: true, statements: transaction });
@@ -161,6 +212,8 @@ export function useQueryRunner(
       } catch {}
       setError(err instanceof Error ? err.message : "Query failed");
     } finally {
+      txPhase.current = "idle";
+      pendingStatements.current = null;
       setExecuting(false);
     }
   };

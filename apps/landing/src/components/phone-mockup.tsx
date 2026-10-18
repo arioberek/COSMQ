@@ -1,25 +1,20 @@
-import { motion } from "motion/react";
 import { Iphone } from "./ui/iphone";
 
 /**
- * Frames the connection-list screenshot in an iPhone mockup with an entrance animation.
+ * Frames the connection-list screenshot in an iPhone mockup with a CSS entrance.
  */
 export function PhoneMockup({ src }: { src: string }) {
 	return (
-		<motion.div
-			initial={{ opacity: 0, y: 32 }}
-			animate={{ opacity: 1, y: 0 }}
-			transition={{
-				duration: 0.6,
-				delay: 0.25,
-				ease: [0.23, 1, 0.32, 1],
-			}}
-			className="relative w-[220px] md:w-[260px]"
+		// CSS entrance (`.hero-reveal`), so the phone is painted with the server
+		// HTML instead of waiting for the hero island to hydrate.
+		<div
+			className="hero-reveal relative w-[220px] md:w-[260px]"
+			style={{ animationDelay: "250ms" }}
 		>
 			<Iphone src={src} />
 
 			<div className="absolute -bottom-6 left-[10%] right-[10%] h-[40px] bg-[radial-gradient(ellipse,hsl(var(--accent)/0.14)_0%,transparent_70%)] blur-xl pointer-events-none" />
 			<div className="absolute -bottom-4 left-[5%] right-[5%] h-[30px] bg-[radial-gradient(ellipse,hsl(var(--shadow-tint)/0.6)_0%,transparent_70%)] blur-lg pointer-events-none" />
-		</motion.div>
+		</div>
 	);
 }

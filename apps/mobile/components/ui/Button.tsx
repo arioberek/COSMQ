@@ -6,7 +6,8 @@ import { AppText } from "./Text";
 // iOS button styles: filled (prominent), tinted, gray, plain, destructive.
 const StyledButton = styled(TamaguiButton, {
   // Own name so Tamagui's `*_Button` sub-themes (white `$color`) don't leak
-  // into non-string children rendered with the default AppText tone.
+  // into non-string children rendered with the default AppText tone. Each tone
+  // pins its hover background, which used to come from that sub-theme (web).
   name: "AppButton",
   flexDirection: "row",
   alignItems: "center",
@@ -19,13 +20,30 @@ const StyledButton = styled(TamaguiButton, {
 
   variants: {
     tone: {
-      filled: { backgroundColor: "$accentFill", pressStyle: { backgroundColor: "$accentFill" } },
-      tinted: { backgroundColor: "$accentMuted", pressStyle: { backgroundColor: "$accentMuted" } },
-      gray: { backgroundColor: "$fill", pressStyle: { backgroundColor: "$fill" } },
-      plain: { backgroundColor: "transparent", pressStyle: { backgroundColor: "transparent" } },
+      filled: {
+        backgroundColor: "$accentFill",
+        pressStyle: { backgroundColor: "$accentFill" },
+        hoverStyle: { backgroundColor: "$accentFill" },
+      },
+      tinted: {
+        backgroundColor: "$accentMuted",
+        pressStyle: { backgroundColor: "$accentMuted" },
+        hoverStyle: { backgroundColor: "$accentMuted" },
+      },
+      gray: {
+        backgroundColor: "$fill",
+        pressStyle: { backgroundColor: "$fill" },
+        hoverStyle: { backgroundColor: "$fill" },
+      },
+      plain: {
+        backgroundColor: "transparent",
+        pressStyle: { backgroundColor: "transparent" },
+        hoverStyle: { backgroundColor: "transparent" },
+      },
       destructive: {
         backgroundColor: "$dangerMuted",
         pressStyle: { backgroundColor: "$dangerMuted" },
+        hoverStyle: { backgroundColor: "$dangerMuted" },
       },
     },
     buttonSize: {

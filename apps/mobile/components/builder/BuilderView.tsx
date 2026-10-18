@@ -81,7 +81,7 @@ export const BuilderView = memo(function BuilderView({
       setTables(list);
     } catch (err) {
       if (tablesReqRef.current !== reqId) return;
-      setError(describeConnectionError(connectionId, err, type));
+      setError(describeConnectionError(connectionId, err, type, instance));
     } finally {
       if (tablesReqRef.current === reqId) setLoadingTables(false);
     }
@@ -109,7 +109,7 @@ export const BuilderView = memo(function BuilderView({
         setColumns(cols);
       } catch (err) {
         if (columnsReqRef.current !== reqId) return;
-        setError(describeConnectionError(connectionId, err, type));
+        setError(describeConnectionError(connectionId, err, type, instance));
         setColumns([]);
       } finally {
         if (columnsReqRef.current === reqId) setLoadingColumns(false);
