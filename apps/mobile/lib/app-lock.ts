@@ -1,4 +1,5 @@
 import * as LocalAuthentication from "expo-local-authentication";
+import { Platform } from "react-native";
 
 export type BiometricType = "fingerprint" | "facial" | "iris" | "none";
 
@@ -41,6 +42,14 @@ export async function checkBiometricCapability(): Promise<BiometricCapability> {
   };
 }
 
+/** True when the system prompt has something to check: biometrics or a device passcode. */
+export function canAuthenticate(capability: BiometricCapability): boolean {
+  if (!capability.isSupported) return false;
+  return (
+    capability.isEnrolled || capability.securityLevel !== LocalAuthentication.SecurityLevel.NONE
+  );
+}
+
 export type AuthResult = {
   success: boolean;
   error?: string;
@@ -53,15 +62,16 @@ export async function authenticate(promptMessage?: string): Promise<AuthResult> 
   if (!capability.isSupported) {
     return {
       success: false,
-      error: "Biometric authentication is not supported on this device",
+      error: "This device doesn’t support biometric authentication.",
     };
   }
 
-  if (!capability.isEnrolled) {
+  // With no biometrics enrolled, the system prompt falls back to the device
+  // passcode. Only a device with neither has nothing to authenticate against.
+  if (!canAuthenticate(capability)) {
     return {
       success: false,
-      error:
-        "No biometric credentials enrolled. Please set up Face ID, Touch ID, or fingerprint in device settings.",
+      error: "Set up a passcode, Face ID, Touch ID or a fingerprint in your device settings.",
     };
   }
 
@@ -80,20 +90,21 @@ export async function authenticate(promptMessage?: string): Promise<AuthResult> 
     if (result.error === "user_cancel") {
       return {
         success: false,
-        warning: "Authentication cancelled",
+        warning: "Authentication canceled.",
       };
     }
 
     if (result.error === "lockout") {
       return {
         success: false,
-        error: "Too many failed attempts. Please try again later.",
+        error: "Too many failed attempts. Try again later.",
       };
     }
 
+    // `result.error` is a machine code such as "not_enrolled", not a sentence.
     return {
       success: false,
-      error: result.error ?? "Authentication failed",
+      error: "Authentication failed. Try again.",
     };
   } catch (err) {
     return {
@@ -108,7 +119,7 @@ export function getBiometricDisplayName(types: BiometricType[]): string {
     return "Face ID";
   }
   if (types.includes("fingerprint")) {
-    return "Touch ID / Fingerprint";
+    return Platform.OS === "ios" ? "Touch ID" : "Fingerprint";
   }
   if (types.includes("iris")) {
     return "Iris Scanner";

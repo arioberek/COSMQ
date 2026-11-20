@@ -650,7 +650,7 @@ export default function NewConnectionScreen() {
                 <XStack alignItems="center" gap={6}>
                   <Ionicons name="alert-circle" size={16} color={theme.danger.val} />
                   <AppText variant="subhead" emphasized tone="danger">
-                    Connection Failed
+                    Couldn’t Connect
                   </AppText>
                 </XStack>
                 <AppText variant="footnote" tone="danger" selectable>

@@ -7,7 +7,14 @@ import { router, Stack, usePathname } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { AppState, type AppStateStatus, Platform, StyleSheet, View } from "react-native";
+import {
+  Appearance,
+  AppState,
+  type AppStateStatus,
+  Platform,
+  StyleSheet,
+  View,
+} from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { Portal, useTheme } from "tamagui";
@@ -72,6 +79,13 @@ function RootLayoutContent() {
   useEffect(() => {
     loadSettings();
   }, [loadSettings]);
+
+  // A forced Light or Dark has to reach the native layer too. Otherwise alerts,
+  // action sheets and the keyboard keep following the system appearance.
+  useEffect(() => {
+    if (!settingsLoaded || Platform.OS === "web") return;
+    Appearance.setColorScheme(settings.appearance === "system" ? null : settings.appearance);
+  }, [settings.appearance, settingsLoaded]);
 
   useEffect(() => {
     if (!settingsLoaded) return;

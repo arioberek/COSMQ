@@ -1,5 +1,6 @@
 import { memo, type ReactNode } from "react";
 import { ActivityIndicator, StyleSheet } from "react-native";
+import { useReducedMotion } from "react-native-reanimated";
 import { type GetProps, styled, Button as TamaguiButton, useTheme } from "tamagui";
 import { AppText } from "./Text";
 
@@ -14,7 +15,6 @@ const StyledButton = styled(TamaguiButton, {
   justifyContent: "center",
   gap: "$sm",
   borderWidth: 0,
-  animation: "quick",
   // Press feedback is the scale alone; dimming as well reads as "disabled".
   pressStyle: { scale: 0.97 },
 
@@ -62,27 +62,12 @@ const StyledButton = styled(TamaguiButton, {
 const ANIMATE_ONLY = ["transform", "opacity"];
 
 type Tone = "filled" | "tinted" | "gray" | "plain" | "destructive";
-// Legacy names kept so existing call sites read naturally.
-type Variant = Tone | "primary" | "secondary" | "outlined" | "ghost" | "danger";
-
-const TONE_FOR: Record<Variant, Tone> = {
-  filled: "filled",
-  tinted: "tinted",
-  gray: "gray",
-  plain: "plain",
-  destructive: "destructive",
-  primary: "filled",
-  secondary: "gray",
-  outlined: "gray",
-  ghost: "plain",
-  danger: "destructive",
-};
 
 type ButtonProps = Omit<
   GetProps<typeof StyledButton>,
   "children" | "size" | "buttonSize" | "tone" | "variant"
 > & {
-  variant?: Variant;
+  variant?: Tone;
   size?: "sm" | "md" | "lg";
   loading?: boolean;
   children: ReactNode;
@@ -97,7 +82,8 @@ export const Button = memo(function Button({
   ...props
 }: ButtonProps) {
   const theme = useTheme();
-  const tone = TONE_FOR[variant];
+  const tone = variant;
+  const reducedMotion = useReducedMotion();
   const isDisabled = disabled || loading;
 
   const textColor =
@@ -113,6 +99,8 @@ export const Button = memo(function Button({
     <StyledButton
       tone={tone}
       buttonSize={size}
+      // With Reduce Motion on, the press scale applies without easing.
+      animation={reducedMotion ? null : "quick"}
       disabled={isDisabled}
       opacity={isDisabled ? 0.45 : 1}
       // Only transform/opacity animate. Tamagui's RN animation driver can't

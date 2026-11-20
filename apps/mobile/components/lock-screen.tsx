@@ -8,6 +8,7 @@ import AlienLogo from "../assets/logos/alien.svg";
 import {
   authenticate,
   type BiometricCapability,
+  canAuthenticate as canAuthenticateWith,
   checkBiometricCapability,
   getBiometricDisplayName,
 } from "../lib/app-lock";
@@ -38,15 +39,21 @@ export const LockScreen = memo(function LockScreen({ onUnlock }: LockScreenProps
 
   onUnlockRef.current = onUnlock;
 
-  useEffect(() => {
-    let mounted = true;
+  const mountedRef = useRef(true);
+
+  const refreshCapability = useCallback(() => {
     checkBiometricCapability().then((cap) => {
-      if (mounted) setCapability(cap);
+      if (mountedRef.current) setCapability(cap);
     });
-    return () => {
-      mounted = false;
-    };
   }, []);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    refreshCapability();
+    return () => {
+      mountedRef.current = false;
+    };
+  }, [refreshCapability]);
 
   const handleUnlock = useCallback(async () => {
     if (isAuthenticating) return;
@@ -73,18 +80,21 @@ export const LockScreen = memo(function LockScreen({ onUnlock }: LockScreenProps
     }
   }, [isAuthenticating]);
 
+  // Biometrics removed after App Lock was turned on: the device passcode still unlocks.
+  const canAuthenticate = capability ? canAuthenticateWith(capability) : false;
+
   useEffect(() => {
-    if (capability?.isEnrolled && !hasTriedAutoAuth.current) {
+    if (canAuthenticate && !hasTriedAutoAuth.current) {
       hasTriedAutoAuth.current = true;
       handleUnlock();
     }
-  }, [capability?.isEnrolled, handleUnlock]);
+  }, [canAuthenticate, handleUnlock]);
 
-  const biometricName = capability
-    ? getBiometricDisplayName(capability.availableTypes)
-    : "Biometrics";
-
-  const canAuthenticate = capability?.isSupported && capability?.isEnrolled;
+  const biometricName = !capability
+    ? "Biometrics"
+    : capability.isEnrolled
+      ? getBiometricDisplayName(capability.availableTypes)
+      : "Passcode";
 
   const message = error
     ? error
@@ -93,7 +103,7 @@ export const LockScreen = memo(function LockScreen({ onUnlock }: LockScreenProps
       : capability && !canAuthenticate
         ? !capability.isSupported
           ? "This device doesn’t support biometric authentication."
-          : "No biometrics are enrolled. Set up Face ID, Touch ID or a fingerprint in your device settings."
+          : "This device has no passcode or biometrics. Set one up in your device settings, then come back."
         : "Your database connections are protected.";
 
   const messageTone = error ? "danger" : warning ? "warning" : "secondary";
@@ -128,7 +138,7 @@ export const LockScreen = memo(function LockScreen({ onUnlock }: LockScreenProps
             height={76}
             borderRadius="$lg"
             style={{ borderCurve: "continuous" }}
-            backgroundColor="$accent"
+            backgroundColor="$accentFill"
             alignItems="center"
             justifyContent="center"
             marginBottom="$sm"
@@ -164,9 +174,11 @@ export const LockScreen = memo(function LockScreen({ onUnlock }: LockScreenProps
             >
               <Ionicons
                 name={
-                  capability.availableTypes.includes("facial")
-                    ? "scan-outline"
-                    : "finger-print-outline"
+                  !capability?.isEnrolled
+                    ? "keypad-outline"
+                    : capability.availableTypes.includes("facial")
+                      ? "scan-outline"
+                      : "finger-print-outline"
                 }
                 size={20}
                 color={theme.textOnAccent.val}
@@ -174,6 +186,11 @@ export const LockScreen = memo(function LockScreen({ onUnlock }: LockScreenProps
               <AppText variant="headline" tone="onAccent" numberOfLines={1}>
                 Unlock with {biometricName}
               </AppText>
+            </Button>
+          ) : capability.isSupported ? (
+            // Nothing to authenticate with yet. Re-check after the user sets a passcode.
+            <Button size="lg" variant="gray" alignSelf="stretch" onPress={refreshCapability}>
+              Check Again
             </Button>
           ) : null}
         </YStack>

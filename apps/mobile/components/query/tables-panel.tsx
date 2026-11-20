@@ -163,7 +163,7 @@ export const TablesPanel = memo(function TablesPanel({
               style={{ textAlign: "center" }}
               padding="$md"
             >
-              {loading ? "Loading…" : "No Tables"}
+              {loading ? "Loading…" : "No tables found."}
             </AppText>
           ) : null}
           {tables.map((table, index) => {
