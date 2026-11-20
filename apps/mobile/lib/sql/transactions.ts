@@ -54,7 +54,7 @@ const aggregateWrites = (command: Record<string, unknown>): string | null => {
 
 /** How a dialect lexes comments and quoted text. They differ enough to hide a statement. */
 type LexProfile = {
-  /** Backslash escapes a quote inside strings (MySQL, MariaDB). */
+  /** Backslash escapes a quote inside strings. A server setting on MySQL and PostgreSQL. */
   backslashEscapes: boolean;
   /** `$tag$ ... $tag$` quoting (PostgreSQL, CockroachDB). */
   dollarQuotes: boolean;
@@ -64,6 +64,14 @@ type LexProfile = {
   dashNeedsSpace: boolean;
   /** Backticks quote identifiers (MySQL, MariaDB, SQLite). */
   backtickQuotes: boolean;
+  /** `[name]` quotes identifiers (SQLite). */
+  bracketQuotes: boolean;
+  // Comments opened with `/*!` or `/*M!` run as SQL (MySQL, MariaDB).
+  executableComments: boolean;
+  /** Block comments nest (PostgreSQL, CockroachDB). */
+  nestedComments: boolean;
+  /** A lone carriage return ends a line comment (PostgreSQL, CockroachDB). */
+  crEndsLineComment: boolean;
 };
 
 const POSTGRES_LEX: LexProfile = {
@@ -72,6 +80,10 @@ const POSTGRES_LEX: LexProfile = {
   hashComments: false,
   dashNeedsSpace: false,
   backtickQuotes: false,
+  bracketQuotes: false,
+  executableComments: false,
+  nestedComments: true,
+  crEndsLineComment: true,
 };
 const MYSQL_LEX: LexProfile = {
   backslashEscapes: true,
@@ -79,6 +91,10 @@ const MYSQL_LEX: LexProfile = {
   hashComments: true,
   dashNeedsSpace: true,
   backtickQuotes: true,
+  bracketQuotes: false,
+  executableComments: true,
+  nestedComments: false,
+  crEndsLineComment: false,
 };
 const SQLITE_LEX: LexProfile = {
   backslashEscapes: false,
@@ -86,21 +102,39 @@ const SQLITE_LEX: LexProfile = {
   hashComments: false,
   dashNeedsSpace: false,
   backtickQuotes: true,
+  bracketQuotes: true,
+  executableComments: false,
+  nestedComments: false,
+  crEndsLineComment: false,
 };
 
-/** The profiles to check: one for a known dialect, all of them when it is unknown. */
+/**
+ * Whether backslash escapes a quote is a server setting the app does not read:
+ * `NO_BACKSLASH_ESCAPES` on MySQL, `standard_conforming_strings` on PostgreSQL.
+ * Each reading can hide a statement the other one shows, so both are checked.
+ */
+const withBothBackslashModes = (lex: LexProfile): LexProfile[] => [
+  lex,
+  { ...lex, backslashEscapes: !lex.backslashEscapes },
+];
+
+/** The profiles to check: those of a known dialect, all of them when it is unknown. */
 const lexProfilesFor = (type?: DatabaseType): LexProfile[] => {
   switch (type) {
     case "postgres":
     case "cockroachdb":
-      return [POSTGRES_LEX];
+      return withBothBackslashModes(POSTGRES_LEX);
     case "mysql":
     case "mariadb":
-      return [MYSQL_LEX];
+      return withBothBackslashModes(MYSQL_LEX);
     case "sqlite":
       return [SQLITE_LEX];
     default:
-      return [POSTGRES_LEX, MYSQL_LEX, SQLITE_LEX];
+      return [
+        ...withBothBackslashModes(POSTGRES_LEX),
+        ...withBothBackslashModes(MYSQL_LEX),
+        SQLITE_LEX,
+      ];
   }
 };
 
@@ -142,6 +176,32 @@ const stripSql = (sql: string, lex: LexProfile): string => {
     return length;
   };
 
+  /** The index where a line comment starting at `i` ends. */
+  const lineCommentEnd = (): number => {
+    let j = i;
+    while (j < length && sql[j] !== "\n" && !(lex.crEndsLineComment && sql[j] === "\r")) j += 1;
+    return j;
+  };
+
+  /** The index after the block comment starting at `i`. */
+  const blockCommentEnd = (): number => {
+    let depth = 1;
+    let j = i + 2;
+    while (j < length) {
+      if (sql[j] === "*" && sql[j + 1] === "/") {
+        depth -= 1;
+        j += 2;
+        if (depth === 0) return j;
+      } else if (lex.nestedComments && sql[j] === "/" && sql[j + 1] === "*") {
+        depth += 1;
+        j += 2;
+      } else {
+        j += 1;
+      }
+    }
+    return length;
+  };
+
   while (i < length) {
     const ch = sql[i];
     const next = sql[i + 1];
@@ -149,37 +209,33 @@ const stripSql = (sql: string, lex: LexProfile): string => {
     if (ch === "-" && next === "-") {
       const after = sql[i + 2];
       if (!lex.dashNeedsSpace || after === undefined || /\s/.test(after)) {
-        const end = sql.indexOf("\n", i);
-        i = end === -1 ? length : end;
+        i = lineCommentEnd();
         out += " ";
         continue;
       }
     }
 
     if (ch === "#" && lex.hashComments) {
-      const end = sql.indexOf("\n", i);
-      i = end === -1 ? length : end;
+      i = lineCommentEnd();
       out += " ";
       continue;
     }
 
     if (ch === "/" && next === "*") {
-      // `/*! ... */` and `/*M! ... */` run as SQL on MySQL and MariaDB: keep the body.
-      const executable = /^\/\*M?!\d*/.exec(sql.slice(i, i + 12));
+      // Executable comments run as SQL: keep the body.
+      const executable = lex.executableComments ? /^\/\*M?!\d*/.exec(sql.slice(i, i + 12)) : null;
       if (executable) {
         i += executable[0].length;
         out += " ";
         continue;
       }
-      // Not nested, even on PostgreSQL: ending at the first `*/` only reveals more text.
-      const end = sql.indexOf("*/", i + 2);
-      i = end === -1 ? length : end + 2;
+      i = blockCommentEnd();
       out += " ";
       continue;
     }
 
     // The closing marker of an executable comment whose body was kept.
-    if (ch === "*" && next === "/") {
+    if (ch === "*" && next === "/" && lex.executableComments) {
       i += 2;
       out += " ";
       continue;
@@ -209,17 +265,27 @@ const stripSql = (sql: string, lex: LexProfile): string => {
       continue;
     }
 
+    if (ch === "[" && lex.bracketQuotes) {
+      // No escape inside: the identifier ends at the first `]`.
+      const end = sql.indexOf("]", i + 1);
+      i = end === -1 ? length : end + 1;
+      out += "[]";
+      continue;
+    }
+
     if (ch === "$" && lex.dollarQuotes) {
       const prev = sql[i - 1];
       const tag =
         prev === undefined || !IDENTIFIER_CHAR.test(prev) ? DOLLAR_TAG.exec(sql.slice(i)) : null;
       if (tag) {
-        // The body may be a DO block or function that runs, so it stays visible.
-        // It is copied as-is: quotes and comment markers inside it are plain text.
+        // The body may be a DO block or function that runs, so it stays visible, twice.
+        // Read as SQL, so a comment in it cannot pair `FOR` with a real `UPDATE`.
+        // And as written, because in another language its quotes and comment
+        // markers mean something else.
         const bodyStart = i + tag[0].length;
         const close = sql.indexOf(tag[0], bodyStart);
-        const bodyEnd = close === -1 ? length : close;
-        out += ` ${sql.slice(bodyStart, bodyEnd)} `;
+        const body = sql.slice(bodyStart, close === -1 ? length : close);
+        out += ` ${stripSql(body, lex)} ; ${body} `;
         i = close === -1 ? length : close + tag[0].length;
         continue;
       }
