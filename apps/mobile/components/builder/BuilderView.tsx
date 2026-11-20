@@ -313,7 +313,13 @@ export const BuilderView = memo(function BuilderView({
         title={sql ? "Table" : "Collection"}
         options={tableOptions}
         selected={currentTableId ? [currentTableId] : []}
-        emptyText={loadingTables ? "Loading…" : "No tables found. Tap Refresh."}
+        emptyText={
+          loadingTables
+            ? "Loading…"
+            : sql
+              ? "No tables found. Tap Refresh."
+              : "No collections found. Tap Refresh."
+        }
         onSelect={(ids) => {
           if (ids.length > 0) handlePickTable(ids[0]);
         }}

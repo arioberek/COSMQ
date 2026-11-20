@@ -24,7 +24,7 @@ export const QueryPlaceholder = memo(function QueryPlaceholder({
       </AppText>
       <AppText variant="subhead" tone="secondary" style={{ textAlign: "center" }} maxWidth={320}>
         {type === "mongodb"
-          ? "Try {} to list documents, or db.runCommand({listCollections:1})."
+          ? "Try a starter command, or tap Tables to browse collections."
           : "Try a starter query, or tap Tables to browse the schema."}
       </AppText>
       {starters.length > 0 ? (

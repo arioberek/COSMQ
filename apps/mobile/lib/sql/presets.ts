@@ -38,4 +38,6 @@ export const STARTER_QUERIES: Partial<Record<DatabaseType, string[]>> = {
   mysql: ["SELECT VERSION();", "SHOW DATABASES;", "SHOW TABLES;"],
   mariadb: ["SELECT VERSION();", "SHOW DATABASES;", "SHOW TABLES;"],
   sqlite: ["SELECT sqlite_version();", "SELECT name FROM sqlite_master WHERE type='table';"],
+  // MongoDB queries are JSON database commands, so the starters are too.
+  mongodb: ['{"listCollections": 1}', '{"ping": 1}', '{"buildInfo": 1}'],
 };

@@ -12,19 +12,19 @@ type QueryErrorProps = {
   onRetry: () => void;
   /** Defaults to "Query Failed". */
   title?: string;
-  /** Defaults to "Retry". */
+  /** Defaults to "Try Again". */
   actionLabel?: string;
   /** Shown while `retrying`. Defaults to "Retrying…". */
   busyLabel?: string;
 };
 
-/** `$dangerMuted` inset block with the selectable error and a Retry action. */
+/** `$dangerMuted` inset block with the selectable error and a Try Again action. */
 export const QueryError = memo(function QueryError({
   message,
   retrying,
   onRetry,
   title = "Query Failed",
-  actionLabel = "Retry",
+  actionLabel = "Try Again",
   busyLabel = "Retrying…",
 }: QueryErrorProps) {
   const theme = useTheme();

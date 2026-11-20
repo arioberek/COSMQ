@@ -34,7 +34,7 @@ const openUrl = (url: string) => {
 export default function SettingsScreen() {
   const theme = useTheme();
   const { settings, updateSettings } = useSettingsStore();
-  const appVersion = Constants.expoConfig?.version ?? "1.0.0";
+  const appVersion = Constants.expoConfig?.version ?? "0.0.0";
   const [biometricCapability, setBiometricCapability] = useState<BiometricCapability | null>(null);
   const versionTapCount = useRef(0);
   const versionTapTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -217,7 +217,7 @@ export default function SettingsScreen() {
 
       <ListSection
         title="Safety"
-        footer={`Confirmation asks before UPDATE, DELETE or DROP runs. Auto-rollback rolls back a transaction still open when the timer runs out (${AUTO_ROLLBACK_RANGE.min}–${AUTO_ROLLBACK_RANGE.max} seconds).`}
+        footer={`Confirmation asks before UPDATE, DELETE, DROP, TRUNCATE, ALTER, MERGE or REPLACE runs. Auto-rollback rolls back a transaction still open when the timer runs out (${AUTO_ROLLBACK_RANGE.min}–${AUTO_ROLLBACK_RANGE.max} seconds).`}
       >
         <ListRow
           icon={<ListIcon name="warning" color={theme.tileRed.val} />}
@@ -358,10 +358,10 @@ export default function SettingsScreen() {
         <ListRow
           icon={<ListIcon name="logo-github" color={theme.tileGray.val} />}
           title="GitHub"
-          value="arioberek/cosmq"
+          value="arioberek/COSMQ"
           accessory={linkIcon}
-          onPress={() => openUrl("https://github.com/arioberek/cosmq")}
-          accessibilityLabel="GitHub, arioberek/cosmq"
+          onPress={() => openUrl("https://github.com/arioberek/COSMQ")}
+          accessibilityLabel="GitHub, arioberek/COSMQ"
         />
       </ListSection>
 

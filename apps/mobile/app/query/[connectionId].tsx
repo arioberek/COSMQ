@@ -1,4 +1,3 @@
-import SegmentedControl from "@react-native-segmented-control/segmented-control";
 import * as Clipboard from "expo-clipboard";
 import { router, Stack, useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -17,6 +16,7 @@ import { TablesPanel, useSchemaBrowser } from "../../components/query/tables-pan
 import { TransactionBanner } from "../../components/query/transaction-banner";
 import { useQueryRunner } from "../../components/query/use-query-runner";
 import { ResultsView } from "../../components/results/ResultsView";
+import { Segmented } from "../../components/results/Segmented";
 import { Button, EmptyState } from "../../components/ui";
 import { useTheme } from "../../hooks/useTheme";
 import { useHaptic } from "../../lib/haptics";
@@ -183,13 +183,12 @@ export default function QueryScreen() {
       <Stack.Screen options={{ title: connection.config.name || "Query", headerRight }} />
 
       <View style={{ paddingHorizontal: 16, paddingTop: 8, paddingBottom: 16, gap: 12 }}>
-        <SegmentedControl
-          values={["SQL", "Builder"]}
+        {/* The wrapper re-mounts the Android fallback when the saved mode loads after mount. */}
+        <Segmented
+          // MongoDB takes JSON commands, so its text mode isn't "SQL".
+          values={[connection.config.type === "mongodb" ? "Query" : "SQL", "Builder"]}
           selectedIndex={MODES.indexOf(editorMode)}
-          onChange={(event) =>
-            handleEditorModeChange(MODES[event.nativeEvent.selectedSegmentIndex] ?? "editor")
-          }
-          appearance={theme.mode}
+          onChange={(index) => handleEditorModeChange(MODES[index] ?? "editor")}
           accessibilityLabel="Editor mode"
         />
 
