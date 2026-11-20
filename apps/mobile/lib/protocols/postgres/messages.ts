@@ -329,7 +329,8 @@ function md5Bytes(bytes: Uint8Array): string {
   return wordToHex(state[0]) + wordToHex(state[1]) + wordToHex(state[2]) + wordToHex(state[3]);
 }
 
-function md5Utf8(input: string): string {
+/** Hex MD5 of a UTF-8 string. Also used for MongoDB's SCRAM-SHA-1 password digest. */
+export function md5Utf8(input: string): string {
   return md5Bytes(utf8ToBytes(input));
 }
 

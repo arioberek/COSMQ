@@ -103,6 +103,8 @@ export class PostgresConnection implements DatabaseConnection {
     await this.client.send(startupMessage);
 
     let scramSession: ScramSession | null = null;
+    let scramVerified = false;
+    let authenticated = false;
 
     while (true) {
       const data = await this.client.receive();
@@ -119,6 +121,12 @@ export class PostgresConnection implements DatabaseConnection {
 
           switch (auth.authType) {
             case AuthType.OK:
+              // Once SCRAM starts, only a server that proved it knows the password
+              // may finish it. Otherwise an impostor could skip the proof.
+              if (scramSession && !scramVerified) {
+                throw new Error("Server ended SCRAM authentication without proving its identity");
+              }
+              authenticated = true;
               continue;
 
             case AuthType.CLEARTEXT_PASSWORD: {
@@ -183,6 +191,7 @@ export class PostgresConnection implements DatabaseConnection {
               }
               const serverFinal = auth.data.toString("utf8").replace(/\u0000+$/g, "");
               verifyScramServerFinal(scramSession, serverFinal);
+              scramVerified = true;
               continue;
             }
 
@@ -197,6 +206,11 @@ export class PostgresConnection implements DatabaseConnection {
         }
 
         if (message.type === "Z") {
+          // ReadyForQuery only counts after AuthenticationOk. A server that skips
+          // it has not finished authentication, and with SCRAM has not proved itself.
+          if (!authenticated) {
+            throw new Error("Server reported ready before finishing authentication");
+          }
           return;
         }
       }
