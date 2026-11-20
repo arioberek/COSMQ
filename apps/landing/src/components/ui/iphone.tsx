@@ -1,4 +1,4 @@
-import type { HTMLAttributes } from "react";
+import { type HTMLAttributes, type ReactNode, useId } from "react";
 
 const PHONE_WIDTH = 433;
 const PHONE_HEIGHT = 882;
@@ -18,12 +18,13 @@ const RADIUS_V = (SCREEN_RADIUS / SCREEN_HEIGHT) * 100;
 
 export interface IphoneProps extends HTMLAttributes<HTMLDivElement> {
 	src?: string;
-	videoSrc?: string;
+	/** Rendered inside the screen instead of `src`, e.g. several stacked screenshots. */
+	children?: ReactNode;
 }
 
-export function Iphone({ src, videoSrc, className, style, ...props }: IphoneProps) {
-	const hasVideo = !!videoSrc;
-	const hasMedia = hasVideo || !!src;
+export function Iphone({ src, children, className, style, ...props }: IphoneProps) {
+	const hasMedia = !!children || !!src;
+	const maskId = `screenPunch-${useId().replace(/:/g, "")}`;
 
 	return (
 		<div
@@ -34,9 +35,11 @@ export function Iphone({ src, videoSrc, className, style, ...props }: IphoneProp
 			}}
 			{...props}
 		>
-			{hasVideo && (
+			{hasMedia && (
+				// The screenshots have no status bar. The black inset stands in for one,
+				// so the app's header clears the Dynamic Island.
 				<div
-					className="pointer-events-none absolute z-0 overflow-hidden"
+					className="pointer-events-none absolute z-0 overflow-hidden bg-black pt-[12%]"
 					style={{
 						left: `${LEFT_PCT}%`,
 						top: `${TOP_PCT}%`,
@@ -45,36 +48,17 @@ export function Iphone({ src, videoSrc, className, style, ...props }: IphoneProp
 						borderRadius: `${RADIUS_H}% / ${RADIUS_V}%`,
 					}}
 				>
-					<video
-						className="block size-full object-cover"
-						src={videoSrc}
-						autoPlay
-						loop
-						muted
-						playsInline
-						preload="metadata"
-					/>
-				</div>
-			)}
-
-			{!hasVideo && src && (
-				<div
-					className="pointer-events-none absolute z-0 overflow-hidden"
-					style={{
-						left: `${LEFT_PCT}%`,
-						top: `${TOP_PCT}%`,
-						width: `${WIDTH_PCT}%`,
-						height: `${HEIGHT_PCT}%`,
-						borderRadius: `${RADIUS_H}% / ${RADIUS_V}%`,
-					}}
-				>
-					<img
-						src={src}
-						alt=""
-						fetchPriority="high"
-						decoding="async"
-						className="block size-full object-cover object-top"
-					/>
+					<div className="relative size-full">
+						{children ?? (
+							<img
+								src={src}
+								alt=""
+								fetchPriority="high"
+								decoding="async"
+								className="block size-full object-cover object-top"
+							/>
+						)}
+					</div>
 				</div>
 			)}
 
@@ -85,7 +69,7 @@ export function Iphone({ src, videoSrc, className, style, ...props }: IphoneProp
 				className="absolute inset-0 size-full"
 				style={{ transform: "translateZ(0)" }}
 			>
-				<g mask={hasMedia ? "url(#screenPunch)" : undefined}>
+				<g mask={hasMedia ? `url(#${maskId})` : undefined}>
 					<path
 						d="M2 73C2 32.6832 34.6832 0 75 0H357C397.317 0 430 32.6832 430 73V809C430 849.317 397.317 882 357 882H75C34.6832 882 2 849.317 2 809V73Z"
 						className="fill-[#E5E5E5] dark:fill-[#404040]"
@@ -121,7 +105,7 @@ export function Iphone({ src, videoSrc, className, style, ...props }: IphoneProp
 				<path
 					d={`M${SCREEN_X} 75C${SCREEN_X} 44.2101 46.2101 ${SCREEN_Y} 77 ${SCREEN_Y}H355C385.79 ${SCREEN_Y} 410.75 44.2101 410.75 75V807C410.75 837.79 385.79 862.75 355 862.75H77C46.2101 862.75 ${SCREEN_X} 837.79 ${SCREEN_X} 807V75Z`}
 					className="fill-[#E5E5E5] stroke-[#E5E5E5] stroke-[0.5] dark:fill-[#404040] dark:stroke-[#404040]"
-					mask={hasMedia ? "url(#screenPunch)" : undefined}
+					mask={hasMedia ? `url(#${maskId})` : undefined}
 				/>
 
 				<path
@@ -138,7 +122,7 @@ export function Iphone({ src, videoSrc, className, style, ...props }: IphoneProp
 				/>
 
 				<defs>
-					<mask id="screenPunch" maskUnits="userSpaceOnUse">
+					<mask id={maskId} maskUnits="userSpaceOnUse">
 						<rect x="0" y="0" width={PHONE_WIDTH} height={PHONE_HEIGHT} fill="white" />
 						<rect
 							x={SCREEN_X}
@@ -150,16 +134,6 @@ export function Iphone({ src, videoSrc, className, style, ...props }: IphoneProp
 							fill="black"
 						/>
 					</mask>
-					<clipPath id="roundedCorners">
-						<rect
-							x={SCREEN_X}
-							y={SCREEN_Y}
-							width={SCREEN_WIDTH}
-							height={SCREEN_HEIGHT}
-							rx={SCREEN_RADIUS}
-							ry={SCREEN_RADIUS}
-						/>
-					</clipPath>
 				</defs>
 			</svg>
 		</div>

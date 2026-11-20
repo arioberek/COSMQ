@@ -139,9 +139,33 @@ function AlienBackground() {
  */
 /** `phoneSrc`: the phone screenshot, resized in index.astro. */
 export const HeroSection = ({ phoneSrc }: { phoneSrc: string }) => {
+	const reduceMotion = useReducedMotion();
+	// Pointer position across the hero, -1 to 1 on each axis. The phone leans toward it.
+	const pointerX = useMotionValue(0);
+	const pointerY = useMotionValue(0);
+
+	const handlePointerMove = useCallback(
+		(e: React.PointerEvent<HTMLElement>) => {
+			if (reduceMotion || e.pointerType !== "mouse") return;
+			const rect = e.currentTarget.getBoundingClientRect();
+			pointerX.set(((e.clientX - rect.left) / rect.width) * 2 - 1);
+			pointerY.set(((e.clientY - rect.top) / rect.height) * 2 - 1);
+		},
+		[pointerX, pointerY, reduceMotion],
+	);
+
+	const handlePointerLeave = useCallback(() => {
+		pointerX.set(0);
+		pointerY.set(0);
+	}, [pointerX, pointerY]);
+
 	return (
 		<MotionConfig reducedMotion="user">
-			<section className="relative min-h-[100dvh] flex items-center overflow-visible">
+			<section
+				className="relative min-h-[100dvh] flex items-center overflow-visible"
+				onPointerMove={handlePointerMove}
+				onPointerLeave={handlePointerLeave}
+			>
 				<div className="absolute inset-0 aurora-bg overflow-hidden" />
 				<div className="absolute inset-0 grid-pattern opacity-30" />
 
@@ -162,15 +186,15 @@ export const HeroSection = ({ phoneSrc }: { phoneSrc: string }) => {
 							Open source, MIT licensed, for iOS and Android
 						</div>
 
-						<h1 className="text-[clamp(2.8rem,8vw,6rem)] leading-[1.05] mb-8 font-black tracking-[-0.03em] lg:tracking-[-0.045em] text-foreground">
+						<h1 className="text-[clamp(2.5rem,8vw,4rem)] lg:text-[clamp(3rem,4.8vw,4.25rem)] leading-[1.05] mb-8 font-black tracking-[-0.03em] lg:tracking-[-0.045em] text-foreground">
 							<span className="hero-reveal block" style={{ animationDelay: "160ms" }}>
-								Your databases.
+								Query your database
 							</span>
 							<span
 								className="hero-reveal block font-display font-normal text-foreground/95 pb-[0.1em]"
 								style={{ animationDelay: "240ms" }}
 							>
-								Everywhere.
+								from your phone.
 							</span>
 						</h1>
 
@@ -178,8 +202,9 @@ export const HeroSection = ({ phoneSrc }: { phoneSrc: string }) => {
 							className="hero-reveal text-[clamp(1rem,2.2vw,1.2rem)] text-muted-foreground max-w-[32rem] mx-auto lg:mx-0 mb-10 md:mb-12 leading-[1.6]"
 							style={{ animationDelay: "320ms" }}
 						>
-							Connect straight to PostgreSQL, MySQL, MongoDB and more from your phone. Write a
-							query, read the results, and skip the proxy in between.
+							COSMQ opens a TCP socket from your phone to PostgreSQL, MySQL, MongoDB and three more
+							engines. Write a query, read the rows. Your credentials go to your database and
+							nowhere else.
 						</p>
 
 						<div
@@ -193,7 +218,7 @@ export const HeroSection = ({ phoneSrc }: { phoneSrc: string }) => {
 								href="#features"
 								className="group inline-flex items-center gap-1.5 min-h-11 text-[15px] font-medium text-muted-foreground no-underline hover:text-foreground transition-colors duration-200"
 							>
-								How it works
+								See how it works
 								<span
 									aria-hidden="true"
 									className="transition-transform duration-200 ease-out group-hover:translate-y-0.5"
@@ -205,7 +230,7 @@ export const HeroSection = ({ phoneSrc }: { phoneSrc: string }) => {
 					</div>
 
 					<div className="flex justify-center lg:justify-end">
-						<PhoneMockup src={phoneSrc} />
+						<PhoneMockup src={phoneSrc} pointerX={pointerX} pointerY={pointerY} />
 					</div>
 				</div>
 
