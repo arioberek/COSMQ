@@ -25,6 +25,9 @@
     "@changesets/cli": "^2.27.0",
     "turbo": "^2.3.0"
   },
+  "patchedDependencies": {
+    "react-native-tcp-socket@6.3.0": "patches/react-native-tcp-socket@6.3.0.patch"
+  },
   "packageManager": "bun@1.2.0",
   "engines": {
     "node": ">=18"

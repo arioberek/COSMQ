@@ -8,6 +8,7 @@ import type {
   QueryResult,
   TableInfo,
 } from "../../types";
+import { md5Utf8 } from "../postgres/messages";
 import { type BsonDocument, decodeBson, encodeBson, ObjectId } from "./bson";
 
 const OP_MSG = 2013;
@@ -66,7 +67,7 @@ export class MongoDBConnection implements DatabaseConnection {
     const saslStartCommand: BsonDocument = {
       saslStart: 1,
       mechanism: "SCRAM-SHA-1",
-      payload: Buffer.from(`n,,n=${this.config.username},r=${nonce}`),
+      payload: Buffer.from(`n,,n=${this.scramUsername()},r=${nonce}`),
       $db: "admin",
       autoAuthorize: 1,
     };
@@ -120,6 +121,11 @@ export class MongoDBConnection implements DatabaseConnection {
     }
   }
 
+  /** The username as SCRAM sends it: "=" and "," are the message's own separators. */
+  private scramUsername(): string {
+    return this.config.username.replace(/=/g, "=3D").replace(/,/g, "=2C");
+  }
+
   private generateNonce(): string {
     const bytes = new Uint8Array(24);
     if (globalThis.crypto?.getRandomValues) {
@@ -151,16 +157,27 @@ export class MongoDBConnection implements DatabaseConnection {
   ): { clientFinal: string; serverSignature: string } {
     const attrs = this.parseScramAttributes(serverFirstMessage);
     const serverNonce = attrs.r;
+    if (!serverNonce?.startsWith(clientNonce) || !attrs.s || !attrs.i) {
+      throw new Error("Invalid SCRAM challenge from server");
+    }
     const salt = Buffer.from(attrs.s, "base64");
     const iterations = parseInt(attrs.i, 10);
 
-    const saltedPassword = this.pbkdf2Sha1(Buffer.from(password, "utf8"), salt, iterations, 20);
+    // MongoDB's SCRAM-SHA-1 does not hash the password itself. It hashes the hex MD5
+    // of "user:mongo:password", the credential format left over from MONGODB-CR.
+    const passwordDigest = md5Utf8(`${this.config.username}:mongo:${password}`);
+    const saltedPassword = this.pbkdf2Sha1(
+      Buffer.from(passwordDigest, "utf8"),
+      salt,
+      iterations,
+      20,
+    );
 
     const clientKey = this.hmacSha1(saltedPassword, Buffer.from("Client Key"));
     const storedKey = this.sha1(clientKey);
     const channelBinding = Buffer.from("n,,").toString("base64");
     const clientFinalWithoutProof = `c=${channelBinding},r=${serverNonce}`;
-    const authMessage = `n=${this.config.username},r=${clientNonce},${serverFirstMessage},${clientFinalWithoutProof}`;
+    const authMessage = `n=${this.scramUsername()},r=${clientNonce},${serverFirstMessage},${clientFinalWithoutProof}`;
     const clientSignature = this.hmacSha1(storedKey, Buffer.from(authMessage, "utf8"));
     const clientProof = this.xorBuffers(clientKey, clientSignature);
     const serverKey = this.hmacSha1(saltedPassword, Buffer.from("Server Key"));

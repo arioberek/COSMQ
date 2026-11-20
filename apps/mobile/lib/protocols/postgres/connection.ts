@@ -103,6 +103,7 @@ export class PostgresConnection implements DatabaseConnection {
     await this.client.send(startupMessage);
 
     let scramSession: ScramSession | null = null;
+    let scramVerified = false;
 
     while (true) {
       const data = await this.client.receive();
@@ -119,6 +120,11 @@ export class PostgresConnection implements DatabaseConnection {
 
           switch (auth.authType) {
             case AuthType.OK:
+              // Once SCRAM starts, only a server that proved it knows the password
+              // may finish it. Otherwise an impostor could skip the proof.
+              if (scramSession && !scramVerified) {
+                throw new Error("Server ended SCRAM authentication without proving its identity");
+              }
               continue;
 
             case AuthType.CLEARTEXT_PASSWORD: {
@@ -183,6 +189,7 @@ export class PostgresConnection implements DatabaseConnection {
               }
               const serverFinal = auth.data.toString("utf8").replace(/\u0000+$/g, "");
               verifyScramServerFinal(scramSession, serverFinal);
+              scramVerified = true;
               continue;
             }
 
