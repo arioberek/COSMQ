@@ -42,3 +42,6 @@ npm-debug.*
 # Logs
 *.log
 .osgrep
+
+# Serena (local code-index cache)
+.serena/
