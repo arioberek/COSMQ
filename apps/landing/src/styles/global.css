@@ -124,6 +124,39 @@
 	}
 }
 
+/* ── Header: clear over the hero, then it picks up its bar as the page scrolls.
+   Without scroll timelines the bar is simply always there. ── */
+@supports (animation-timeline: scroll()) {
+	.site-header {
+		animation: header-settle linear both;
+		animation-timeline: scroll(root);
+		animation-range: 0 96px;
+	}
+	@keyframes header-settle {
+		from {
+			border-color: transparent;
+			background-color: hsl(var(--background) / 0);
+		}
+	}
+}
+
+/* ── Editor caret on the feature spec. `steps` gives the hard blink of a
+   real text cursor. ── */
+.spec-caret {
+	display: inline-block;
+	width: 0.55em;
+	height: 1.15em;
+	margin-left: 1px;
+	vertical-align: text-bottom;
+	background: currentColor;
+	animation: caret-blink 1.1s steps(1) infinite;
+}
+@keyframes caret-blink {
+	50% {
+		opacity: 0;
+	}
+}
+
 /* ── Hero copy entrance: CSS so the text is visible before any JS loads ── */
 @media (prefers-reduced-motion: no-preference) {
 	.hero-reveal {

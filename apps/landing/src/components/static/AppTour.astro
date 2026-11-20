@@ -1,0 +1,285 @@
+---
+// Static: the step picker is a radio group and CSS `:has()` swaps the phone
+// screen, so this ships no JavaScript and keeps native arrow-key behaviour.
+import { getImage } from "astro:assets";
+import Builder from "../../assets/screenshots/app/builder-dark.png";
+import Home from "../../assets/screenshots/app/home-dark.png";
+import Cards from "../../assets/screenshots/app/results-cards-dark.png";
+import Json from "../../assets/screenshots/app/results-json-dark.png";
+import { Iphone } from "../ui/iphone";
+
+const steps = [
+	{
+		image: Home,
+		short: "Connect",
+		title: "Save a connection",
+		body: "Paste a postgres://, mysql:// or mongodb:// URL and COSMQ fills in the form. Test it before you save, then tag it with a colour so prod stands out.",
+		alt: "Connections list: a connected SQLite store, plus saved PostgreSQL, MySQL, MongoDB and CockroachDB servers",
+	},
+	{
+		image: Cards,
+		short: "Query",
+		title: "Write the query",
+		body: "The editor highlights SQL and suggests the keyword that comes next. Tap Run and each row comes back as a card you can filter, sort and copy.",
+		alt: "SQL editor with a SELECT on customers and five rows returned as cards in 15 ms",
+	},
+	{
+		image: Json,
+		short: "JSON",
+		title: "Read it as JSON",
+		body: "Switch the same result between cards, a table and a collapsible JSON tree. COSMQ remembers the view you picked for each connection.",
+		alt: "The same five rows shown as a collapsible JSON tree",
+	},
+	{
+		image: Builder,
+		short: "Builder",
+		title: "Skip the typing",
+		body: "Pick a table, columns, conditions and a sort order. The builder writes the SQL, or the find command for MongoDB.",
+		alt: "Visual query builder with table, column and condition pickers above the results",
+	},
+];
+
+// Source PNGs are 600px wide; the phone screen shows at about 235px.
+const screens = await Promise.all(
+	steps.map(async ({ image }) => {
+		const [small, large] = await Promise.all([
+			getImage({ src: image, width: 300, format: "webp", quality: 82 }),
+			getImage({ src: image, width: 600, format: "webp", quality: 82 }),
+		]);
+		return { src: large.src, srcSet: `${small.src} 300w, ${large.src} 600w` };
+	}),
+);
+---
+
+<section id="tour" aria-labelledby="tour-title" class="relative pt-20 pb-24 md:pt-28 md:pb-32 px-6 lg:px-10">
+	<div class="max-w-[1280px] mx-auto grid lg:grid-cols-12 gap-x-10 gap-y-10 items-center">
+		<div class="lg:col-span-6 lg:col-start-1 lg:row-start-1 reveal-on-scroll">
+			<span class="eyebrow mb-6">
+				<span class="eyebrow-rule"></span>
+				<span>Inside the app</span>
+			</span>
+			<h2 id="tour-title" class="text-[clamp(2rem,5vw,3.25rem)] font-semibold tracking-[-0.035em] leading-[1.08] text-foreground">
+				From connection string <span class="font-display font-normal">to rows.</span>
+			</h2>
+		</div>
+
+		<!-- A div, not a fieldset: `display: contents` on fieldsets is unreliable. -->
+		<div class="tour contents" role="radiogroup" aria-label="Pick a screen to preview">
+
+			<div class="tour-steps lg:col-span-6 lg:col-start-1 lg:row-start-2 lg:self-start">
+				{
+					steps.map((step, i) => (
+						<label class="tour-step">
+							<input type="radio" name="tour-step" value={i} checked={i === 0} class="sr-only" />
+							<span class="tour-step-num" aria-hidden="true">{String(i + 1).padStart(2, "0")}</span>
+							<span class="tour-step-title">
+								<span class="lg:hidden">{step.short}</span>
+								<span class="hidden lg:inline">{step.title}</span>
+							</span>
+							<span class="tour-step-body">
+								<span>{step.body}</span>
+							</span>
+						</label>
+					))
+				}
+			</div>
+
+			<div class="lg:col-span-5 lg:col-start-8 lg:row-start-1 lg:row-span-2 flex flex-col items-center">
+				<div class="reveal-on-scroll relative w-[230px] md:w-[270px]">
+					<Iphone>
+						{
+							screens.map((screen, i) => (
+								<img
+									src={screen.src}
+									srcset={screen.srcSet}
+									sizes="270px"
+									alt={steps[i].alt}
+									data-screen={i}
+									loading="lazy"
+									decoding="async"
+									class="tour-screen"
+								/>
+							))
+						}
+					</Iphone>
+					<div class="absolute -bottom-5 left-[6%] right-[6%] h-8 bg-[radial-gradient(ellipse,hsl(var(--shadow-tint)/0.7)_0%,transparent_70%)] blur-lg pointer-events-none" aria-hidden="true"></div>
+				</div>
+
+				<!-- Below lg the step list is a row of chips, so the description sits under the phone. -->
+				<div class="tour-captions lg:hidden mt-10 max-w-[26rem] text-center">
+					{steps.map((step, i) => <p data-caption={i}>{step.body}</p>)}
+				</div>
+			</div>
+		</div>
+	</div>
+</section>
+
+<style is:global>
+	/* ── Screens: stacked, one visible. The blur hides the moment two
+	   unrelated layouts overlap mid-crossfade. ── */
+	.tour-screen {
+		position: absolute;
+		inset: 0;
+		width: 100%;
+		height: 100%;
+		object-fit: cover;
+		object-position: top;
+		opacity: 0;
+		filter: blur(2px);
+		transition:
+			opacity 250ms ease,
+			filter 250ms ease;
+	}
+	.tour-screen[data-screen="0"] {
+		opacity: 1;
+		filter: none;
+	}
+	.tour:has(input:checked:not([value="0"])) .tour-screen[data-screen="0"] {
+		opacity: 0;
+		filter: blur(2px);
+	}
+	.tour:has(input[value="1"]:checked) .tour-screen[data-screen="1"],
+	.tour:has(input[value="2"]:checked) .tour-screen[data-screen="2"],
+	.tour:has(input[value="3"]:checked) .tour-screen[data-screen="3"] {
+		opacity: 1;
+		filter: none;
+	}
+
+	.tour-captions p {
+		display: none;
+		color: hsl(var(--muted-foreground));
+		font-size: 15px;
+		line-height: 1.7;
+	}
+	.tour:has(input[value="0"]:checked) .tour-captions [data-caption="0"],
+	.tour:has(input[value="1"]:checked) .tour-captions [data-caption="1"],
+	.tour:has(input[value="2"]:checked) .tour-captions [data-caption="2"],
+	.tour:has(input[value="3"]:checked) .tour-captions [data-caption="3"] {
+		display: block;
+	}
+
+	/* ── Steps. Below lg: a segmented row of chips. ── */
+	.tour-steps {
+		display: grid;
+		grid-template-columns: repeat(4, 1fr);
+		gap: 2px;
+		padding: 3px;
+		border-radius: 9999px;
+		background: hsl(var(--surface-1));
+		border: 1px solid hsl(var(--border));
+		max-width: 26rem;
+		width: 100%;
+		margin-inline: auto;
+	}
+	.tour-step {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		min-height: 44px;
+		border-radius: 9999px;
+		font-size: 13px;
+		font-weight: 500;
+		color: hsl(var(--muted-foreground));
+		cursor: pointer;
+		-webkit-tap-highlight-color: transparent;
+		transition:
+			color 200ms ease,
+			background-color 200ms ease,
+			transform 160ms var(--ease-out);
+	}
+	.tour-step:active {
+		transform: scale(0.97);
+	}
+	.tour-step:has(input:checked) {
+		color: hsl(var(--foreground));
+		background: hsl(var(--surface-2));
+	}
+	.tour-step:has(input:focus-visible) {
+		outline: 2px solid hsl(var(--ring));
+		outline-offset: 4px;
+	}
+	.tour-step-num,
+	.tour-step-body {
+		display: none;
+	}
+
+	/* ── From lg: an editorial list. The checked step opens its description. ── */
+	@media (min-width: 1024px) {
+		.tour-steps {
+			display: block;
+			padding: 0;
+			border: 0;
+			border-radius: 0;
+			background: none;
+			max-width: 34rem;
+			margin-inline: 0;
+			border-bottom: 1px solid hsl(var(--border));
+		}
+		.tour-step {
+			display: grid;
+			grid-template-columns: 3rem 1fr;
+			align-items: baseline;
+			justify-content: stretch;
+			min-height: 0;
+			padding: 1.25rem 0;
+			border-radius: 0;
+			border-top: 1px solid hsl(var(--border));
+			font-size: 1.375rem;
+			font-weight: 600;
+			letter-spacing: -0.02em;
+			color: hsl(var(--foreground) / 0.45);
+			transition: color 200ms ease;
+		}
+		.tour-step:active {
+			transform: none;
+		}
+		.tour-step:has(input:checked) {
+			background: none;
+		}
+		.tour-step-num {
+			display: block;
+			font-family: var(--font-mono);
+			font-size: 12px;
+			font-weight: 400;
+			letter-spacing: 0.2em;
+			font-variant-numeric: tabular-nums;
+			transition: color 200ms ease;
+		}
+		.tour-step:has(input:checked) .tour-step-num {
+			color: hsl(var(--accent));
+		}
+		/* 0fr → 1fr animates the row open without measuring a height. */
+		.tour-step-body {
+			grid-column: 2;
+			display: grid;
+			grid-template-rows: 0fr;
+			opacity: 0;
+			transition:
+				grid-template-rows 250ms var(--ease-out),
+				opacity 200ms ease;
+		}
+		.tour-step-body > span {
+			overflow: hidden;
+			min-height: 0;
+			font-size: 15px;
+			font-weight: 400;
+			letter-spacing: 0;
+			line-height: 1.7;
+			color: hsl(var(--muted-foreground));
+		}
+		.tour-step-body > span::before {
+			content: "";
+			display: block;
+			height: 0.5rem;
+		}
+		.tour-step:has(input:checked) .tour-step-body {
+			grid-template-rows: 1fr;
+			opacity: 1;
+		}
+		@media (hover: hover) and (pointer: fine) {
+			.tour-step:not(:has(input:checked)):hover {
+				color: hsl(var(--foreground) / 0.8);
+			}
+		}
+	}
+</style>

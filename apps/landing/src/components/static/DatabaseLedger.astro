@@ -1,0 +1,142 @@
+---
+// Static: six engines fit on screen, so they get a table of facts instead of
+// a scrolling logo strip. Values match apps/mobile and the README support table.
+import CockroachIcon from "../../assets/icons/cockroachdb.svg";
+import MariadbIcon from "../../assets/icons/mariadb.svg";
+import MongoIcon from "../../assets/icons/mongodb.svg";
+import MysqlIcon from "../../assets/icons/mysql.svg";
+import PostgresIcon from "../../assets/icons/postgresql.svg";
+import SqliteIcon from "../../assets/icons/sqlite.svg";
+
+const engines = [
+	{ icon: PostgresIcon, name: "PostgreSQL", url: "postgres://", port: "5432", auth: "SCRAM-SHA-256, MD5" },
+	{ icon: MysqlIcon, name: "MySQL", url: "mysql://", port: "3306", auth: "caching_sha2_password" },
+	{ icon: MariadbIcon, name: "MariaDB", url: "mariadb://", port: "3306", auth: "mysql_native_password" },
+	{ icon: CockroachIcon, name: "CockroachDB", url: "cockroachdb://", port: "26257", auth: "PostgreSQL wire protocol" },
+	{ icon: MongoIcon, name: "MongoDB", url: "mongodb://", port: "27017", auth: "SCRAM-SHA-1" },
+	{ icon: SqliteIcon, name: "SQLite", url: "a file you pick", port: "", auth: "Opens on the device" },
+];
+---
+
+<section id="databases" aria-labelledby="databases-title" class="relative pt-20 pb-24 md:pt-28 md:pb-32 px-6 lg:px-10 border-t border-border">
+	<div class="max-w-[1280px] mx-auto grid lg:grid-cols-12 gap-x-10 gap-y-12">
+		<div class="reveal-on-scroll lg:col-span-4">
+			<span class="eyebrow mb-6">
+				<span class="eyebrow-rule"></span>
+				<span>Databases</span>
+			</span>
+			<h2 id="databases-title" class="text-[clamp(2rem,5vw,3.25rem)] font-semibold tracking-[-0.035em] leading-[1.08] text-foreground mb-5">
+				Talks to <span class="font-display font-normal">your stack.</span>
+			</h2>
+			<p class="text-muted-foreground text-base max-w-[26rem] leading-[1.7]">
+				Paste the connection string you already use. COSMQ verifies the server's TLS
+				certificate by default and refuses to fall back to plaintext.
+			</p>
+		</div>
+
+		<div class="lg:col-span-8">
+			<table class="ledger">
+				<thead>
+					<tr>
+						<th scope="col">Engine</th>
+						<th scope="col">URL</th>
+						<th scope="col" class="ledger-port">Port</th>
+						<th scope="col" class="ledger-auth">Auth</th>
+					</tr>
+				</thead>
+				<tbody>
+					{
+						engines.map((engine) => (
+							<tr class="reveal-on-scroll">
+								<th scope="row">
+									<img
+										src={engine.icon.src}
+										width="20"
+										height="20"
+										alt=""
+										loading="lazy"
+										decoding="async"
+										class="w-5 h-5 brightness-0 invert opacity-70 shrink-0"
+									/>
+									{engine.name}
+								</th>
+								<td class:list={engine.port ? "ledger-url" : "ledger-plain"}>{engine.url}</td>
+								<td class="ledger-port">{engine.port ? engine.port : <span class="sr-only">None</span>}</td>
+								<td class="ledger-auth">{engine.auth}</td>
+							</tr>
+						))
+					}
+				</tbody>
+			</table>
+		</div>
+	</div>
+</section>
+
+<style is:global>
+	.ledger {
+		width: 100%;
+		border-collapse: collapse;
+		text-align: left;
+	}
+	.ledger thead th {
+		padding: 0 0.75rem 0.875rem;
+		font-size: 12px;
+		font-weight: 500;
+		color: hsl(var(--foreground) / 0.5);
+	}
+	.ledger tbody tr {
+		border-top: 1px solid hsl(var(--border));
+		transition: background-color 150ms ease;
+	}
+	.ledger tbody tr:last-child {
+		border-bottom: 1px solid hsl(var(--border));
+	}
+	.ledger tbody th,
+	.ledger tbody td {
+		padding: 1.125rem 0.75rem;
+		vertical-align: middle;
+	}
+	.ledger tbody th {
+		display: flex;
+		align-items: center;
+		gap: 0.75rem;
+		font-size: 1.0625rem;
+		font-weight: 600;
+		letter-spacing: -0.015em;
+		color: hsl(var(--foreground));
+		white-space: nowrap;
+	}
+	.ledger td {
+		font-size: 14px;
+		color: hsl(var(--muted-foreground));
+	}
+	.ledger .ledger-url,
+	.ledger td.ledger-port {
+		font-family: var(--font-mono);
+		font-size: 13px;
+	}
+	.ledger .ledger-url {
+		color: hsl(var(--accent));
+	}
+	.ledger .ledger-port {
+		text-align: right;
+		font-variant-numeric: tabular-nums;
+	}
+	.ledger td.ledger-port {
+		color: hsl(var(--foreground) / 0.8);
+	}
+	.ledger .ledger-auth {
+		display: none;
+		padding-left: 2.5rem;
+	}
+	@media (min-width: 768px) {
+		.ledger .ledger-auth {
+			display: table-cell;
+		}
+	}
+	@media (hover: hover) and (pointer: fine) {
+		.ledger tbody tr:hover {
+			background: hsl(var(--surface-1));
+		}
+	}
+</style>

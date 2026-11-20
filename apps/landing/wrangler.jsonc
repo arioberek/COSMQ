@@ -1,6 +1,8 @@
 {
 	"name": "cosmq",
 	"compatibility_date": "2026-01-05", // Update to the day you deploy
+	// Serves the site at cosmq.arielton.com. Wrangler creates the DNS record.
+	"routes": [{ "pattern": "cosmq.arielton.com", "custom_domain": true }],
 	"assets": {
 		"directory": "./dist",
 		// Serve dist/404.html for unknown paths instead of a bare 404.
