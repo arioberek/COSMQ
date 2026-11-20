@@ -9,3 +9,7 @@ updates:
       actions:
         patterns:
           - "*"
+    ignore:
+      # changesets/action v2 needs Changesets CLI v3; stay on v1 until the CLI is upgraded.
+      - dependency-name: changesets/action
+        update-types: ["version-update:semver-major"]
